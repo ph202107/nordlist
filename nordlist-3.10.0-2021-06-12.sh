@@ -6,7 +6,8 @@
 # scripting is new to me and I'm learning as I go.  I added a
 # lot of comments to help fellow newbies customize the script.
 #
-# It looks like this:  https://imgur.com/a/3LMBATC
+# It looks like this:  
+# https://imgur.com/ElGAxH5 https://imgur.com/BUuKzhG
 # /u/pennyhoard20 on reddit
 #
 # Last tested with NordVPN Version 3.10.0 on Linux Mint 19.3
@@ -102,7 +103,7 @@ fast5="n"
 allfast=( "$fast1" "$fast2" "$fast3" "$fast4" "$fast5" )
 #
 # =====================================================================
-# The Main Menu starts on line 1478.  Recommend configuring the
+# The Main Menu starts on line 1479.  Recommend configuring the
 # first six main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist"
