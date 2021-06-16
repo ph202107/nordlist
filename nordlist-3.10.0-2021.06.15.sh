@@ -529,7 +529,7 @@ function fobservers {
         fi
         ask_protocol
         if [[ "$killswitch" == "disabled" ]]; then
-            change_setting "the Kill Switch" "$killswitch" "killswitch" "$ks" "none" "override"
+            change_setting "the Kill Switch" "$killswitch" "killswitch" "$ks" " " "override"
         fi
         if [[ "$obfuscate" == "disabled" ]]; then
             nordvpn set obfuscate enabled; wait
@@ -1468,7 +1468,7 @@ function fdisconnect {
     heading "Disconnect"
     if [[ "$killswitch" == "enabled" ]]; then
         echo -e "${WColor}** Reminder **${Color_Off}"
-        change_setting "the Kill Switch" "$killswitch" "killswitch" "$ks" "none" "override"
+        change_setting "the Kill Switch" "$killswitch" "killswitch" "$ks" " " "override"
     fi
     if [[ "$alwaysrate" =~ ^[Yy]$ ]]; then
         rate_server
