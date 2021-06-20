@@ -112,7 +112,7 @@ fast5="n"
 allfast=( "$fast1" "$fast2" "$fast3" "$fast4" "$fast5" )
 #
 # =====================================================================
-# The Main Menu starts on line 1520.  Recommend configuring the
+# The Main Menu starts on line 1518.  Recommend configuring the
 # first six main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist"
@@ -1147,7 +1147,6 @@ function frestart {
     echo "Send commands:"
     echo "nordvpn set killswitch disabled"
     echo "nordvpn set autoconnect (choose)"
-    echo "nordvpn disconnect"
     echo "sudo systemctl restart nordvpnd.service"
     echo "sudo systemctl restart nordvpn.service"
     echo -e ${Color_Off}
@@ -1159,10 +1158,9 @@ function frestart {
             nordvpn set killswitch disabled; wait
             echo
         fi
+        echo
         change_setting "Auto-Connect" "$autocon" "autoconnect" "$ac" "override" "$acwhere"
         echo
-        echo "If disconnect stalls, hit CTRL-C once to continue."
-        discon2
         sudo systemctl restart nordvpnd.service
         sudo systemctl restart nordvpn.service
         echo
