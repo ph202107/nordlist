@@ -1199,8 +1199,6 @@ function freset {
             nordvpn set killswitch disabled; wait
             echo
         fi
-        echo
-        echo "If disconnect stalls, hit CTRL-C once to continue."
         discon2
         nordvpn logout; wait
         echo
