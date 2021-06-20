@@ -1146,7 +1146,7 @@ function frestart {
     echo -e ${WColor}
     echo "Send commands:"
     echo "nordvpn set killswitch disabled"
-    echo "nordvpn set autoconnect (choose)"
+    echo "nordvpn set autoconnect disabled (choice)"
     echo "sudo systemctl restart nordvpnd.service"
     echo "sudo systemctl restart nordvpn.service"
     echo -e ${Color_Off}
@@ -1159,7 +1159,9 @@ function frestart {
             echo
         fi
         echo
-        change_setting "Auto-Connect" "$autocon" "autoconnect" "$ac" "override" "$acwhere"
+        if [[ "$autocon" == "enabled" ]]; then
+            change_setting "Auto-Connect" "$autocon" "autoconnect" "$ac" "override" "$acwhere"
+        fi
         echo
         sudo systemctl restart nordvpnd.service
         sudo systemctl restart nordvpn.service
