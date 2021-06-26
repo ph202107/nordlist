@@ -1485,6 +1485,7 @@ function fdefaults {
         read -n 1 -r -p "[Defaults] Go to the 'CustomDNS' setting? (y/n) "
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
+            set_vars
             fcustomdns
         fi
         main_menu
