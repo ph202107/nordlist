@@ -299,7 +299,7 @@ function custom_ascii {
     fi
 }
 function logo {
-	set_vars
+    set_vars
     #
     # Specify  std_ascii or custom_ascii on the line below.
     custom_ascii
