@@ -78,7 +78,11 @@ nordchangelog="/usr/share/doc/nordvpn/changelog.gz"
 alwaysrate="y"
 #
 # Show the logo when the script exits.  "y" or "n"
-exitlogo="n"
+exitlogo="y"
+#
+# When exitlogo="y", also ping the connected server and query
+# the server load.  "y" or "n"
+exitping="y"
 #
 # Adjust the COLUMNS value if the menu looks jumbled or to
 # match your terminal.
@@ -368,6 +372,21 @@ function status {
     if [[ "$exitlogo" =~ ^[Yy]$ ]]; then
         clear -x
         logo
+        if [[ "$connected" == "Connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]]; then
+            ping -c 3 -q $nordhost
+            echo
+            echo "Getting server load..."
+            echo
+            sload=$(curl --silent https://api.nordvpn.com/server/stats/$nordhost | jq .percent)
+            if (( ${#sload} <= 30 )); then
+                echo -e "$nordhost load = ${EColor}$sload%${Color_Off}"
+            elif (( ${#sload} <= 60 )); then
+                echo -e "$nordhost load = ${FColor}$sload%${Color_Off}"
+            else
+                echo -e "$nordhost load = ${DColor}$sload%${Color_Off}"
+            fi
+            echo
+        fi
     fi
     date
     echo
