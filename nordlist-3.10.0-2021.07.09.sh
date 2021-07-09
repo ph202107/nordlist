@@ -15,7 +15,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.10.0 on Linux Mint 20.1
-# (Bash 5.0.17) July 8 2021
+# (Bash 5.0.17) July 9 2021
 #
 # =====================================================================
 # Instructions
