@@ -81,8 +81,8 @@ alwaysrate="y"
 exitlogo="y"
 #
 # When exitlogo="y", also ping the connected server and query
-# the server load.  "y" or "n"
-exitping="y"
+# the server load (requires 'curl' and 'jq').   "y" or "n"
+exitping="n"
 #
 # Adjust the COLUMNS value if the menu looks jumbled or to
 # match your terminal.
