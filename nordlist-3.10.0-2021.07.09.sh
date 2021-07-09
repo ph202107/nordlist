@@ -121,7 +121,7 @@ fast5="n"
 allfast=( "$fast1" "$fast2" "$fast3" "$fast4" "$fast5" )
 #
 # =====================================================================
-# The Main Menu starts on line 1633.  Recommend configuring the
+# The Main Menu starts on line 1652.  Recommend configuring the
 # first six main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist"
