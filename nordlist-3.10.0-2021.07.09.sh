@@ -378,9 +378,9 @@ function status {
             echo "Getting server load..."
             echo
             sload=$(curl --silent https://api.nordvpn.com/server/stats/$nordhost | jq .percent)
-            if (( ${#sload} <= 30 )); then
+            if (( $sload <= 30 )); then
                 echo -e "$nordhost load = ${EColor}$sload%${Color_Off}"
-            elif (( ${#sload} <= 60 )); then
+            elif (( $sload <= 60 )); then
                 echo -e "$nordhost load = ${FColor}$sload%${Color_Off}"
             else
                 echo -e "$nordhost load = ${DColor}$sload%${Color_Off}"
