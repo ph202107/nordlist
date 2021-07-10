@@ -308,7 +308,7 @@ function logo {
     # Specify  std_ascii or custom_ascii on the line below.
     custom_ascii
     #
-    echo $connected: $city $country $server $ipaddr
+    echo $connected: $city $country $server $ip
     echo -e \($technology $pdisplay\) $fw$ks$cs$ob$no$ac$ip6$dns$fst
     echo -e $transfer $uptime
     echo
