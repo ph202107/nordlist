@@ -121,7 +121,7 @@ fast5="n"
 allfast=( "$fast1" "$fast2" "$fast3" "$fast4" "$fast5" )
 #
 # =====================================================================
-# The Main Menu starts on line 1704.  Recommend configuring the
+# The Main Menu starts on line 1692.  Recommend configuring the
 # first six main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -570,9 +570,7 @@ function fobservers {
     echo "Connect to the Obfuscated_Servers group $obwhere"
     echo -e ${Color_Off}
     if [[ "$fast4" =~ ^[Yy]$ ]]; then
-        echo
         echo -e "${FColor}[F]ast4 option is enabled.${Color_Off}"
-        echo
         REPLY="y"
     else
         read -n 1 -r -p "Proceed? (y/n) "
@@ -621,9 +619,7 @@ function fdoublevpn {
     echo "Connect to the Double_VPN group."
     echo -e ${Color_Off}
     if [[ "$fast4" =~ ^[Yy]$ ]]; then
-        echo
         echo -e "${FColor}[F]ast4 option is enabled.${Color_Off}"
-        echo
         REPLY="y"
     else
         read -n 1 -r -p "Proceed? (y/n) "
@@ -671,9 +667,7 @@ function fonion {
     echo "Connect to the Onion_Over_VPN group."
     echo -e ${Color_Off}
     if [[ "$fast4" =~ ^[Yy]$ ]]; then
-        echo
         echo -e "${FColor}[F]ast4 option is enabled.${Color_Off}"
-        echo
         REPLY="y"
     else
         read -n 1 -r -p "Proceed? (y/n) "
@@ -718,9 +712,7 @@ function fp2p {
     echo "Connect to the P2P group $p2pwhere"
     echo -e ${Color_Off}
     if [[ "$fast4" =~ ^[Yy]$ ]]; then
-        echo
         echo -e "${FColor}[F]ast4 option is enabled.${Color_Off}"
-        echo
         REPLY="y"
     else
         read -n 1 -r -p "Proceed? (y/n) "
@@ -760,7 +752,6 @@ function ftechnology {
     echo
     if [[ "$fast3" =~ ^[Yy]$ ]]; then
         echo -e "${FColor}[F]ast3 option is enabled.${Color_Off}"
-        echo
         REPLY="y"
     elif [[ "$technology" == "OpenVPN" ]]; then
         read -n 1 -r -p "Change the Technology to NordLynx? (y/n) "
@@ -822,7 +813,6 @@ function fprotocol {
         echo
         if [[ "$fast3" =~ ^[Yy]$ ]]; then
             echo -e "${FColor}[F]ast3 option is enabled.${Color_Off}"
-            echo
             REPLY="y"
         elif [[ "$protocol" == "UDP" ]]; then
             read -n 1 -r -p "Change the Protocol to TCP? (y/n) "
@@ -895,7 +885,6 @@ function change_setting {
     echo
     if [[ "$fast2" =~ ^[Yy]$ ]] && [[ "$5" != "override" ]]; then
         echo -e "${FColor}[F]ast2 option is enabled.${Color_Off}"
-        echo
         REPLY="y"
     else
         read -n 1 -r -p "$chgprompt"
@@ -1027,7 +1016,6 @@ function fobfuscate {
         echo
         if [[ "$fast3" =~ ^[Yy]$ ]]; then
             echo -e "${FColor}[F]ast3 option is enabled.${Color_Off}"
-            echo
             REPLY="y"
         else
             read -n 1 -r -p "$obprompt"
