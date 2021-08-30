@@ -15,3 +15,5 @@ To download:
 - Open your text editor and Paste
 - Save as "nordlist.sh" (with "Line Ending" option = Unix/Linux)
 - Make the script executable with "chmod +x nordlist.sh"
+- Optional: "sudo apt-get install figlet lolcat curl jq highlight"
+- Customization notes are included in the script
