@@ -16,7 +16,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.11.0 on Linux Mint 20.2
-# (Bash 5.0.17) October 3 2021
+# (Bash 5.0.17) October 4 2021
 #
 # =====================================================================
 # Instructions
@@ -1772,7 +1772,7 @@ logo
 #
 PS3=$'\n''Choose an option: '
 #
-mainmenu=("Vancouver" "Toronto" "Seattle" "Canada" "USA" "Discord" "Countries" "Groups" "Settings" "Disconnect" "Exit")
+mainmenu=("Vancouver" "Toronto" "Seattle" "Canada" "US_Cities" "Discord" "Countries" "Groups" "Settings" "Disconnect" "Exit")
 #
 nummainmenu=${#mainmenu[@]}
 select opt in "${mainmenu[@]}"
@@ -1803,11 +1803,10 @@ do
             status
             break
             ;;
-        "USA")
-            discon
-            nordvpn connect United_States
-            status
-            break
+        "US_Cities")
+            # city menu for United_States
+            xcountry="United_States"
+            cities
             ;;
         "Discord")
             # I use this entry to connect to a specific server which can help
