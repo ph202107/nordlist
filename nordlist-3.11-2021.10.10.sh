@@ -16,7 +16,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.11.0 on Linux Mint 20.2
-# (Bash 5.0.17) October 8 2021
+# (Bash 5.0.17) October 10 2021
 #
 # =====================================================================
 # Instructions
@@ -53,10 +53,10 @@
 # CUSTOMIZATION
 # (all of these are optional)
 #
-# Specify your P2P preferred country.  eg p2pwhere="Canada"
+# Specify your P2P preferred location.  eg p2pwhere="Canada"
 p2pwhere=""
 #
-# Specify your Obfuscated_Servers preferred country.
+# Specify your Obfuscated_Servers preferred location.
 # The location must support obfuscation.  eg obwhere="United_States"
 obwhere=""
 #
@@ -133,7 +133,7 @@ fast7="n"
 allfast=( "$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7" )
 #
 # =====================================================================
-# The Main Menu starts on line 1759.  Recommend configuring the
+# The Main Menu starts on line 1818.  Recommend configuring the
 # first six main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -1467,6 +1467,69 @@ function server_load {
     fi
     echo
 }
+function allvpnservers {
+    heading "All Servers"
+    if (( ${#allnordservers[@]} == 0 )); then
+        echo "Retrieving the list of NordVPN servers..."
+        readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
+    fi
+    echo "Count: ${#allnordservers[@]}"
+    echo
+    PS3=$'\n''Choose an option: '
+    submallvpn=("List All Servers" "Double-VPN Servers" "Onion Servers" "Socks Servers" "Search" "Exit")
+    numsubmallvpn=${#submallvpn[@]}
+    select smavpn in "${submallvpn[@]}"
+    do
+        case $smavpn in
+            "List All Servers")
+                echo
+                echo -e "${LColor}All the VPN Servers${Color_Off}"
+                echo
+                printf '%s\n' "${allnordservers[@]}" 
+                echo
+                ;;
+            "Double-VPN Servers")
+                echo
+                echo -e "${LColor}Double-VPN Servers${Color_Off}"
+                echo
+                printf '%s\n' "${allnordservers[@]}" | grep "-" | grep -i -v -e "socks" -e "onion"
+                echo
+                ;;
+            "Onion Servers")
+                echo
+                echo -e "${LColor}Onion Servers${Color_Off}"
+                echo
+                printf '%s\n' "${allnordservers[@]}" | grep -i "onion"
+                echo
+                ;;
+            "Socks Servers")
+                echo
+                echo -e "${LColor}Socks Servers${Color_Off}"
+                echo
+                printf '%s\n' "${allnordservers[@]}" | grep -i "socks"
+                echo
+                ;;
+            "Search")
+                echo
+                read -r -p "Enter search term: " allvpnsearch
+                echo
+                echo -e "${LColor}Search for '$allvpnsearch'${Color_Off}"
+                echo
+                printf '%s\n' "${allnordservers[@]}" | grep -i "$allvpnsearch"
+                echo
+                ;;                
+            "Exit")
+                nordapi
+                ;;                                  
+            *)
+                echo
+                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
+                echo
+                echo "Select any number from 1-$numsubmallvpn ($numsubmallvpn to Exit)."
+                ;;
+        esac
+    done
+}
 function nordapi {
     # submenu for NordVPN API calls
     heading "NordVPN API"
@@ -1526,11 +1589,7 @@ function nordapi {
                 echo
                 ;;
             "All VPN Servers")
-                echo
-                echo -e "${LColor}All the VPN Servers${Color_Off}"
-                echo
-                curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort
-                echo
+                allvpnservers
                 ;;
             "Change Host")
                 change_host
