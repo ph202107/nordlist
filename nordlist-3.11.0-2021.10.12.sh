@@ -16,7 +16,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.11.0 on Linux Mint 20.2
-# (Bash 5.0.17) October 11 2021
+# (Bash 5.0.17) October 12 2021
 #
 # =====================================================================
 # Instructions
@@ -118,9 +118,10 @@ fast4="n"
 # (Unless connecting through "All_Groups")
 fast5="n"
 #
-# Always choose UDP protocol when asked to choose TCP or UDP.
+# Always choose the same protocol when asked to choose TCP or UDP.
 # (Unless changing the setting through Settings-Protocol.)
-fast6="n"
+fast6="n"       # "y" or "n"
+fast6p="UDP"    # specify the protocol. fast6p="UDP" or fast6p="TCP"
 #
 # After choosing a country, automatically connect to the city if
 # there is only one choice.
@@ -133,7 +134,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 1821.  Recommend configuring the
+# The Main Menu starts on line 1825.  Recommend configuring the
 # first six main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -968,11 +969,14 @@ function ask_protocol {
     echo -e "The Protocol is set to ${TColor}$protocol${Color_Off}."
     echo
     if [[ "$fast6" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}[F]ast6 is enabled.  Always choose UDP.${Color_Off}"
+        echo -e "${FColor}[F]ast6 is enabled.  Always choose $fast6p.${Color_Off}"
         echo
-        if [[ "$protocol" == "TCP" ]]; then
-            nordvpn set protocol UDP; wait
-            echo
+        if [[ "$protocol" == "UDP" ]] && [[ "$fast6p" == "TCP" ]]; then
+                nordvpn set protocol TCP; wait
+                echo
+        elif [[ "$protocol" == "TCP" ]] && [[ "$fast6p" == "UDP" ]]; then
+                nordvpn set protocol UDP; wait
+                echo
         fi
         return
     elif [[ "$protocol" == "UDP" ]]; then
