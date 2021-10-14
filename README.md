@@ -2,11 +2,11 @@ Bash script to use with the NordVPN Linux CLI.
 Requires bash version 4 or greater.   
 It looks like this:   
 
-https://i.imgur.com/rNgRtDX.png
-
-https://i.imgur.com/nYCaMFm.png
-
-https://i.imgur.com/Ma16eqc.png
+It looks like this:   
+https://i.imgur.com/hEtjdFq.png   
+https://i.imgur.com/HbBezmY.png   
+https://i.imgur.com/To2BbUI.png   
+https://i.imgur.com/077qYI3.png   
 
 To download:
 - Click on the "nordlist-******.sh" link above
