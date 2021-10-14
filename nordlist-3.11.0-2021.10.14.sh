@@ -1807,9 +1807,10 @@ function ftools {
     done
 }
 function fdefaults {
+    defaultsc=(${LColor}[Defaults]${Color_Off}'\n')
     echo
-    echo -e "${LColor}[Defaults]${Color_Off} Disconnect and apply the NordVPN settings"
-    echo "specified in 'function set_defaults'."
+    echo -e "$defaultsc  Disconnect and apply the NordVPN settings"
+    echo "  specified in 'function set_defaults'."
     echo
     read -n 1 -r -p "Proceed? (y/n) "
     echo
@@ -1817,13 +1818,13 @@ function fdefaults {
         discon2
         set_defaults
         echo
-        read -n 1 -r -p "$(echo -e "${LColor}[Defaults]${Color_Off} Go to the 'Whitelist' setting? (y/n) ")"
+        read -n 1 -r -p "$(echo -e "$defaultsc  Go to the 'Whitelist' setting? (y/n) ")"
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             fwhitelist "back"
         fi
         echo
-        read -n 1 -r -p "$(echo -e "${LColor}[Defaults]${Color_Off} Go to the 'CustomDNS' setting? (y/n) ")"
+        read -n 1 -r -p "$(echo -e "$defaultsc  Go to the 'CustomDNS' setting? (y/n) ")"
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             set_vars
