@@ -1807,7 +1807,7 @@ function ftools {
     done
 }
 function fdefaults {
-    defaultsc=(${LColor}[Defaults]${Color_Off}'\n')
+    defaultsc=(${LColor}"[Defaults]"${Color_Off}'\n')
     echo
     echo -e "$defaultsc  Disconnect and apply the NordVPN settings"
     echo "  specified in 'function set_defaults'."
@@ -1948,7 +1948,6 @@ function main_menu {
                 # city menu for Canada
                 xcountry="Canada"
                 cities
-                break
                 ;;
             "Discord")
                 # I use this entry to connect to a specific server which can help
