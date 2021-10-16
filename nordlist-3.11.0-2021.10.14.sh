@@ -1610,7 +1610,7 @@ function nordapi {
     echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
     echo
     PS3=$'\n''API Call: '
-    submapi=("Host Server Load" "Host Server Info" "Top 5 Recommended" "Top 5 By Country" "#Servers per Country" "All VPN Servers" "Change Host" "Connect" "Exit")
+    submapi=("Host Server Load" "Host Server Info" "Top 15 Recommended" "Top 15 By Country" "#Servers per Country" "All VPN Servers" "Change Host" "Connect" "Exit")
     numsubmapi=${#submapi[@]}
     select sma in "${submapi[@]}"
     do
@@ -1627,23 +1627,23 @@ function nordapi {
                 echo
                 curl --silent https://api.nordvpn.com/server | jq '.[] | select(.domain == "'$nordhost'")'
                 ;;
-            "Top 5 Recommended")
+            "Top 15 Recommended")
                 echo
-                echo -e "${LColor}Top 5 Recommended VPN Servers${Color_Off}"
+                echo -e "${LColor}Top 15 Recommended VPN Servers${Color_Off}"
                 echo
-                curl --silent "https://api.nordvpn.com/v1/servers/recommendations" | jq --raw-output 'limit(5;.[]) | "  Server: \(.name)\nHostname: \(.hostname)\nLocation: \(.locations[0].country.name) - \(.locations[0].country.city.name)\n    Load: \(.load)\n"'
+                curl --silent "https://api.nordvpn.com/v1/servers/recommendations" | jq --raw-output 'limit(15;.[]) | "  Server: \(.name)\nHostname: \(.hostname)\nLocation: \(.locations[0].country.name) - \(.locations[0].country.city.name)\n    Load: \(.load)\n"'
                 ;;
-            "Top 5 By Country")
+            "Top 15 By Country")
                 echo
-                echo -e "${LColor}Top 5 VPN Servers by Country Code${Color_Off}"
+                echo -e "${LColor}Top 15 VPN Servers by Country Code${Color_Off}"
                 echo
                 curl --silent "https://api.nordvpn.com/v1/servers/countries" | jq --raw-output '.[] | [.id, .name] | @tsv'
                 echo
                 read -r -p "Country Code: " ccode
                 echo
-                 echo -e "${LColor}SERVER: ${EColor}%LOAD${Color_Off}"
+                echo -e "${LColor}SERVER: ${EColor}%LOAD${Color_Off}"
                 echo
-                curl --silent "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$ccode&\[servers_groups\]\[identifier\]=legacy_standard" | jq --raw-output --slurp ' .[] | sort_by(.load) | limit(5;.[]) | [.hostname, .load] | "\(.[0]): \(.[1])"'
+                curl --silent "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$ccode&\[servers_groups\]\[identifier\]=legacy_standard" | jq --raw-output --slurp ' .[] | sort_by(.load) | limit(15;.[]) | [.hostname, .load] | "\(.[0]): \(.[1])"'
                 echo
                 ;;
             "#Servers per Country")
