@@ -17,7 +17,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.11.0 on Linux Mint 20.2
-# (Bash 5.0.17) October 14 2021
+# (Bash 5.0.17) October 19 2021
 #
 # =====================================================================
 # Instructions
@@ -135,7 +135,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 1885.  Recommend configuring the
+# The Main Menu starts on line 1906.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -623,17 +623,17 @@ function fhostname {
     echo "Connect to specific servers by name."
     echo
     echo "This option may be useful to test multiple servers for"
-    echo "latency, load, app compatibility, etc.  Will not exit"
-    echo "after connecting to a server."
+    echo "latency, load, throughput, app compatibility, etc."
+    echo "Will not exit after connecting to a server."
     echo
     echo "A list of servers can be found in:"
     echo "Settings - Tools - NordVPN API"
     echo
     echo "Leave blank to quit."
-    read -r -p "Enter the short name (eg. us9364): " specsrvr
+    read -r -p "Enter the server name (eg. us9364): " specsrvr
     echo
     if [[ "$specsrvr" == "" ]]; then return; fi
-    if [[ "$specsrvr" == *"nord"* ]]; then echo -e "${WColor}(eg. us9364)${Color_Off}"; echo; return; fi
+    if [[ "$specsrvr" == *"nord"* ]]; then specsrvr=$( echo "$specsrvr" | cut -f1 -d'.' ); fi
     if [[ "$specsrvr" == *"socks"* ]]; then echo -e "${WColor}Unable to connect to SOCKS servers${Color_Off}"; echo; return; fi
     if [[ "$specsrvr" == *"-"* ]] && [[ "$specsrvr" != *"onion"* ]] && [[ "$technology" == "nordlynx" ]]; then
         echo -e "${WColor}Double-VPN Servers require OpenVPN${Color_Off}"; echo; return
@@ -642,11 +642,12 @@ function fhostname {
     echo
     discon2
     if [[ $specdef =~ ^[Yy]$ ]]; then set_defaults; fi
-    echo "Connect to $specsrvr.nordvpn.com"
+    echo "Connect to $specsrvr"
     echo
     nordvpn connect $specsrvr
     status
     if [[ ! "$exitlogo" =~ ^[Yy]$ ]]; then set_vars; fi
+    # test commands
     # app commands
 }
 function fallgroups {
@@ -1430,6 +1431,23 @@ function frestart {
     main_menu
 }
 function freset {
+    # To reinstall:
+    #   sudo apt update
+    #   sudo apt --purge autoremove nordvpn*
+    #   delete: /home/username/.config/nordvpn/nordvpn.conf
+    #   sudo apt install nordvpn
+    #
+    # To downgrade:
+    #   sudo apt update
+    #   sudo apt --purge autoremove nordvpn*
+    #   delete: /home/username/.config/nordvpn/nordvpn.conf
+    #   apt-cache showpkg nordvpn
+    #   eg.  sudo apt install nordvpn=3.7.4
+    #
+    # 'Permission denied accessing /run/nordvpn/nordvpnd.sock'
+    #   sudo usermod -aG nordvpn $USER
+    #   reboot
+    #
     heading "Reset Nord"
     echo
     echo "Reset the NordVPN app to default settings."
@@ -1506,7 +1524,9 @@ function server_load {
     echo "Checking the server load..."
     echo
     sload=$(curl --silent https://api.nordvpn.com/server/stats/$nordhost | jq .percent)
-    if (( $sload <= 30 )); then
+    if [[ $sload == "" ]]; then
+        echo "Request timed out."
+    elif (( $sload <= 30 )); then
         echo -e "$nordhost load = ${EColor}$sload%${Color_Off}"
     elif (( $sload <= 60 )); then
         echo -e "$nordhost load = ${FColor}$sload%${Color_Off}"
@@ -1519,7 +1539,7 @@ function allvpnservers {
     heading "All Servers"
     if (( ${#allnordservers[@]} == 0 )); then
         echo "Retrieving the list of NordVPN servers..."
-        echo "(To use a text file see 'function allvpnservers')"
+        echo "  (To use a text file see 'function allvpnservers')"
         readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
         #
         # Use a text file instead:
