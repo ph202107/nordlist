@@ -8,7 +8,7 @@
 # lot of comments to help fellow newbies customize the script.
 #
 # It looks like this:
-# https://i.imgur.com/hEtjdFq.png
+# https://i.imgur.com/LMvwDZo.png
 # https://i.imgur.com/HbBezmY.png
 # https://i.imgur.com/To2BbUI.png
 # https://i.imgur.com/077qYI3.png
@@ -17,7 +17,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.11.0 on Linux Mint 20.2
-# (Bash 5.0.17) October 19 2021
+# (Bash 5.0.17) October 24 2021
 #
 # =====================================================================
 # Instructions
@@ -135,7 +135,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 1906.  Recommend configuring the
+# The Main Menu starts on line 1947.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -162,6 +162,16 @@ Purple='\033[0;35m'
 Cyan='\033[0;36m'
 White='\033[0;97m'
 #
+# Light
+LGrey='\033[0;37m'  # Light
+DGrey='\033[0;90m'  # Dark
+LRed='\033[0;91m'
+LGreen='\033[0;92m'
+LYellow='\033[0;93m'
+LBlue='\033[0;94m'
+LPurple='\033[0;95m'
+LCyan='\033[0;96m'
+#
 # Bold
 BBlack='\033[1;30m'
 BRed='\033[1;31m'
@@ -171,6 +181,16 @@ BBlue='\033[1;34m'
 BPurple='\033[1;35m'
 BCyan='\033[1;36m'
 BWhite='\033[1;37m'
+#
+# Underline
+UBlack='\033[4;30m'
+URed='\033[4;31m'
+UGreen='\033[4;32m'
+UYellow='\033[4;33m'
+UBlue='\033[4;34m'
+UPurple='\033[4;35m'
+UCyan='\033[4;36m'
+UWhite='\033[4;37m'
 #
 # Background
 # eg: ${BWhite}${On_Red} = Bold white text on red background
@@ -186,13 +206,25 @@ On_White='\033[47m'
 Color_Off='\033[0m'
 #
 # Change colors here if needed.
-EColor=${BGreen}        # Color for Enabled/On indicator
-DColor=${BRed}          # Color for Disabled/Off indicator
-WColor=${BRed}          # Color for warnings, errors, disconnects
-LColor=${BCyan}         # Color for "changes" lists and key info text
-FColor=${BYellow}       # Color for 'fast' indicator and text
+#
+EColor=${BGreen}        # Enabled/On indicator
+DColor=${BRed}          # Disabled/Off indicator
+WColor=${BRed}          # Warnings, errors, disconnects
+LColor=${LCyan}         # "Changes" lists and key info text
+FColor=${BYellow}       # [F]ast indicator and text
 TColor=${BPurple}       # Technology and Protocol indicator and text
-SColor=${BBlue}         # Color for std_ascii and non-figlet headings
+SColor=${BBlue}         # Color for the std_ascii image
+HColor=${BBlue}         # Non-figlet headings
+# logo
+CNColor=${LGreen}       # Connected status
+DIColor=${BRed}         # Disconnected status
+CIColor=${Color_Off}    # City name
+COColor=${Color_Off}    # Country name
+SVColor=${Color_Off}    # Server name
+IPColor=${Color_Off}    # IP address
+DLColor=${Green}        # Download stat
+ULColor=${Yellow}       # Upload stat
+UPColor=${Cyan}         # Uptime stat
 #
 #
 function std_ascii {
@@ -232,13 +264,22 @@ function custom_ascii {
 }
 function logo {
     set_vars
+    if [[ "$1" != "tools" ]]; then
+        #
+        # Specify  std_ascii or custom_ascii on the line below.
+        custom_ascii
+        #
+    fi
+    if [[ "$connected" == "connected" ]]; then
+        connectedc="${CNColor}${connected^}${Color_Off}"
+    else
+        connectedc="${DIColor}${connected^}${Color_Off}"
+    fi
+    transferc="${DLColor}\u25bc $transferd ${ULColor}\u25b2 $transferu${Color_Off}"
     #
-    # Specify  std_ascii or custom_ascii on the line below.
-    custom_ascii
-    #
-    echo ${connected^}: $city $country $server $ip
+    echo -e $connectedc: ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ip ${Color_Off}
     echo -e $techpro$fw$ks$cs$ob$no$ac$ip6$dns$fst
-    echo -e $transfer $uptime
+    echo -e $transferc ${UPColor}$uptime ${Color_Off}
     echo
     # all indicators: $techpro$fw$ks$cs$ob$no$ac$ip6$dns$fst
 }
@@ -247,7 +288,7 @@ function heading {
     # This is the ASCII that displays after a menu selection is made.
     #
     # Uncomment the next two lines if figlet is not installed
-    #echo ""; echo -e "${SColor}/// $1 ///${Color_Off}"; echo ""
+    #echo ""; echo -e "${HColor}/// $1 ///${Color_Off}"; echo ""
     #return
     #
     # Display longer names with smaller font to prevent wrapping.
@@ -260,7 +301,7 @@ function heading {
         figlet -f small "$1" | lolcat -p 1000
     else                            # more than 18 characters
         echo
-        echo -e "${SColor}/// $1 ///${Color_Off}"
+        echo -e "${HColor}/// $1 ///${Color_Off}"
         echo
     fi
 }
@@ -563,7 +604,7 @@ function cities {
     echo
     if [[ "$xcountry" == "Sarajevo" ]]; then  # special case
         xcountry="Bosnia_and_Herzegovina"
-        echo -e "${SColor}/// $xcountry ///${Color_Off}"
+        echo -e "${HColor}/// $xcountry ///${Color_Off}"
         echo
     fi
     if [[ "$obfuscate" == "enabled" ]]; then
@@ -1444,6 +1485,9 @@ function freset {
     #   apt-cache showpkg nordvpn
     #   eg.  sudo apt install nordvpn=3.7.4
     #
+    # 'Whoops! /run/nordvpn/nordvpnd.sock not found.'
+    #   sudo systemctl start nordvpnd.service
+    #
     # 'Permission denied accessing /run/nordvpn/nordvpnd.sock'
     #   sudo usermod -aG nordvpn $USER
     #   reboot
@@ -1481,9 +1525,12 @@ function freset {
         echo -e "${WColor}** Reminder **${Color_Off}"
         echo -e "${LColor}Reconfigure the Whitelist and other settings.${Color_Off}"
         echo
+        echo "Consider deleting /home/username/.config/nordvpn/nordvpn.conf"
+        echo "It will be recreated automatically."
+        echo
         read -n 1 -s -r -p "Press any key to restart services..."
         set_vars
-        frestart plusdefaults
+        frestart "plusdefaults"
     fi
     main_menu
 }
@@ -1496,15 +1543,13 @@ function rate_server {
         echo
         read -n 1 -r -p "$(echo -e Rating 1-5 [e${LColor}x${Color_Off}it]): " rating
         echo
-        if [[ $rating =~ ^[Xx]$ ]]; then
-            break
-        fi
-        if [[ $rating == "" ]]; then
+        if [[ $rating =~ ^[Xx]$ ]] || [[ $rating == "" ]]; then
             break
         fi
         if (( 1 <= $rating )) && (( $rating <= 5 )); then
             echo
             nordvpn rate $rating
+            echo
             break
         else
             echo
@@ -1714,22 +1759,18 @@ function change_host {
 function ftools {
     heading "Tools"
     if [[ "$connected" == "connected" ]]; then
-        echo -e "Server: ${LColor}$nordhost${Color_Off}  IP: ${LColor}$ipaddr${Color_Off}"
-        echo "Connected to: $city $country"
-        echo -e "$techpro$fw$ks$cs$ob$no$ac$ip6$dns$fst"
-        echo -e "$transfer  $uptime"
-        echo
-        PS3=$'\n''Choose a tool: '
+        logo "tools"
+        PS3=$'\n''Choose an option: '
     else
         echo -e "${WColor}** VPN is Disconnected **${Color_Off}"
         echo
         read -r -p "Enter a Hostname/IP [Default $default_host]: " nordhost
         nordhost=${nordhost:-$default_host}
         echo
-        echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
+        echo -e "Hostname: ${LColor}$nordhost${Color_Off}"
         echo "(Does not affect 'Rate VPN Server')"
         echo
-        PS3=$'\n''Choose a tool (VPN Off): '
+        PS3=$'\n''Choose an option (VPN Off): '
     fi
     nettools=("Rate VPN Server" "NordVPN API" "www.speedtest.net" "youtube-dl" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "world map" "Change Host" "Exit")
     numnettools=${#nettools[@]}
@@ -1924,7 +1965,7 @@ function main_menu {
         case $opt in
             "Vancouver")
                 discon
-                #set_defaults    #Apply default settings for this connection.
+                #set_defaults    # Apply default settings for this connection.
                 nordvpn connect Canada Vancouver
                 status
                 break
