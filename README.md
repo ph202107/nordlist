@@ -2,7 +2,7 @@ Bash script to use with the NordVPN Linux CLI.
 Requires bash version 4 or greater.   
 
 It looks like this:   
-https://i.imgur.com/hEtjdFq.png   
+https://i.imgur.com/LMvwDZo.png   
 https://i.imgur.com/HbBezmY.png   
 https://i.imgur.com/To2BbUI.png   
 https://i.imgur.com/077qYI3.png   
