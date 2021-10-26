@@ -1559,7 +1559,7 @@ function fiptables {
     echo -e ${Color_Off}
     PS3=$'\n''Choose an option: '
     submipt=("View IPTables" "KillSwitch Setting" "Flush IPTables" "Restart Services" "ping google.com" "Exit")
-    numsubmipt=${#submallvpn[@]}
+    numsubmipt=${#submipt[@]}
     select smipt in "${submipt[@]}"
     do
         case $smipt in
