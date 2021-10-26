@@ -135,7 +135,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2078.  Recommend configuring the
+# The Main Menu starts on line 2090.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -1620,25 +1620,37 @@ function fiptables {
                 ;;
             "Restart Services")
                 echo
-                echo -e ${LColor}"Restart NordVPN services. Wait 10s"${Color_Off}
+                echo -e ${WColor}"Disconnect the VPN and restart nordvpn services."${Color_Off}
                 echo
-                sudo systemctl restart nordvpnd.service
-                sudo systemctl restart nordvpn.service
-                for t in {10..1}; do
-                    echo -n "$t "; sleep 1
-                done
+                read -n 1 -r -p "Proceed? (y/n) "
                 echo
-                echo
-                set_vars
-                echo -e "The VPN is $connectedc."
-                echo -e "$ks the Kill Switch is $killswitchc."
-                echo
-                echo -e ${LColor}"sudo iptables -S"${Color_Off}
-                sudo iptables -S
-                echo
-                echo -e ${LColor}"ping -c 3 google.com"${Color_Off}
-                ping -c 3 google.com
-                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    echo
+                    discon2
+                    echo -e ${LColor}"Restart NordVPN services. Wait 10s"${Color_Off}
+                    echo
+                    sudo systemctl restart nordvpnd.service
+                    sudo systemctl restart nordvpn.service
+                    for t in {10..1}; do
+                        echo -n "$t "; sleep 1
+                    done
+                    echo
+                    echo
+                    set_vars
+                    echo -e "The VPN is $connectedc."
+                    echo -e "$ks the Kill Switch is $killswitchc."
+                    echo
+                    echo -e ${LColor}"sudo iptables -S"${Color_Off}
+                    sudo iptables -S
+                    echo
+                    echo -e ${LColor}"ping -c 3 google.com"${Color_Off}
+                    ping -c 3 google.com
+                    echo
+                else
+                    echo
+                    echo "No changes made."
+                    echo
+                fi
                 ;;
             "ping google.com")
                 echo
