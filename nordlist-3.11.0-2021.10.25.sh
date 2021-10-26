@@ -9,7 +9,7 @@
 #
 # It looks like this:
 # https://i.imgur.com/LMvwDZo.png
-# https://i.imgur.com/HbBezmY.png
+# https://i.imgur.com/dKnK7u9.png
 # https://i.imgur.com/To2BbUI.png
 # https://i.imgur.com/077qYI3.png
 #
@@ -17,7 +17,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.11.0 on Linux Mint 20.2
-# (Bash 5.0.17) October 24 2021
+# (Bash 5.0.17) October 25 2021
 #
 # =====================================================================
 # Instructions
@@ -135,7 +135,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 1947.  Recommend configuring the
+# The Main Menu starts on line 2067.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -145,8 +145,9 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the figlet ASCII style for headings in "function heading"
 # Change the highlighted text and indicator colors under "COLORS"
 #
-# Note: The "Restart" menu option will ask for a sudo password
-# - see "function frestart"
+# Note: "Restart" and "IPTables" require a sudo password
+#   - see "function frestart"
+#   - see 'function fiptables'
 #
 # ==End================================================================
 #
@@ -270,13 +271,6 @@ function logo {
         custom_ascii
         #
     fi
-    if [[ "$connected" == "connected" ]]; then
-        connectedc="${CNColor}${connected^}${Color_Off}"
-    else
-        connectedc="${DIColor}${connected^}${Color_Off}"
-    fi
-    transferc="${DLColor}\u25bc $transferd ${ULColor}\u25b2 $transferu${Color_Off}"
-    #
     echo -e $connectedc: ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ip ${Color_Off}
     echo -e $techpro$fw$ks$cs$ob$no$ac$ip6$dns$fst
     echo -e $transferc ${UPColor}$uptime ${Color_Off}
@@ -451,20 +445,30 @@ function set_vars {
         protocold=$protocol
     fi
     #
-    # Status Indicators
+    if [[ "$connected" == "connected" ]]; then
+        connectedc="${CNColor}${connected^}${Color_Off}"
+    else
+        connectedc="${DIColor}${connected^}${Color_Off}"
+    fi
+    #
+    transferc="${DLColor}\u25bc $transferd ${ULColor}\u25b2 $transferu${Color_Off}"
     #
     techpro=(${TColor}"[$technologyd $protocold]"${Color_Off})
     #
     if [[ "$firewall" == "enabled" ]]; then
         fw=(${EColor}[FW]${Color_Off})
+        firewallc=(${EColor}"$firewall"${Color_Off})
     else
         fw=(${DColor}[FW]${Color_Off})
+        firewallc=(${DColor}"$firewall"${Color_Off})
     fi
     #
     if [[ "$killswitch" == "enabled" ]]; then
         ks=(${EColor}[KS]${Color_Off})
+        killswitchc=(${EColor}"$killswitch"${Color_Off})
     else
         ks=(${DColor}[KS]${Color_Off})
+        killswitchc=(${DColor}"$killswitch"${Color_Off})
     fi
     #
     if [[ "$cybersec" == "enabled" ]]; then
@@ -1140,14 +1144,14 @@ function ffirewall {
     echo "The Firewall must be enabled to use the Kill Switch."
     echo
     if [[ "$killswitch" == "enabled" ]]; then
-        echo -e "$fw the Firewall is ${EColor}$firewall${Color_Off}."
+        echo -e "$fw the Firewall is $firewallc."
         echo
         echo -e "${WColor}The Kill Switch must be disabled before disabling the Firewall.${Color_Off}"
         echo
         change_setting "killswitch" "override"
         set_vars
         if [[ "$killswitch" == "enabled" ]]; then
-            echo -e "$fw Keep the Firewall ${EColor}$firewall${Color_Off}."
+            echo -e "$fw Keep the Firewall $firewallc."
             main_menu
         fi
     fi
@@ -1162,18 +1166,18 @@ function fkillswitch {
     echo "computer should not be able to access the internet."
     echo
     if [[ "$connected" != "connected" ]]; then
-        echo -e "The VPN is currently ${LColor}$connected${Color_Off}."
+        echo -e "The VPN is currently $connectedc."
         echo
     fi
     if [[ "$firewall" == "disabled" ]]; then
-        echo -e "$ks the Kill Switch is ${DColor}$killswitch${Color_Off}."
+        echo -e "$ks the Kill Switch is $killswitchc."
         echo
         echo -e "${WColor}The Firewall must be enabled to use the Kill Switch.${Color_Off}"
         echo
         change_setting "firewall" "override"
         set_vars
         if [[ "$firewall" == "disabled" ]]; then
-            echo -e "$ks Keep the Kill Switch ${DColor}$killswitch${Color_Off}."
+            echo -e "$ks Keep the Kill Switch $killswitchc."
             main_menu
         fi
     fi
@@ -1492,6 +1496,12 @@ function freset {
     #   sudo usermod -aG nordvpn $USER
     #   reboot
     #
+    # 'Your account has expired. Renew your subscription now to continue
+    # enjoying the ultimate privacy and security with NordVPN.'
+    #   delete: /var/lib/nordvpn/data/settings.dat
+    #   delete: /home/username/.config/nordvpn/nordvpn.conf
+    #   nordvpn login
+    #
     heading "Reset Nord"
     echo
     echo "Reset the NordVPN app to default settings."
@@ -1533,6 +1543,116 @@ function freset {
         frestart "plusdefaults"
     fi
     main_menu
+}
+function fiptables {
+    # Only tested with Linux Mint
+    heading "IPTables"
+    echo "Flushing the IPTables may help resolve problems enabling or"
+    echo "disabling the KillSwitch or with other connection issues."
+    echo -e ${WColor}
+    echo "** WARNING **"
+    echo "  - This will CLEAR all of your Firewall rules"
+    echo "  - Review 'function fiptables' before use"
+    echo "  - Commands require 'sudo'"
+    echo "  - Nordvpn services will be restarted"
+    echo "  - The VPN will be disconnected"
+    echo -e ${Color_Off}
+    PS3=$'\n''Choose an option: '
+    submipt=("View IPTables" "KillSwitch Setting" "Flush IPTables" "Restart Services" "ping google.com" "Exit")
+    numsubmipt=${#submallvpn[@]}
+    select smipt in "${submipt[@]}"
+    do
+        case $smipt in
+            "View IPTables")
+                echo
+                set_vars
+                echo -e "The VPN is $connectedc."
+                echo -e "$ks the Kill Switch is $killswitchc."
+                echo
+                echo -e ${LColor}"sudo iptables -S"${Color_Off}
+                sudo iptables -S
+                echo
+                ;;
+            "KillSwitch Setting")
+                echo
+                set_vars
+                echo -e "The VPN is $connectedc."
+                change_setting "killswitch" "override"
+                ;;
+            "Flush IPTables")
+                echo
+                echo -e ${LColor}"IPTables Before:"${Color_Off}
+                sudo iptables -S
+                echo
+                echo -e ${WColor}"Flushing the IPTables"${Color_Off}
+                # Accept all traffic first to avoid ssh lockdown
+                sudo iptables -P INPUT ACCEPT
+                sudo iptables -P FORWARD ACCEPT
+                sudo iptables -P OUTPUT ACCEPT
+                # Flush All Iptables Chains/Firewall rules
+                sudo iptables -F
+                # Delete all Iptables Chains
+                sudo iptables -X
+                # Flush all counters
+                sudo iptables -Z
+                # Flush and delete all nat and  mangle
+                sudo iptables -t nat -F
+                sudo iptables -t nat -X
+                sudo iptables -t mangle -F
+                sudo iptables -t mangle -X
+                sudo iptables -t raw -F
+                sudo iptables -t raw -X
+                echo
+                echo -e ${LColor}"IPTables After:"${Color_Off}
+                sudo iptables -S
+                echo
+                ;;
+            "Restart Services")
+                echo
+                echo -e ${LColor}"Restart NordVPN services. Wait 10s"${Color_Off}
+                echo
+                sudo systemctl restart nordvpnd.service
+                sudo systemctl restart nordvpn.service
+                for t in {10..1}; do
+                    echo -n "$t "; sleep 1
+                done
+                echo
+                echo
+                set_vars
+                echo -e "The VPN is $connectedc."
+                echo -e "$ks the Kill Switch is $killswitchc."
+                echo
+                echo -e ${LColor}"sudo iptables -S"${Color_Off}
+                sudo iptables -S
+                echo
+                echo -e ${LColor}"ping -c 3 google.com"${Color_Off}
+                ping -c 3 google.com
+                echo
+                ;;
+            "ping google.com")
+                echo
+                set_vars
+                echo -e "The VPN is $connectedc."
+                echo -e "$ks the Kill Switch is $killswitchc."
+                echo
+                echo -e ${LColor}"sudo iptables -S"${Color_Off}
+                sudo iptables -S
+                echo
+                echo -e ${LColor}"ping -c 3 google.com"${Color_Off}
+                ping -c 3 google.com
+                echo
+                ;;
+            "Exit")
+                main_menu
+                ;;
+            *)
+                echo
+                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
+                echo
+                echo "Select any number from 1-$numsubmipt ($numsubmipt to Exit)."
+                ;;
+        esac
+    done
 }
 function rate_server {
     echo
@@ -1772,16 +1892,16 @@ function ftools {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=("Rate VPN Server" "NordVPN API" "www.speedtest.net" "youtube-dl" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "world map" "Change Host" "Exit")
+    nettools=("NordVPN API" "Rate VPN Server" "www.speedtest.net" "youtube-dl" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "world map" "Change Host" "Exit")
     numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
         case $tool in
-            "Rate VPN Server")
-                rate_server
-                ;;
             "NordVPN API")
                 nordapi
+                ;;
+            "Rate VPN Server")
+                rate_server
                 ;;
             "www.speedtest.net")
                 xdg-open http://www.speedtest.net/  # default browser
@@ -2077,7 +2197,7 @@ function main_menu {
                 echo -e "$techpro$fw$ks$cs$ob$no$ac$ip6$dns$fst"
                 echo
                 PS3=$'\n''Choose a Setting: '
-                submsett=("Technology" "Protocol" "Firewall" "KillSwitch" "CyberSec" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "Tools" "Script" "Defaults" "Exit")
+                submsett=("Technology" "Protocol" "Firewall" "KillSwitch" "CyberSec" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
                 numsubmsett=${#submsett[@]}
                 select sms in "${submsett[@]}"
                 do
@@ -2123,6 +2243,9 @@ function main_menu {
                             ;;
                         "Reset")
                             freset
+                            ;;
+                        "IPTables")
+                            fiptables
                             ;;
                         "Tools")
                             ftools
