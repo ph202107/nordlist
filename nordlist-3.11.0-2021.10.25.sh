@@ -1581,31 +1581,42 @@ function fiptables {
                 ;;
             "Flush IPTables")
                 echo
-                echo -e ${LColor}"IPTables Before:"${Color_Off}
-                sudo iptables -S
+                echo -e ${WColor}"Flush the IPTables and clear all of your Firewall rules."${Color_Off}
                 echo
-                echo -e ${WColor}"Flushing the IPTables"${Color_Off}
-                # Accept all traffic first to avoid ssh lockdown
-                sudo iptables -P INPUT ACCEPT
-                sudo iptables -P FORWARD ACCEPT
-                sudo iptables -P OUTPUT ACCEPT
-                # Flush All Iptables Chains/Firewall rules
-                sudo iptables -F
-                # Delete all Iptables Chains
-                sudo iptables -X
-                # Flush all counters
-                sudo iptables -Z
-                # Flush and delete all nat and  mangle
-                sudo iptables -t nat -F
-                sudo iptables -t nat -X
-                sudo iptables -t mangle -F
-                sudo iptables -t mangle -X
-                sudo iptables -t raw -F
-                sudo iptables -t raw -X
+                read -n 1 -r -p "Proceed? (y/n) "
                 echo
-                echo -e ${LColor}"IPTables After:"${Color_Off}
-                sudo iptables -S
-                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    echo
+                    echo -e ${LColor}"IPTables Before:"${Color_Off}
+                    sudo iptables -S
+                    echo
+                    echo -e ${WColor}"Flushing the IPTables"${Color_Off}
+                    # Accept all traffic first to avoid ssh lockdown
+                    sudo iptables -P INPUT ACCEPT
+                    sudo iptables -P FORWARD ACCEPT
+                    sudo iptables -P OUTPUT ACCEPT
+                    # Flush All Iptables Chains/Firewall rules
+                    sudo iptables -F
+                    # Delete all Iptables Chains
+                    sudo iptables -X
+                    # Flush all counters
+                    sudo iptables -Z
+                    # Flush and delete all nat and  mangle
+                    sudo iptables -t nat -F
+                    sudo iptables -t nat -X
+                    sudo iptables -t mangle -F
+                    sudo iptables -t mangle -X
+                    sudo iptables -t raw -F
+                    sudo iptables -t raw -X
+                    echo
+                    echo -e ${LColor}"IPTables After:"${Color_Off}
+                    sudo iptables -S
+                    echo
+                else
+                    echo
+                    echo "No changes made."
+                    echo
+                fi
                 ;;
             "Restart Services")
                 echo
