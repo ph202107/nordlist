@@ -328,8 +328,8 @@ function set_defaults {
     # at once and get back to a typical configuration.
     #
     # Configure as needed and comment-out or remove the next two lines.
-    #echo -e "${WColor}** 'function set_defaults' not configured **${Color_Off}"; echo ""
-    #return
+    echo -e "${WColor}** 'function set_defaults' not configured **${Color_Off}"; echo ""
+    return
     #
     # Notes:
     # - NordLynx is UDP only
