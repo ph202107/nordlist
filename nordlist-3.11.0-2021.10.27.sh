@@ -135,7 +135,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2090.  Recommend configuring the
+# The Main Menu starts on line 2103.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -1465,6 +1465,7 @@ function frestart {
             echo -n "$t "; sleep 1
         done
         echo
+        sudo -K     # timeout sudo
         if [[ "$1" == "plusdefaults" ]]; then
             echo
             nordvpn login; wait
@@ -1544,8 +1545,20 @@ function freset {
     fi
     main_menu
 }
+function fiptables_status {
+    echo
+    set_vars
+    echo -e "The VPN is $connectedc."
+    echo -e "The Kill Switch is $killswitchc."
+    echo
+    echo -e ${LColor}"sudo iptables -S"${Color_Off}
+    sudo iptables -S
+    echo
+}
 function fiptables {
+    #https://old.reddit.com/r/nordvpn/comments/qgakq9/linux_killswitch_problems_iptables/
     # Only tested with Linux Mint
+    #
     heading "IPTables"
     echo "Flushing the IPTables may help resolve problems enabling or"
     echo "disabling the KillSwitch or with other connection issues."
@@ -1554,30 +1567,26 @@ function fiptables {
     echo "  - This will CLEAR all of your Firewall rules"
     echo "  - Review 'function fiptables' before use"
     echo "  - Commands require 'sudo'"
-    echo "  - Nordvpn services will be restarted"
-    echo "  - The VPN will be disconnected"
     echo -e ${Color_Off}
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "KillSwitch Setting" "Flush IPTables" "Restart Services" "ping google.com" "Exit")
+    submipt=("View IPTables" "KillSwitch" "Whitelist" "Flush IPTables" "Restart Services" "ping google.com" "Examples" "Exit")
     numsubmipt=${#submipt[@]}
     select smipt in "${submipt[@]}"
     do
         case $smipt in
             "View IPTables")
-                echo
-                set_vars
-                echo -e "The VPN is $connectedc."
-                echo -e "$ks the Kill Switch is $killswitchc."
-                echo
-                echo -e ${LColor}"sudo iptables -S"${Color_Off}
-                sudo iptables -S
-                echo
+                fiptables_status
                 ;;
-            "KillSwitch Setting")
+            "KillSwitch")
                 echo
                 set_vars
-                echo -e "The VPN is $connectedc."
                 change_setting "killswitch" "override"
+                fiptables_status
+                ;;
+            "Whitelist")
+                echo
+                fwhitelist "back"
+                fiptables_status
                 ;;
             "Flush IPTables")
                 echo
@@ -1591,6 +1600,7 @@ function fiptables {
                     sudo iptables -S
                     echo
                     echo -e ${WColor}"Flushing the IPTables"${Color_Off}
+                    # https://www.cyberciti.biz/tips/linux-iptables-how-to-flush-all-rules.html
                     # Accept all traffic first to avoid ssh lockdown
                     sudo iptables -P INPUT ACCEPT
                     sudo iptables -P FORWARD ACCEPT
@@ -1625,7 +1635,6 @@ function fiptables {
                 read -n 1 -r -p "Proceed? (y/n) "
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    echo
                     discon2
                     echo -e ${LColor}"Restart NordVPN services. Wait 10s"${Color_Off}
                     echo
@@ -1635,14 +1644,7 @@ function fiptables {
                         echo -n "$t "; sleep 1
                     done
                     echo
-                    echo
-                    set_vars
-                    echo -e "The VPN is $connectedc."
-                    echo -e "$ks the Kill Switch is $killswitchc."
-                    echo
-                    echo -e ${LColor}"sudo iptables -S"${Color_Off}
-                    sudo iptables -S
-                    echo
+                    fiptables_status
                     echo -e ${LColor}"ping -c 3 google.com"${Color_Off}
                     ping -c 3 google.com
                     echo
@@ -1653,19 +1655,30 @@ function fiptables {
                 fi
                 ;;
             "ping google.com")
-                echo
-                set_vars
-                echo -e "The VPN is $connectedc."
-                echo -e "$ks the Kill Switch is $killswitchc."
-                echo
-                echo -e ${LColor}"sudo iptables -S"${Color_Off}
-                sudo iptables -S
-                echo
+                fiptables_status
                 echo -e ${LColor}"ping -c 3 google.com"${Color_Off}
                 ping -c 3 google.com
                 echo
                 ;;
+            "Examples")
+                echo
+                echo -e "${EColor}Examples${Color_Off}"
+                echo
+                echo -e "${LColor}KillSwitch Active - Interface eno1${Color_Off}"
+                echo "  -A INPUT -i eno1 -j DROP"
+                echo "  -A OUTPUT -o eno1 -j DROP"
+                echo
+                echo -e "${LColor}Whitelist Active - Subnet 192.168.1.0/24${Color_Off}"
+                echo "  -A INPUT -s 192.168.1.0/24 -i eno1 -j ACCEPT"
+                echo "  -A OUTPUT -d 192.168.1.0/24 -o eno1 -j ACCEPT"
+                echo
+                echo -e "${LColor}VPN Connected - Server IP: 66.115.146.233${Color_Off}"
+                echo "  -A INPUT -s 66.115.146.233/32 -i eno1 -j ACCEPT"
+                echo "  -A OUTPUT -d 66.115.146.233/32 -o eno1 -j ACCEPT"
+                echo
+                ;;
             "Exit")
+                sudo -K     # timeout sudo
                 main_menu
                 ;;
             *)
