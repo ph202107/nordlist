@@ -135,7 +135,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2130.  Recommend configuring the
+# The Main Menu starts on line 2146.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -2110,6 +2110,22 @@ function fdisconnect {
     status
     exit
 }
+function fquickconnect {
+    # This is an alternate method to connect to the NordVPN recommended server.
+    # It may be a faster method than using "nordvpn connect"
+    # requires 'curl' and 'jq'
+    # Auguss82 via github
+    heading "QuickConnect"
+    discon2
+    echo "Getting the recommended server... "
+    echo
+    bestserver="$(curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
+    echo -e "Connecting to ${LColor}$bestserver${Color_Off}"
+    echo
+    nordvpn connect $bestserver
+    status
+    exit
+}
 function main_menu {
     if [[ "$1" == "start" ]]; then
         echo
@@ -2140,7 +2156,7 @@ function main_menu {
     #
     PS3=$'\n''Choose an option: '
     #
-    mainmenu=("Vancouver" "Seattle" "Los_Angeles" "Atlanta" "UK" "Japan" "US_Cities" "CA_Cities" "Discord" "Countries" "Groups" "Settings" "Disconnect" "Exit")
+    mainmenu=("Vancouver" "Seattle" "Los_Angeles" "Atlanta" "UK" "Japan" "US_Cities" "CA_Cities" "Discord" "QuickConnect" "Countries" "Groups" "Settings" "Disconnect" "Exit")
     #
     nummainmenu=${#mainmenu[@]}
     select opt in "${mainmenu[@]}"
@@ -2208,6 +2224,11 @@ function main_menu {
                 xdg-open https://discord.gg/83jsvGqpGk  # default browser
                 # /usr/bin/firefox --new-window https://discord.gg/83jsvGqpGk
                 break
+                ;;
+            "QuickConnect")
+                # alternative to "nordvpn connect"
+                # requires 'curl' and 'jq'
+                fquickconnect
                 ;;
             "Hostname")
                 # can add to mainmenu
