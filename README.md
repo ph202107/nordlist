@@ -3,7 +3,7 @@ Requires bash version 4 or greater.
 Tested with Linux Mint only (Debian/Ubuntu base).
 
 It looks like this:   
-https://i.imgur.com/LMvwDZo.png   
+https://i.imgur.com/s2ul0Yh.png   
 https://i.imgur.com/dKnK7u9.png   
 https://i.imgur.com/To2BbUI.png   
 https://i.imgur.com/077qYI3.png   
