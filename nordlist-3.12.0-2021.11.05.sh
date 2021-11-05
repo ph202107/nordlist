@@ -8,7 +8,7 @@
 # lot of comments to help fellow newbies customize the script.
 #
 # It looks like this:
-# https://i.imgur.com/LMvwDZo.png
+# https://i.imgur.com/s2ul0Yh.png
 # https://i.imgur.com/dKnK7u9.png
 # https://i.imgur.com/To2BbUI.png
 # https://i.imgur.com/077qYI3.png
@@ -17,7 +17,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.12.0 on Linux Mint 20.2
-# (Bash 5.0.17) November 4, 2021
+# (Bash 5.0.17) November 5, 2021
 #
 # =====================================================================
 # Instructions
@@ -26,10 +26,9 @@
 #       eg. /home/username/bin/nordlist.sh
 # 2) Make the script executable with
 #       "chmod +x nordlist.sh"
-# 3) For the customized menu ASCII and to generate ASCII headings two
-#       small programs are required *
-#       "figlet" (ASCII generator) and "lolcat" (for coloring).
-#       eg. "sudo apt-get install figlet && sudo apt-get install lolcat"
+# 3) For the customized menu ASCII, to generate ASCII headings, and to 
+#       use NordVPN API functions these small programs are required *
+#       eg "sudo apt-get install figlet lolcat curl jq highlight"
 # 4) At the terminal type "nordlist.sh"
 #
 # =====================================================================
@@ -135,7 +134,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2146.  Recommend configuring the
+# The Main Menu starts on line 2149.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -2111,16 +2110,20 @@ function fdisconnect {
     exit
 }
 function fquickconnect {
-    # This is an alternate method to connect to the NordVPN recommended server.
-    # It may be a faster method than using "nordvpn connect"
-    # requires 'curl' and 'jq'
+    # This is an alternate method for connecting to the NordVPN recommended server.
+    # It may be faster than using "nordvpn connect"
+    # Requires 'curl' and 'jq'
     # Auguss82 via github
     heading "QuickConnect"
     discon2
     echo "Getting the recommended server... "
     echo
     bestserver="$(curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
-    echo -e "Connecting to ${LColor}$bestserver${Color_Off}"
+    if [[ "$bestserver" == "" ]]; then
+        echo "Request timed out. Using 'nordvpn connect'."
+    else
+        echo -e "Connecting to ${LColor}$bestserver${Color_Off}"
+    fi
     echo
     nordvpn connect $bestserver
     status
