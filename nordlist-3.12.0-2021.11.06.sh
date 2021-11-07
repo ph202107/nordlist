@@ -134,7 +134,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2149.  Recommend configuring the
+# The Main Menu starts on line 2152.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -2112,13 +2112,16 @@ function fdisconnect {
 function fquickconnect {
     # This is an alternate method for connecting to the NordVPN recommended server.
     # It may be faster than using "nordvpn connect"
+    # Will disconnect (if KillSwitch is disabled) to find the nearest best server.
     # Requires 'curl' and 'jq'
     # Auguss82 via github
     heading "QuickConnect"
-    discon2
+    if [[ "$killswitch" == "disabled" ]]; then
+        discon2
+    fi
     echo "Getting the recommended server... "
     echo
-    bestserver="$(curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
+    bestserver="$(timeout 10 curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
     if [[ "$bestserver" == "" ]]; then
         echo "Request timed out. Using 'nordvpn connect'."
     else
