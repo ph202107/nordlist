@@ -134,7 +134,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2152.  Recommend configuring the
+# The Main Menu starts on line 2159.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -2119,11 +2119,18 @@ function fquickconnect {
     if [[ "$killswitch" == "disabled" ]]; then
         discon2
     fi
+    echo
     echo "Getting the recommended server... "
     echo
-    bestserver="$(timeout 10 curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
+    if [[ "$killswitch" == "enabled" ]] && [[ "$connected" != "connected" ]]; then
+        echo -e "VPN is $connectedc with KillSwitch $killswitchc."
+        echo
+        bestserver=""
+    else
+        bestserver="$(timeout 10 curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
+    fi
     if [[ "$bestserver" == "" ]]; then
-        echo "Request timed out. Using 'nordvpn connect'."
+        echo "Request timed out. Using 'nordvpn connect'"
     else
         echo -e "Connecting to ${LColor}$bestserver${Color_Off}"
     fi
