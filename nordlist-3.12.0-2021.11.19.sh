@@ -17,7 +17,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.12.0 on Linux Mint 20.2
-# (Bash 5.0.17) November 18, 2021
+# (Bash 5.0.17) November 19, 2021
 #
 # =====================================================================
 # Instructions
@@ -571,7 +571,7 @@ function warning {
 function fcountries {
     # submenu for all available countries and cities
     heading "Countries"
-    countrylist=($(nordvpn countries | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | sort | tail -n +3))
+    countrylist=($(nordvpn countries | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$tail_list" | sort))
     # Replaced "Bosnia_And_Herzegovina" with "Sarajevo" to help compact the list.
     countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Sarajevo}")
     countrylist+=( "Exit" )
@@ -611,7 +611,7 @@ function cities {
         echo -e "$ob Cities in $xcountry with Obfuscation support"
         echo
     fi
-    citylist=($(nordvpn cities $xcountry | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | sort | tail -n +3))
+    citylist=($(nordvpn cities $xcountry | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$tail_list" | sort))
     citylist+=( "Default" )
     citylist+=( "Exit" )
     numcities=${#citylist[@]}
@@ -694,7 +694,7 @@ function fhostname {
 function fallgroups {
     # all available groups
     heading "All Groups"
-    grouplist=($(nordvpn groups | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | sort | tail -n +3))
+    grouplist=($(nordvpn groups | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$tail_list" | sort))
     grouplist+=( "Exit" )
     numgroups=${#grouplist[@]}
     echo "Groups that are available with"
@@ -2362,23 +2362,26 @@ if ! systemctl is-active --quiet nordvpnd; then
     echo "sudo systemctl start nordvpnd.service"
     sudo systemctl start nordvpnd.service; wait
 fi
-# Update notice
-if nordvpn status | grep -i "update"; then
-    echo
-    echo -e "${WColor}** Please update NordVPN **${Color_Off}"
-    echo
+if nordvpn status | grep -i "update" &> /dev/null; then
+    # A new version of NordVPN is available! Please update the application.
+    # number of words in the update notice:
+    updatenum="11"
+    #
+    tail_list=$(( $updatenum + 3 ))
+    echo -e ${WColor}
+    echo "** A NordVPN update is available **"
+    echo -e ${Color_Off}
     echo -e "${LColor}Before updating:${Color_Off}"
     echo "nordvpn set killswitch disabled"
     echo "nordvpn set autoconnect disabled"
     echo "nordvpn disconnect"
     echo
-    echo -e "${WColor}Some functions will not work correctly when there is an update notice.${Color_Off}"
-    echo "You may get strange and unexpected results."
-    echo
     echo
     read -n 1 -s -r -p "Press any key for the menu... "
     echo
     echo
+else
+    tail_list="3"
 fi
 #
 main_menu start
