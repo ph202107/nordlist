@@ -17,7 +17,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.12.0 on Linux Mint 20.2
-# (Bash 5.0.17) November 11, 2021
+# (Bash 5.0.17) November 18, 2021
 #
 # =====================================================================
 # Instructions
@@ -133,7 +133,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2130.  Recommend configuring the
+# The Main Menu starts on line 2116.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -395,27 +395,9 @@ function set_vars {
     readarray -t nstat < <( nordvpn status | tr -d '\r' )
     readarray -t nsets < <( nordvpn settings | tr -d '\r' | tr '[:upper:]' '[:lower:]' )
     #
-    # Exit if an update is available.
-    # (Variables won't be set correctly with an update notice.)
-    if nstatbl "update"; then
-        echo
-        echo -e "${WColor}** Please update NordVPN. **${Color_Off}"
-        echo
-        echo "Before updating:"
-        echo "nordvpn set killswitch disabled"
-        echo "nordvpn set autoconnect disabled"
-        echo "nordvpn disconnect"
-        echo
-        echo "Check and clear KillSwitch if necessary:"
-        echo "sudo iptables -S"
-        echo "sudo iptables -F"
-        echo
-        exit
-    fi
-    #
     # "nordvpn status" - array nstat - search function nstatbl
     # When disconnected, $connected is the only variable from nstat
-    connected=$(nstatbl "Status" | awk '{ print $4 }' | tr '[:upper:]' '[:lower:]')
+    connected=$(nstatbl "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')
     nordhost=$(nstatbl "Current server" | cut -f3 -d' ') # full hostname
     server=$(echo "$nordhost" | cut -f1 -d'.')           # shortened hostname
     # country and city names may have spaces eg. "United States"
@@ -432,7 +414,7 @@ function set_vars {
     #
     # "nordvpn settings" - array nsets (all elements lowercase) - search function nsetsbl
     # $protocol and $obfuscate are not listed when using NordLynx
-    technology=$(nsetsbl "Technology" | awk '{ print $4 }')
+    technology=$(nsetsbl "Technology" | cut -f2 -d':' | cut -c 2-)
     protocol=$(nsetsbl "Protocol" | cut -f2 -d' ' | tr '[:lower:]' '[:upper:]')
     firewall=$(nsetsbl "Firewall" | cut -f2 -d' ')
     killswitch=$(nsetsbl "Kill" | cut -f3 -d' ')
@@ -697,7 +679,7 @@ function fhostname {
     if [[ "$specsrvr" == *"-"* ]] && [[ "$specsrvr" != *"onion"* ]] && [[ "$technology" == "nordlynx" ]]; then
         echo -e "${WColor}Double-VPN Servers require OpenVPN${Color_Off}"; echo; return
     fi
-    read -n 1 -r -p "Apply your default config after disconnecting? (y/n) " specdef
+    read -n 1 -r -p "Apply your default config? (y/n) " specdef
     echo
     discon2
     if [[ $specdef =~ ^[Yy]$ ]]; then set_defaults; fi
@@ -1223,7 +1205,7 @@ function fautoconnect {
     echo
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob When obfuscate is enabled, the Auto-Connect location"
-        echo "must support obfuscation."
+        echo "     must support obfuscation."
         echo
     fi
     if [[ "$autocon" == "disabled" ]] && [[ "$acwhere" != "" ]]; then
@@ -1419,13 +1401,17 @@ function faccount {
                 ;;
             "Changelog")
                 echo
-                zless -p$( nordvpn --version | cut -f3 -d' ' ) "$nordchangelog"
-                # version numbers are not in order (latest release != last entry)
-                #
                 #zless +G "$nordchangelog"
                 #zcat "$nordchangelog"
-                # also here:
-                #https://nordvpn.com/blog/nordvpn-linux-release-notes/
+                # version numbers are not in order (latest release != last entry)
+                zless -p$( nordvpn --version | cut -f3 -d' ' ) "$nordchangelog"
+                #
+                nordrl="https://nordvpn.com/blog/nordvpn-linux-release-notes/"
+                read -n 1 -r -p "$(echo -e "Open ${EColor}$nordrl${Color_Off} ? (y/n) ")"
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    xdg-open "$nordrl"
+                fi
                 ;;
             "Nord Manual")
                 echo
@@ -1456,7 +1442,7 @@ function frestart {
     echo "Restart nordvpn services."
     echo -e ${WColor}
     echo "Send commands:"
-    echo "nordvpn set killswitch disabled"
+    echo "nordvpn set killswitch disabled (choice)"
     echo "nordvpn set autoconnect disabled (choice)"
     echo "sudo systemctl restart nordvpnd.service"
     echo "sudo systemctl restart nordvpn.service"
@@ -1467,13 +1453,11 @@ function frestart {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if [[ "$killswitch" == "enabled" ]]; then
-            nordvpn set killswitch disabled; wait
-            echo
+            change_setting "killswitch" "override"
         fi
         if [[ "$autocon" == "enabled" ]]; then
             change_setting "autoconnect" "override"
         fi
-        echo
         sudo systemctl restart nordvpnd.service
         sudo systemctl restart nordvpn.service
         echo
@@ -1552,7 +1536,6 @@ function fiptables_status {
 function fiptables {
     #https://old.reddit.com/r/nordvpn/comments/qgakq9/linux_killswitch_problems_iptables/
     # Only tested with Linux Mint
-    #
     heading "IPTables"
     echo "Flushing the IPTables may help resolve problems enabling or"
     echo "disabling the KillSwitch or with other connection issues."
@@ -1630,6 +1613,9 @@ function fiptables {
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     discon2
+                    if [[ "$autocon" == "enabled" ]]; then
+                        change_setting "autoconnect" "override"
+                    fi
                     echo -e ${LColor}"Restart NordVPN services. Wait 10s"${Color_Off}
                     echo
                     sudo systemctl restart nordvpnd.service
@@ -1718,7 +1704,7 @@ function server_load {
     fi
     echo "Checking the server load..."
     echo
-    sload=$(curl --silent https://api.nordvpn.com/server/stats/$nordhost | jq .percent)
+    sload=$(timeout 10 curl --silent https://api.nordvpn.com/server/stats/$nordhost | jq .percent)
     if [[ $sload == "" ]]; then
         echo "Request timed out."
     elif (( $sload <= 30 )); then
@@ -2369,6 +2355,31 @@ if (( BASH_VERSINFO < 4 )); then
     echo -e "${WColor}Bash v4.0 or higher is required.${Color_Off}"
     exit 1
 fi
+if ! systemctl is-active --quiet nordvpnd; then
+    echo
+    echo -e "${WColor}nordvpnd.service is not active${Color_Off}"
+    echo -e "${EColor}Starting the service... ${Color_Off}"
+    echo "sudo systemctl start nordvpnd.service"
+    sudo systemctl start nordvpnd.service; wait
+fi
+# Update notice
+if nordvpn status | grep -i "update"; then
+    echo
+    echo -e "${WColor}** Please update NordVPN **${Color_Off}"
+    echo
+    echo -e "${LColor}Before updating:${Color_Off}"
+    echo "nordvpn set killswitch disabled"
+    echo "nordvpn set autoconnect disabled"
+    echo "nordvpn disconnect"
+    echo
+    echo -e "${WColor}Some functions will not work correctly when there is an update notice.${Color_Off}"
+    echo "You may get strange and unexpected results."
+    echo
+    echo
+    read -n 1 -s -r -p "Press any key for the menu... "
+    echo
+    echo
+fi
 #
 main_menu start
 #
@@ -2386,8 +2397,6 @@ main_menu start
 #   or
 #   sh <(wget -qO - https://downloads.nordcdn.com/apps/linux/install.sh)
 #
-# "nordvpn login --nordaccount" will become the default login method in the future.
-#
 # To reinstall:
 #   sudo apt update
 #   sudo apt autoremove --purge nordvpn*
@@ -2399,7 +2408,7 @@ main_menu start
 #   sudo apt autoremove --purge nordvpn*
 #   delete: /home/username/.config/nordvpn/nordvpn.conf
 #   apt-cache showpkg nordvpn
-#   sudo apt install nordvpn=3.7.4
+#   sudo apt install nordvpn=3.12.0-1
 #
 # 'Whoops! /run/nordvpn/nordvpnd.sock not found.'
 #   sudo systemctl start nordvpnd.service
@@ -2413,6 +2422,8 @@ main_menu start
 #   delete: /var/lib/nordvpn/data/settings.dat
 #   delete: /home/username/.config/nordvpn/nordvpn.conf
 #   nordvpn login
+#
+# "nordvpn login --nordaccount" will become the default login method
 #
 # NordLynx stability issues
 #   install WireGuard
