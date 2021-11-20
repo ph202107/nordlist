@@ -1,3 +1,17 @@
+** 
+The NordVPN update 3.12.1 is not working correctly for me.
+
+I've purged, deleted, reinstalled, and used the browser login.
+Attempting to connect to any city produces the error message:
+"flag provided but not defined: "
+
+I'll continue to use 3.12.0 for now.
+
+The update notice will no longer cause the script to exit, and
+the menus for Countries, Cities, and Groups won't include 
+the notice.
+**
+
 Bash script to use with the NordVPN Linux CLI.  
 Requires bash version 4 or greater.  
 Tested with Linux Mint only (Debian/Ubuntu base).
