@@ -1,6 +1,6 @@
 **    
 
-2021.11.20 - The NordVPN update 3.12.1 is not working correctly for me.
+2021.11.25 - The NordVPN update 3.12.1 is not working correctly for me.
 
 I've purged, deleted, reinstalled, and used the browser login.
 Attempting to connect to any city produces the error message:
@@ -8,9 +8,7 @@ Attempting to connect to any city produces the error message:
 
 I'll continue to use 3.12.0 for now.
 
-The update notice will no longer cause the script to exit, and
-the menus for Countries, Cities, and Groups won't include 
-the notice.
+The update notice will no longer cause the script to exit.
 
 **
 
@@ -19,7 +17,7 @@ Requires bash version 4 or greater.
 Tested with Linux Mint only (Debian/Ubuntu base).
 
 It looks like this:   
-https://i.imgur.com/s2ul0Yh.png   
+https://i.imgur.com/5JFLTBb.png   
 https://i.imgur.com/dKnK7u9.png   
 https://i.imgur.com/To2BbUI.png   
 https://i.imgur.com/077qYI3.png   
