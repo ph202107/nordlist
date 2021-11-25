@@ -8,7 +8,7 @@
 # lot of comments to help fellow newbies customize the script.
 #
 # It looks like this:
-# https://i.imgur.com/s2ul0Yh.png
+# https://i.imgur.com/5JFLTBb.png
 # https://i.imgur.com/dKnK7u9.png
 # https://i.imgur.com/To2BbUI.png
 # https://i.imgur.com/077qYI3.png
@@ -17,7 +17,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.12.0 on Linux Mint 20.2
-# (Bash 5.0.17) November 20, 2021
+# (Bash 5.0.17) November 25, 2021
 #
 # =====================================================================
 # Instructions
@@ -133,7 +133,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2116.  Recommend configuring the
+# The Main Menu starts on line 2143.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -308,7 +308,16 @@ function fwhitelist {
     echo -e "${LColor} 'function fwhitelist' ${Color_Off}"
     echo
     echo "This option may be useful to restore a default whitelist"
-    echo "configuration after using 'Reset' or making other changes."
+    echo "after installation, using 'Reset', or making other changes."
+    echo
+    echo -e "${EColor}Current Settings:${Color_Off}"
+    if nordvpn settings | grep -i -q "whitelist"; then
+        nordvpn settings | grep -A100 -i "whitelist" --color=none
+        echo
+    else
+        echo "No whitelist entries."
+        echo
+    fi
     echo
     read -n 1 -r -p "Apply your default whitelist settings? (y/n) "
     echo
@@ -322,7 +331,10 @@ function fwhitelist {
         echo
     else
         echo "No changes made."
+        echo
     fi
+    nordvpn settings | grep -A100 -i "whitelist" --color=none
+    echo
     if [[ "$1" == "back" ]]; then return; fi
     main_menu
 }
@@ -1123,6 +1135,13 @@ function change_setting {
             nordvpn set $1 enabled $chgloc; wait
             echo
         else
+            if [[ "$1" == "firewall" ]] && [[ "$killswitch" == "enabled" ]]; then
+                # when changing the setting from IPTables
+                echo -e "${WColor}Disabling the Kill Switch.${Color_Off}"
+                echo
+                nordvpn set killswitch disabled; wait
+                echo
+            fi
             nordvpn set $1 disabled; wait
             echo
         fi
@@ -1526,8 +1545,10 @@ function freset {
 function fiptables_status {
     echo
     set_vars
-    echo -e "The VPN is $connectedc."
-    echo -e "The Kill Switch is $killswitchc."
+    echo -e "The VPN is $connectedc.  ${IPColor}$ip${Color_Off}"
+    echo -e "$fw The Firewall is $firewallc."
+    echo -e "$ks The Kill Switch is $killswitchc."
+    nordvpn settings | grep -A100 -i "whitelist" --color=none
     echo
     echo -e ${LColor}"sudo iptables -S"${Color_Off}
     sudo iptables -S
@@ -1546,12 +1567,18 @@ function fiptables {
     echo "  - Commands require 'sudo'"
     echo -e ${Color_Off}
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "KillSwitch" "Whitelist" "Flush IPTables" "Restart Services" "ping google.com" "Examples" "Exit")
+    submipt=("View IPTables" "Firewall" "KillSwitch" "Whitelist" "Flush IPTables" "Restart Services" "ping google.com" "Examples" "Exit")
     numsubmipt=${#submipt[@]}
     select smipt in "${submipt[@]}"
     do
         case $smipt in
             "View IPTables")
+                fiptables_status
+                ;;
+            "Firewall")
+                echo
+                set_vars
+                change_setting "firewall" "override"
                 fiptables_status
                 ;;
             "KillSwitch")
@@ -1612,10 +1639,10 @@ function fiptables {
                 read -n 1 -r -p "Proceed? (y/n) "
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    discon2
                     if [[ "$autocon" == "enabled" ]]; then
                         change_setting "autoconnect" "override"
                     fi
+                    discon2
                     echo -e ${LColor}"Restart NordVPN services. Wait 10s"${Color_Off}
                     echo
                     sudo systemctl restart nordvpnd.service
@@ -2126,7 +2153,7 @@ function main_menu {
     #
     PS3=$'\n''Choose an option: '
     #
-    mainmenu=("Vancouver" "Seattle" "Los_Angeles" "Atlanta" "UK" "Japan" "US_Cities" "CA_Cities" "Discord" "QuickConnect" "Countries" "Groups" "Settings" "Disconnect" "Exit")
+    mainmenu=("Vancouver" "Seattle" "Los_Angeles" "Atlanta" "Sweden" "Japan" "US_Cities" "CA_Cities" "Discord" "QuickConnect" "Countries" "Groups" "Settings" "Disconnect" "Exit")
     #
     nummainmenu=${#mainmenu[@]}
     select opt in "${mainmenu[@]}"
@@ -2157,9 +2184,9 @@ function main_menu {
                 status
                 break
                 ;;
-            "UK")
+            "Sweden")
                 discon
-                nordvpn connect United_Kingdom
+                nordvpn connect Sweden
                 status
                 break
                 ;;
@@ -2342,32 +2369,35 @@ function main_menu {
 }
 #
 echo
-if ! command -v nordvpn &> /dev/null; then
-    echo -e "${WColor}The NordVPN Linux client could not be found.${Color_Off}"
-    echo "https://nordvpn.com/download/"
-    exit 1
-else
-    nordvpn --version
-fi
-#
 echo "Bash Version $BASH_VERSION"
 if (( BASH_VERSINFO < 4 )); then
     echo -e "${WColor}Bash v4.0 or higher is required.${Color_Off}"
+    echo
     exit 1
 fi
-if ! systemctl is-active --quiet nordvpnd; then
+#
+if ! command -v nordvpn &> /dev/null; then
+    echo -e "${WColor}The NordVPN Linux client could not be found.${Color_Off}"
+    echo "https://nordvpn.com/download/"
     echo
+    exit 1
+else
+    nordvpn --version
+    echo
+fi
+#
+if ! systemctl is-active --quiet nordvpnd; then
     echo -e "${WColor}nordvpnd.service is not active${Color_Off}"
     echo -e "${EColor}Starting the service... ${Color_Off}"
     echo "sudo systemctl start nordvpnd.service"
     sudo systemctl start nordvpnd.service; wait
+    echo
 fi
-# A new version of NordVPN is available! Please update the application.
+# Update notice
 numupdate=$( nordvpn status | grep -i "update" | tr -d '-' | wc -w )
 numtail=$(( $numupdate + 3 ))
 #
 if (( $numupdate > 0 )); then
-    echo
     echo -e "${WColor}** A NordVPN update is available **${Color_Off}"
     echo
     echo -e "${LColor}Before updating:${Color_Off}"
@@ -2377,7 +2407,6 @@ if (( $numupdate > 0 )); then
     echo
     echo
     read -n 1 -s -r -p "Press any key for the menu... "
-    echo
     echo
 fi
 #
@@ -2453,4 +2482,9 @@ main_menu start
 #   Show nordvpn status, move terminal to workspace 2 and rename.
 #       gnome-terminal -- bash -c "nordvpn status; exec bash"
 #       wmctrl -r "myusername" -t 1 && wmctrl -r "myusername" -T "NORD"
+#
+# NordVPN Indicator Cinnamon Applet - no status with Nord update notice
+#   ~/.local/share/cinnamon/applets/nordvpn-indicator@nickdurante/applet.js
+#   Line 111 - Change [0] to [1]
+#       let result = status.split("\n")[1].split(": ")[1];
 #
