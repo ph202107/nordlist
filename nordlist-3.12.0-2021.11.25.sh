@@ -17,7 +17,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.12.0 on Linux Mint 20.2
-# (Bash 5.0.17) November 25, 2021
+# (Bash 5.0.17) November 26, 2021
 #
 # =====================================================================
 # Instructions
@@ -133,7 +133,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2143.  Recommend configuring the
+# The Main Menu starts on line 2146.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -318,11 +318,14 @@ function fwhitelist {
         echo "No whitelist entries."
         echo
     fi
+    echo -e "Enter ${WColor}X${Color_Off} to remove all entries."
+    read -n 1 -r -p "Apply your default whitelist settings? (y/n/X) "
     echo
-    read -n 1 -r -p "Apply your default whitelist settings? (y/n) "
     echo
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ $REPLY =~ ^[Xx]$ ]]; then
+        nordvpn whitelist remove all
+        echo
+    elif [[ $REPLY =~ ^[Yy]$ ]]; then
         # Enter one command per line.  Example:
         #
         #nordvpn whitelist remove all    # Clear the Whitelist
