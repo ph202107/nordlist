@@ -17,7 +17,7 @@
 # https://github.com/ph202107/nordlist
 #
 # Last tested with NordVPN Version 3.12.0 on Linux Mint 20.2
-# (Bash 5.0.17) November 26, 2021
+# (Bash 5.0.17) November 28, 2021
 #
 # =====================================================================
 # Instructions
@@ -86,9 +86,10 @@ exitlogo="y"
 # the server load.  Requires 'curl' and 'jq'.  "y" or "n"
 exitping="n"
 #
-# Adjust the COLUMNS value if the menu looks jumbled or to
-# match your terminal.
-COLUMNS=80
+# Lower the menuwidth value to compact the menus horizontally.  
+# Set to your terminal width or lower eg. menuwidth="70"
+# Leave blank to have the menu width change with the window size.
+menuwidth=""
 #
 # =====================================================================
 # FAST options speed up the script by automatically answering 'yes'
@@ -133,7 +134,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2146.  Recommend configuring the
+# The Main Menu starts on line 2149.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -301,6 +302,7 @@ function heading {
         echo -e "${HColor}/// $1 ///${Color_Off}"
         echo
     fi
+    COLUMNS=$menuwidth
 }
 function fwhitelist {
     heading "Whitelist"
@@ -308,7 +310,7 @@ function fwhitelist {
     echo -e "${LColor} 'function fwhitelist' ${Color_Off}"
     echo
     echo "This option may be useful to restore a default whitelist"
-    echo "after installation, using 'Reset', or making other changes."
+    echo "after installing, using 'Reset', or making other changes."
     echo
     echo -e "${EColor}Current Settings:${Color_Off}"
     if nordvpn settings | grep -i -q "whitelist"; then
@@ -2142,6 +2144,7 @@ function main_menu {
     #
     clear -x
     logo
+    COLUMNS=$menuwidth
     #
     # ====== MAIN MENU ====================================================
     #
