@@ -52,14 +52,15 @@
 # CUSTOMIZATION
 # (all of these are optional)
 #
-# Specify your P2P preferred location.  eg p2pwhere="Canada"
-p2pwhere=""
+# Specify your P2P preferred location.  Use a Country OR a City.
+p2pwhere=""     # eg p2pwhere="Canada" or p2pwhere="Seattle"
 #
-# Specify your Obfuscated_Servers preferred location.
+# Specify your Obfuscated_Servers location. Use a Country OR a City.
 # The location must support obfuscation.  eg obwhere="United_States"
 obwhere=""
 #
-# Specify your Auto-Connect location.  eg acwhere="Toronto"
+# Specify your Auto-Connect location. Use a Country OR a Country plus
+# a City.  eg acwhere="Canada"  or  acwhere="Canada Toronto"
 # When obfuscate is enabled, the location must support obfuscation.
 acwhere=""
 #
@@ -134,7 +135,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2152.  Recommend configuring the
+# The Main Menu starts on line 2153.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
