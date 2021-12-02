@@ -59,7 +59,7 @@ p2pwhere=""
 # The location must support obfuscation.  eg obwhere="United_States"
 obwhere=""
 #
-# Specify your Auto-Connect location.  eg acwhere="Canada Toronto"
+# Specify your Auto-Connect location.  eg acwhere="Toronto"
 # When obfuscate is enabled, the location must support obfuscation.
 acwhere=""
 #
