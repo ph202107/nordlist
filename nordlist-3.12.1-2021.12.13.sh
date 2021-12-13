@@ -1,5 +1,7 @@
 #!/bin/bash
-# Requires bash v4 or greater.
+#
+# Tested with NordVPN Version 3.12.1 on Linux Mint 20.2
+# December 13, 2021
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -8,16 +10,13 @@
 # lot of comments to help fellow newbies customize the script.
 #
 # It looks like this:
-# https://i.imgur.com/5JFLTBb.png
+# https://i.imgur.com/GbUdJLr.png
 # https://i.imgur.com/dKnK7u9.png
 # https://i.imgur.com/To2BbUI.png
 # https://i.imgur.com/077qYI3.png
 #
-# /u/pennyhoard20 on reddit
 # https://github.com/ph202107/nordlist
-#
-# Last tested with NordVPN Version 3.12.1 on Linux Mint 20.2
-# (Bash 5.0.17) December 2, 2021
+# /u/pennyhoard20 on reddit
 #
 # =====================================================================
 # Instructions
@@ -52,15 +51,17 @@
 # CUSTOMIZATION
 # (all of these are optional)
 #
-# Specify your P2P preferred location.  Use a Country OR a City.
-p2pwhere=""     # eg p2pwhere="Canada" or p2pwhere="Seattle"
+# Specify your P2P preferred location.  Choose a Country or a City.
+# eg  p2pwhere="Canada"  or  p2pwhere="Toronto"
+p2pwhere=""
 #
-# Specify your Obfuscated_Servers location. Use a Country OR a City.
-# The location must support obfuscation.  eg obwhere="United_States"
+# Specify your Obfuscated_Servers location. Choose a Country or a City.
+# The location must support obfuscation.
+# eg  obwhere="United_States"  or  obwhere="Los_Angeles"
 obwhere=""
 #
-# Specify your Auto-Connect location. Use a Country OR a Country plus
-# a City.  eg acwhere="Canada"  or  acwhere="Canada Toronto"
+# Specify your Auto-Connect location. Choose a Country or a City.
+# eg  acwhere="France"  or  acwhere="Paris"
 # When obfuscate is enabled, the location must support obfuscation.
 acwhere=""
 #
@@ -135,7 +136,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2153.  Recommend configuring the
+# The Main Menu starts on line 2167.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -260,7 +261,7 @@ function custom_ascii {
         #figlet NordVPN | lolcat -p 0.8         # standard font colorized
         #figlet -f slant NordVPN | lolcat       # slant font, colorized
         #figlet $city | lolcat -p 1             # display the city name, more rainbow
-        figlet -f slant $city | lolcat -p 1.7  # city in slant font
+        figlet -f slant $city | lolcat         # city in slant font
         #figlet $country | lolcat -p 1.5        # display the country
         #figlet $transferd | lolcat  -p 1       # display the download statistic
         #
@@ -321,19 +322,20 @@ function fwhitelist {
         echo "No whitelist entries."
         echo
     fi
-    echo -e "Enter ${WColor}X${Color_Off} to remove all entries."
-    read -n 1 -r -p "Apply your default whitelist settings? (y/n/X) "
+    echo -e "Type ${WColor}R${Color_Off} to remove all whitelist entries."
+    echo
+    read -n 1 -r -p "Apply your default whitelist settings? (y/n/R) "
     echo
     echo
-    if [[ $REPLY =~ ^[Xx]$ ]]; then
-        nordvpn whitelist remove all
-        echo
-    elif [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         # Enter one command per line.  Example:
         #
         #nordvpn whitelist remove all    # Clear the Whitelist
         #nordvpn whitelist add subnet 192.168.1.0/24
         #
+        echo
+    elif [[ $REPLY =~ ^[Rr]$ ]]; then
+        nordvpn whitelist remove all
         echo
     else
         echo "No changes made."
@@ -458,11 +460,11 @@ function set_vars {
     fi
     #
     if [[ "$connected" == "connected" ]]; then
-        connectedcl="${CNColor}${connected^}${Color_Off}"
         connectedc="${CNColor}$connected${Color_Off}"
+        connectedcl="${CNColor}${connected^}${Color_Off}"
     else
-        connectedcl="${DNColor}${connected^}${Color_Off}"
         connectedc="${DNColor}$connected${Color_Off}"
+        connectedcl="${DNColor}${connected^}${Color_Off}"
     fi
     #
     transferc="${DLColor}\u25bc $transferd ${ULColor}\u25b2 $transferu${Color_Off}"
@@ -566,7 +568,7 @@ function status {
         clear -x
         logo
         if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]]; then
-            sleep 1  # on rare occasions ping doesn't work if sent too soon
+            #sleep 1  # on rare occasions ping doesn't work if sent too soon
             if [[ "$nordhost" == *"onion"* ]]; then
                 ping -c 3 -q $ipaddr
             else
@@ -587,7 +589,7 @@ function warning {
     fi
 }
 function fcountries {
-    # submenu for all available countries and cities
+    # submenu for all available countries
     heading "Countries"
     countrylist=($(nordvpn countries | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort))
     # Replaced "Bosnia_And_Herzegovina" with "Sarajevo" to help compact the list.
@@ -662,7 +664,6 @@ function cities {
         fi
         if (( 1 <= $REPLY )) && (( $REPLY <= $numcities )); then
             heading "$xcity"
-            echo
             discon2
             echo "Connecting to $xcity, $xcountry."
             echo
@@ -1391,7 +1392,7 @@ function faccount {
                 ;;
             "Browser Login")
                 echo
-                echo "From 'man nordvpn' Note 2:"
+                echo -e "${EColor}From 'man nordvpn' Note 2:${Color_Off}"
                 echo "OAuth2 login without graphical user interface."
                 echo "After finishing login in the browser, copy the link pointed by xdg-open button."
                 echo "The following command can be invoked manually to finish the login process."
@@ -1411,7 +1412,7 @@ function faccount {
                 echo
                 echo "Need to disconnect the VPN."
                 echo
-                echo "* untested"
+                echo -e "${WColor}** Untested **${Color_Off}"
                 echo
                 read -n 1 -r -p "Proceed? (y/n) "
                 echo
@@ -1425,17 +1426,17 @@ function faccount {
                 nordvpn --version
                 ;;
             "Changelog")
+                nordrel="https://nordvpn.com/blog/nordvpn-linux-release-notes/"
                 echo
-                #zless +G "$nordchangelog"
                 #zcat "$nordchangelog"
+                #zless +G "$nordchangelog"
                 # version numbers are not in order (latest release != last entry)
                 zless -p$( nordvpn --version | cut -f3 -d' ' ) "$nordchangelog"
                 #
-                nordrl="https://nordvpn.com/blog/nordvpn-linux-release-notes/"
-                read -n 1 -r -p "$(echo -e "Open ${EColor}$nordrl${Color_Off} ? (y/n) ")"
+                read -n 1 -r -p "$(echo -e "Open ${EColor}$nordrel${Color_Off} ? (y/n) ")"
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    xdg-open "$nordrl"
+                    xdg-open "$nordrel"
                 fi
                 ;;
             "Nord Manual")
@@ -1483,6 +1484,8 @@ function frestart {
         if [[ "$autocon" == "enabled" ]]; then
             change_setting "autoconnect" "override"
         fi
+        echo -e ${LColor}"sudo systemctl restart nordvpnd.service"${Color_Off}
+        echo -e ${LColor}"sudo systemctl restart nordvpn.service"${Color_Off}
         sudo systemctl restart nordvpnd.service
         sudo systemctl restart nordvpn.service
         echo
@@ -1496,7 +1499,10 @@ function frestart {
         sudo -K     # timeout sudo
         if [[ "$1" == "plusdefaults" ]]; then
             echo
-            nordvpn login; wait
+            nordvpn login --nordaccount
+            wait
+            read -n 1 -r -p "Press any key after login is complete... "; echo
+            echo
             fdefaults
         fi
         status
@@ -1517,6 +1523,7 @@ function freset {
     echo "nordvpn whitelist remove all"
     echo "nordvpn set defaults"
     echo "Restart nordvpn services"
+    echo "nordvpn login --nordaccount"
     echo "Apply your default configuration"
     echo -e ${Color_Off}
     echo
@@ -1535,7 +1542,7 @@ function freset {
         echo
         nordvpn set defaults; wait
         echo
-        echo -e "${LColor}Can also delete:${Color_Off}"
+        echo -e "${EColor}Can also delete:${Color_Off}"
         echo "  /home/username/.config/nordvpn/nordvpn.conf"
         echo "  /var/lib/nordvpn/data/settings.dat"
         echo
@@ -1561,7 +1568,7 @@ function fiptables_status {
     echo
 }
 function fiptables {
-    #https://old.reddit.com/r/nordvpn/comments/qgakq9/linux_killswitch_problems_iptables/
+    # https://old.reddit.com/r/nordvpn/comments/qgakq9/linux_killswitch_problems_iptables/
     # Only tested with Linux Mint
     heading "IPTables"
     echo "Flushing the IPTables may help resolve problems enabling or"
@@ -1876,7 +1883,7 @@ function nordapi {
                 echo
                 curl --silent "https://api.nordvpn.com/v1/servers/countries" | jq --raw-output '.[] | [.id, .name] | @tsv'
                 echo
-                read -r -p "Country Code: " ccode
+                read -r -p "Enter the Country Code: " ccode
                 echo
                 echo -e "${LColor}SERVER: ${EColor}%LOAD${Color_Off}"
                 echo
@@ -1944,7 +1951,7 @@ function ftools {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=("NordVPN API" "Rate VPN Server" "www.speedtest.net" "youtube-dl" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "world map" "Change Host" "Exit")
+    nettools=("NordVPN API" "Rate VPN Server" "www.speedtest.net" "youtube-dl" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "world map" "Change Host" "Exit")
     numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
@@ -2007,7 +2014,10 @@ function ftools {
                 xdg-open https://ipleak.net/
                 ;;
             "dnsleaktest.com")
-                xdg-open https://dnsleaktest.com
+                xdg-open https://dnsleaktest.com/
+                ;;
+            "test-ipv6.com")
+                xdg-open https://test-ipv6.com/
                 ;;
             "world map")
                 # may be possible to highlight location
@@ -2104,6 +2114,10 @@ function fquickconnect {
         echo -e "The VPN is $connectedc with the Kill Switch $killswitchc."
         echo
         bestserver=""
+    elif [[ "$obfuscate" == "enabled" ]]; then
+        echo -e "$ob Obfuscate is $obfuscatec."
+        echo
+        bestserver=""
     else
         bestserver="$(timeout 10 curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
     fi
@@ -2164,7 +2178,7 @@ function main_menu {
     #
     PS3=$'\n''Choose an option: '
     #
-    mainmenu=("Vancouver" "Seattle" "Los_Angeles" "Atlanta" "Sweden" "Japan" "US_Cities" "CA_Cities" "Discord" "QuickConnect" "Countries" "Groups" "Settings" "Disconnect" "Exit")
+    mainmenu=( "Vancouver" "Seattle" "Los_Angeles" "Denver" "Atlanta" "US_Cities" "CA_Cities" "P2P_Canada" "Discord" "QuickConnect" "Countries" "Groups" "Settings" "Disconnect" "Exit" )
     #
     nummainmenu=${#mainmenu[@]}
     select opt in "${mainmenu[@]}"
@@ -2189,21 +2203,15 @@ function main_menu {
                 status
                 break
                 ;;
+            "Denver")
+                discon
+                nordvpn connect Denver
+                status
+                break
+                ;;
             "Atlanta")
                 discon
                 nordvpn connect Atlanta
-                status
-                break
-                ;;
-            "Sweden")
-                discon
-                nordvpn connect Sweden
-                status
-                break
-                ;;
-            "Japan")
-                discon
-                nordvpn connect Japan
                 status
                 break
                 ;;
@@ -2216,6 +2224,14 @@ function main_menu {
                 # city menu for Canada
                 xcountry="Canada"
                 cities
+                ;;
+            "P2P_Canada")
+                heading "P2P Canada"
+                discon2
+                set_defaults
+                nordvpn connect --group p2p Canada
+                status
+                break
                 ;;
             "Discord")
                 # I use this entry to connect to a specific server which can help
@@ -2449,7 +2465,12 @@ main_menu start
 #   delete: /var/lib/nordvpn/           # (should already be deleted)
 #   delete: /home/username/.config/nordvpn/
 #   apt-cache showpkg nordvpn
-#   sudo apt install nordvpn=3.12.0-1   # (for example)
+#   Examples:
+#       sudo apt install nordvpn=3.7.4
+#       sudo apt install nordvpn=3.9.5-1
+#       sudo apt install nordvpn=3.10.0-1
+#       sudo apt install nordvpn=3.11.0-1
+#       sudo apt install nordvpn=3.12.0-1
 #
 # 'Whoops! /run/nordvpn/nordvpnd.sock not found.'
 #   sudo systemctl start nordvpnd.service
@@ -2462,12 +2483,30 @@ main_menu start
 # enjoying the ultimate privacy and security with NordVPN.'
 #   delete: /var/lib/nordvpn/data/settings.dat
 #   delete: /home/username/.config/nordvpn/nordvpn.conf
-#   nordvpn login
+#   nordvpn login --nordaccount
 #
-# "nordvpn login --nordaccount" will become the default login method
+# 'nordvpn login --nordaccount' will become the default login method
+#
+# After system crash or hard restart
+# 'Whoops! Connection failed. Please try again. If problem persists, contact our customer support.'
+#   sudo chattr -i -a /var/lib/nordvpn/data/.config.ovpn
+#   sudo chmod ugo+w /var/lib/nordvpn/data/.config.ovpn
+#
+# OpenVPN config files
+#   https://support.nordvpn.com/Connectivity/Linux/1061938702/How-to-connect-to-NordVPN-using-Linux-Network-Manager.htm
+#   https://downloads.nordcdn.com/configs/archives/servers/ovpn.zip
+#   https://nordvpn.com/servers/tools/
+#
+# Create WireGuard configs
+#   https://github.com/TomBayne/tombas-script-repo/blob/main/NordLynx2Wireguard.sh
 #
 # NordLynx stability issues
 #   install WireGuard
+#
+# Reconnect Scripts
+#   https://github.com/mmnaseri/nordvpn-reconnect
+#   https://forum.manjaro.org/t/nordvpn-bin-breaks-every-4-hours/80927/16
+#   https://redd.it/povx2x
 #
 # Other Troubleshooting
 #   systemctl status nordvpnd.service
