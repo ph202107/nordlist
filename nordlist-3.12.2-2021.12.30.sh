@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.2 on Linux Mint 20.2
-# December 17, 2021
+# December 30, 2021
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -61,7 +61,7 @@ p2pwhere=""
 obwhere=""
 #
 # Specify your Auto-Connect location. Choose a Country or a City.
-# eg  acwhere="France"  or  acwhere="Paris"
+# eg  acwhere="Australia"  or  acwhere="Sydney"
 # When obfuscate is enabled, the location must support obfuscation.
 acwhere=""
 #
@@ -136,7 +136,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2170.  Recommend configuring the
+# The Main Menu starts on line 2189.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -1371,37 +1371,56 @@ function fcustomdns {
         esac
     done
 }
+function login_nogui {
+    echo
+    echo "For now, users without GUI can use "
+    echo -e "${LColor}      nordvpn login --legacy${Color_Off}"
+    echo -e "${LColor}      nordvpn login --username <username> --password <password>${Color_Off}"
+    echo
+    echo "Future use:"
+    echo
+    echo -e "${WColor}If you don't have a web browser on the device:${Color_Off}"
+    echo -e "${LColor}Nord Account login without a GUI ('man nordvpn' Note 2)${Color_Off}"
+    echo
+    echo -e "${EColor}SSH${Color_Off} = in the SSH session connected to the device"
+    echo -e "${FColor}Computer${Color_Off} = on the computer you're using to SSH into the device"
+    echo
+    echo -e "${EColor}  SSH${Color_Off}"
+    echo "      1. Run 'nordvpn login' and copy the URL"
+    echo -e "${FColor}  Computer${Color_Off}"
+    echo "      2. Open the copied URL in your web browser"
+    echo "      3. Complete the login procedure"
+    echo "      4. Right click on the 'Return to App' button and select 'Copy link'"
+    echo -e "${EColor}  SSH${Color_Off}"
+    echo "      5. Run 'nordvpn login --callback <copied link>'"
+    echo "      6. Run 'nordvpn account' to verify that the login was successful"
+    echo
+}
 function faccount {
     heading "Account"
     echo
     PS3=$'\n''Choose an Option: '
-    submacct=("Login" "Logout" "Browser Login" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "Exit")
+    submacct=("Login (legacy)" "Login (browser)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "Exit")
     numsubmacct=${#submacct[@]}
     select acc in "${submacct[@]}"
     do
         case $acc in
-            "Login")
+            "Login (legacy)")
+                echo
+                nordvpn login --legacy
+                echo
+                ;;
+            "Login (browser)")
                 echo
                 nordvpn login
                 echo
                 ;;
+            "Login (no GUI)")
+                login_nogui
+                ;;
             "Logout")
                 discon2
                 nordvpn logout
-                echo
-                ;;
-            "Browser Login")
-                echo
-                echo -e "${EColor}From 'man nordvpn' Note 2:${Color_Off}"
-                echo "Nord Account login without graphical user interface"
-                echo "1. Run nordvpn login command on your Linux device."
-                echo "2. Open the provided link in the browser."
-                echo "3. Complete the login procedure."
-                echo "4. Right click on the Return to the app button and select Copy link address."
-                echo "5. Run nordvpn login --callback <URL> with the previously copied URL."
-                echo "6. Run nordvpn account to verify that login was successful."
-                echo
-                nordvpn login --nordaccount
                 echo
                 ;;
             "Account Info")
@@ -1502,7 +1521,7 @@ function frestart {
         sudo -K     # timeout sudo
         if [[ "$1" == "plusdefaults" ]]; then
             echo
-            nordvpn login --nordaccount
+            nordvpn login
             wait
             read -n 1 -r -p "Press any key after login is complete... "; echo
             echo
@@ -1526,7 +1545,7 @@ function freset {
     echo "nordvpn whitelist remove all"
     echo "nordvpn set defaults"
     echo "Restart nordvpn services"
-    echo "nordvpn login --nordaccount"
+    echo "nordvpn login"
     echo "Apply your default configuration"
     echo -e ${Color_Off}
     echo
@@ -1652,7 +1671,7 @@ function fiptables {
                 echo
                 echo -e ${WColor}"Disconnect the VPN and restart nordvpn services."${Color_Off}
                 echo
-                read -n 1 -r -p "Proceed? (y/n) "
+                read -n 1 -r -p "Proceed? (y/n) "; echo
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     if [[ "$autocon" == "enabled" ]]; then
@@ -2446,35 +2465,47 @@ main_menu start
 # Notes
 #
 # Add repository and install:
-#   https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
-#   sudo apt install /path/to/nordvpn-release_1.0.0_all.deb
+#   cd ~/Downloads
+#   wget https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
+#   sudo apt install ~/Downloads/nordvpn-release_1.0.0_all.deb
+#       or: sudo dpkg -i nordvpn-release_1.0.0_all.deb
 #   sudo apt update
 #   sudo apt install nordvpn
 #
 # Alternate install method:
+#   When using "purge", the NordVPN repository should remain after using this method once.
 #   sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
 #   or
 #   sh <(wget -qO - https://downloads.nordcdn.com/apps/linux/install.sh)
 #
 # To reinstall:
-#   sudo apt update
 #   sudo apt autoremove --purge nordvpn*
-#   delete: /home/username/.config/nordvpn/nordvpn.conf
+#   delete: /var/lib/nordvpn    (should already be deleted)
+#   delete: /home/username/.config/nordvpn
+#   May need to re-add repo
+#   sudo apt update
 #   sudo apt install nordvpn
 #
 # To downgrade:
-#   sudo apt update
 #   sudo apt autoremove --purge nordvpn*
-#   delete: /var/lib/nordvpn/           # (should already be deleted)
-#   delete: /home/username/.config/nordvpn/
-#   apt-cache showpkg nordvpn
-#   apt list -a nordvpn
+#   delete: /var/lib/nordvpn    (should already be deleted)
+#   delete: /home/username/.config/nordvpn
+#   May need to re-add repo
+#   sudo apt update
+#   Show versions:
+#       apt-cache showpkg nordvpn
+#       apt list -a nordvpn
 #   Examples:
 #       sudo apt install nordvpn=3.7.4
+#       sudo apt install nordvpn=3.8.10
 #       sudo apt install nordvpn=3.9.5-1
 #       sudo apt install nordvpn=3.10.0-1
 #       sudo apt install nordvpn=3.11.0-1
 #       sudo apt install nordvpn=3.12.0-1
+#
+# GPG error: https//repo.nordvpn.com: The following signatures couldn't be verified
+# because the public key is not available: NO_PUBKEY
+#   sudo wget https://repo.nordvpn.com/gpg/nordvpn_public.asc -O - | sudo apt-key add -
 #
 # 'Whoops! /run/nordvpn/nordvpnd.sock not found.'
 #   sudo systemctl start nordvpnd.service
@@ -2487,9 +2518,24 @@ main_menu start
 # enjoying the ultimate privacy and security with NordVPN.'
 #   delete: /var/lib/nordvpn/data/settings.dat
 #   delete: /home/username/.config/nordvpn/nordvpn.conf
-#   nordvpn login --nordaccount
+#   nordvpn login
 #
-# 'nordvpn login --nordaccount' will become the default login method
+# Nord Account login without a GUI
+#   nordvpn --legacy
+#   nordvpn login --username <username> --password <password>
+#
+#   'man nordvpn' Note 2
+#   SSH = in the SSH session connected to the device
+#   Computer = on the computer you're using to SSH into the device
+#       SSH
+#           1. Run 'nordvpn login' and copy the URL
+#       Computer
+#           2. Open the copied URL in your web browser
+#           3. Complete the login procedure
+#           4. Right click on the 'Return to App' button and select 'Copy link'
+#       SSH
+#           5. Run 'nordvpn login --callback <copied link>'
+#           6. Run 'nordvpn account' to verify that the login was successful
 #
 # After system crash or hard restart
 # 'Whoops! Connection failed. Please try again. If problem persists, contact our customer support.'
@@ -2511,6 +2557,12 @@ main_menu start
 #   https://github.com/mmnaseri/nordvpn-reconnect
 #   https://forum.manjaro.org/t/nordvpn-bin-breaks-every-4-hours/80927/16
 #   https://redd.it/povx2x
+#
+# NordVPN Linux GUI
+#   https://github.com/GoBig87/NordVpnLinuxGUI
+#
+# NordVPN status and settings tray app.
+#   https://github.com/dvilelaf/NordIndicator
 #
 # Other Troubleshooting
 #   systemctl status nordvpnd.service
