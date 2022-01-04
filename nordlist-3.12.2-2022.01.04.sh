@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.2 on Linux Mint 20.2
-# December 30, 2021
+# January 4, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -72,7 +72,7 @@ default_dns="103.86.96.100 103.86.99.100"; dnsdesc="Nord"
 #
 # Specify a VPN hostname/IP to use for testing while the VPN is off.
 # Can still enter any hostname later, this is just a default choice.
-default_host="ca1207.nordvpn.com"   # eg. "ca1207.nordvpn.com"
+default_host="ca1425.nordvpn.com"   # eg. "ca1425.nordvpn.com"
 #
 # Confirm the location of the NordVPN changelog on your system.
 #nordchangelog="/var/lib/dpkg/info/nordvpn.changelog"
@@ -136,7 +136,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2189.  Recommend configuring the
+# The Main Menu starts on line 2190.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist configuration commands to "function fwhitelist".
@@ -307,34 +307,34 @@ function heading {
     COLUMNS=$menuwidth
 }
 function fwhitelist {
+    # Restore a default whitelist after installing, using 'Reset',
+    # or making other changes.
     heading "Whitelist"
-    echo "Edit the script to add your whitelist commands to"
-    echo -e "${LColor} 'function fwhitelist' ${Color_Off}"
+    echo "Add your whitelist configuration commands to 'function fwhitelist'."
     echo
-    echo "This option may be useful to restore a default whitelist"
-    echo "after installing, using 'Reset', or making other changes."
+    fwhitelistinfo
     echo
     echo -e "${EColor}Current Settings:${Color_Off}"
     if nordvpn settings | grep -i -q "whitelist"; then
         nordvpn settings | grep -A100 -i "whitelist" --color=none
-        echo
     else
         echo "No whitelist entries."
-        echo
     fi
-    echo -e "Type ${WColor}R${Color_Off} to remove all whitelist entries."
     echo
-    read -n 1 -r -p "Apply your default whitelist settings? (y/n/R) "
+    echo -e "Type ${WColor}C${Color_Off} to clear the whitelist."
     echo
+    read -n 1 -r -p "Apply your whitelist settings? (y/n/C) "; echo
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # whitelist_start
         # Enter one command per line.  Example:
         #
-        #nordvpn whitelist remove all    # Clear the Whitelist
+        #nordvpn whitelist remove all
         #nordvpn whitelist add subnet 192.168.1.0/24
         #
+        # whitelist_end
         echo
-    elif [[ $REPLY =~ ^[Rr]$ ]]; then
+    elif [[ $REPLY =~ ^[Cc]$ ]]; then
         nordvpn whitelist remove all
         echo
     else
@@ -605,8 +605,7 @@ function fcountries {
     do
         if [[ "$xcountry" == "Exit" ]]; then
             main_menu
-        fi
-        if (( 1 <= $REPLY )) && (( $REPLY <= $numcountries )); then
+        elif (( 1 <= $REPLY )) && (( $REPLY <= $numcountries )); then
             #
             cities
             #
@@ -652,8 +651,7 @@ function cities {
     do
         if [[ "$xcity" == "Exit" ]]; then
             main_menu
-        fi
-        if [[ "$xcity" == "Default" ]]; then
+        elif [[ "$xcity" == "Default" ]]; then
             echo
             echo "Connecting to the best available city."
             echo
@@ -661,11 +659,10 @@ function cities {
             nordvpn connect $xcountry
             status
             exit
-        fi
-        if (( 1 <= $REPLY )) && (( $REPLY <= $numcities )); then
+        elif (( 1 <= $REPLY )) && (( $REPLY <= $numcities )); then
             heading "$xcity"
             discon2
-            echo "Connecting to $xcity, $xcountry."
+            echo "Connecting to $xcity $xcountry."
             echo
             nordvpn connect $xcity
             status
@@ -728,8 +725,7 @@ function fallgroups {
     do
         if [[ "$xgroup" == "Exit" ]]; then
             main_menu
-        fi
-        if (( 1 <= $REPLY )) && (( $REPLY <= $numgroups )); then
+        elif (( 1 <= $REPLY )) && (( $REPLY <= $numgroups )); then
             heading "$xgroup"
             echo
             discon2
@@ -1127,12 +1123,10 @@ function change_setting {
             if [[ "$1" == "cybersec" ]] && [[ "$dns_set" != "disabled" ]]; then
                 nordvpn set dns disabled; wait
                 echo
-            fi
-            if [[ "$1" == "autoconnect" ]]; then
+            elif [[ "$1" == "autoconnect" ]]; then
                 echo -e "Enable $chgname ${LColor}$chgloc${Color_Off}"
                 echo
-            fi
-            if [[ "$1" == "killswitch" ]] && [[ "$firewall" == "disabled" ]]; then
+            elif [[ "$1" == "killswitch" ]] && [[ "$firewall" == "disabled" ]]; then
                 # when connecting to Groups or changing the setting from IPTables
                 echo -e "${WColor}Enabling the Firewall.${Color_Off}"
                 echo
@@ -1743,8 +1737,7 @@ function rate_server {
         echo
         if [[ $rating =~ ^[Xx]$ ]] || [[ $rating == "" ]]; then
             break
-        fi
-        if (( 1 <= $rating )) && (( $rating <= 5 )); then
+        elif (( 1 <= $rating )) && (( $rating <= 5 )); then
             echo
             nordvpn rate $rating
             echo
@@ -2119,6 +2112,14 @@ function fscriptinfo {
         exit
     fi
 }
+function fwhitelistinfo {
+    echo -e "${LColor}function fwhitelist${Color_Off}"
+    startline=$(grep -m1 -n "whitelist_start" "$0" | cut -f1 -d':')
+    endline=$(( $(grep -m1 -n "whitelist_end" "$0" | cut -f1 -d':') - 1 ))
+    numlines=$(( $endline - $startline - 1 ))
+    cat -n "$0" | head -n $endline | tail -n $numlines
+    #highlight -l -O xterm256 "$0" | head -n $endline | tail -n $numlines
+}
 function fquickconnect {
     # This is an alternate method of connecting to the NordVPN recommended server.
     # In some cases it may be faster than using "nordvpn connect"
@@ -2466,9 +2467,9 @@ main_menu start
 #
 # Add repository and install:
 #   cd ~/Downloads
-#   wget https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
+#   wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
 #   sudo apt install ~/Downloads/nordvpn-release_1.0.0_all.deb
-#       or: sudo dpkg -i nordvpn-release_1.0.0_all.deb
+#       or: sudo dpkg -i ~/Downloads/nordvpn-release_1.0.0_all.deb
 #   sudo apt update
 #   sudo apt install nordvpn
 #
@@ -2521,7 +2522,7 @@ main_menu start
 #   nordvpn login
 #
 # Nord Account login without a GUI
-#   nordvpn --legacy
+#   nordvpn login --legacy
 #   nordvpn login --username <username> --password <password>
 #
 #   'man nordvpn' Note 2
