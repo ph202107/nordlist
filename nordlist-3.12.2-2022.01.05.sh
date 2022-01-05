@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.2 on Linux Mint 20.2
-# January 4, 2022
+# January 5, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -37,7 +37,6 @@
 #       - change "custom_ascii" to "std_ascii"
 # 2) In "function heading"
 #       - remove the hash mark (#) before "echo"
-#       - remove the hash mark (#) before "return"
 #
 # =====================================================================
 # Other small programs used:
@@ -136,11 +135,11 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2190.  Recommend configuring the
+# The Main Menu starts on line 2189.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
-# Add your Whitelist configuration commands to "function fwhitelist".
-# Configure "function set_defaults" to set up a default NordVPN config.
+# Add your Whitelist commands to "function whitelist_commands".
+# Set up a default NordVPN config in "function set_defaults".
 #
 # Change the main menu figlet ASCII style in "function custom_ascii"
 # Change the figlet ASCII style for headings in "function heading"
@@ -287,9 +286,8 @@ function heading {
     clear -x
     # This is the ASCII that displays after a menu selection is made.
     #
-    # Uncomment the next two lines if figlet is not installed
-    #echo ""; echo -e "${HColor}/// $1 ///${Color_Off}"; echo ""
-    #return
+    # Uncomment the line below if figlet is not installed
+    # echo; echo -e "${HColor}/// $1 ///${Color_Off}"; echo; return
     #
     # Display longer names with smaller font to prevent wrapping.
     # Assumes 80 column terminal.
@@ -306,53 +304,23 @@ function heading {
     fi
     COLUMNS=$menuwidth
 }
-function fwhitelist {
-    # Restore a default whitelist after installing, using 'Reset',
-    # or making other changes.
-    heading "Whitelist"
-    echo "Add your whitelist configuration commands to 'function fwhitelist'."
+function whitelist_commands {
+    # Add your whitelist configuration commands here.
+    # Enter one command per line.
+    # whitelist_start_donotremove
+    #
+    #nordvpn whitelist remove all
+    #nordvpn whitelist add subnet 192.168.1.0/24
+    #
+    # whitelist_end_donotremove
     echo
-    fwhitelistinfo
-    echo
-    echo -e "${EColor}Current Settings:${Color_Off}"
-    if nordvpn settings | grep -i -q "whitelist"; then
-        nordvpn settings | grep -A100 -i "whitelist" --color=none
-    else
-        echo "No whitelist entries."
-    fi
-    echo
-    echo -e "Type ${WColor}C${Color_Off} to clear the whitelist."
-    echo
-    read -n 1 -r -p "Apply your whitelist settings? (y/n/C) "; echo
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        # whitelist_start
-        # Enter one command per line.  Example:
-        #
-        #nordvpn whitelist remove all
-        #nordvpn whitelist add subnet 192.168.1.0/24
-        #
-        # whitelist_end
-        echo
-    elif [[ $REPLY =~ ^[Cc]$ ]]; then
-        nordvpn whitelist remove all
-        echo
-    else
-        echo "No changes made."
-        echo
-    fi
-    nordvpn settings | grep -A100 -i "whitelist" --color=none
-    echo
-    if [[ "$1" == "back" ]]; then return; fi
-    main_menu
 }
 function set_defaults {
     # Calling this function can be useful to change multiple settings
     # at once and get back to a typical configuration.
     #
-    # Configure as needed and comment-out or remove the next two lines.
-    echo -e "${WColor}** 'function set_defaults' not configured **${Color_Off}"; echo ""
-    return
+    # Configure as needed and comment-out the line below.
+    echo -e "${WColor}** 'function set_defaults' not configured **${Color_Off}"; echo; return
     #
     # Notes:
     # - NordLynx is UDP only
@@ -1365,6 +1333,45 @@ function fcustomdns {
         esac
     done
 }
+function fwhitelist {
+    heading "Whitelist"
+    echo "Restore a default whitelist after installation, using 'Reset'"
+    echo "or making other changes.  Edit the script to modify"
+    echo
+    echo -e "${LColor}function whitelist_commands${Color_Off}"
+    #
+    startline=$(grep -m1 -n "whitelist_start" "$0" | cut -f1 -d':')
+    endline=$(( $(grep -m1 -n "whitelist_end" "$0" | cut -f1 -d':') - 1 ))
+    numlines=$(( $endline - $startline ))
+    cat -n "$0" | head -n $endline | tail -n $numlines
+    #highlight -l -O xterm256 "$0" | head -n $endline | tail -n $numlines
+    #
+    echo
+    echo -e "${EColor}Current Settings:${Color_Off}"
+    if nordvpn settings | grep -i -q "whitelist"; then
+        nordvpn settings | grep -A100 -i "whitelist" --color=none
+    else
+        echo "No whitelist entries."
+    fi
+    echo
+    echo -e "Type ${WColor}C${Color_Off} to clear the current whitelist."
+    echo
+    read -n 1 -r -p "Apply your default whitelist settings? (y/n/C) "; echo
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        whitelist_commands
+    elif [[ $REPLY =~ ^[Cc]$ ]]; then
+        nordvpn whitelist remove all
+        echo
+    else
+        echo "No changes made."
+        echo
+    fi
+    nordvpn settings | grep -A100 -i "whitelist" --color=none
+    echo
+    if [[ "$1" == "back" ]]; then return; fi
+    main_menu
+}
 function login_nogui {
     echo
     echo "For now, users without GUI can use "
@@ -2111,14 +2118,6 @@ function fscriptinfo {
         xdg-open "$0"
         exit
     fi
-}
-function fwhitelistinfo {
-    echo -e "${LColor}function fwhitelist${Color_Off}"
-    startline=$(grep -m1 -n "whitelist_start" "$0" | cut -f1 -d':')
-    endline=$(( $(grep -m1 -n "whitelist_end" "$0" | cut -f1 -d':') - 1 ))
-    numlines=$(( $endline - $startline - 1 ))
-    cat -n "$0" | head -n $endline | tail -n $numlines
-    #highlight -l -O xterm256 "$0" | head -n $endline | tail -n $numlines
 }
 function fquickconnect {
     # This is an alternate method of connecting to the NordVPN recommended server.
