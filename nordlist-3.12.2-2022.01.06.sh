@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.2 on Linux Mint 20.2
-# January 5, 2022
+# January 6, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -40,8 +40,9 @@
 #
 # =====================================================================
 # Other small programs used:
-# "highlight"       Settings-Script             (function fscriptinfo)
-# "youtube-dl"      Settings-Tools-youtube-dl   (function ftools)
+# highlight         Settings-Script             (function fscriptinfo)
+# youtube-dl        Settings-Tools-youtube-dl   (function ftools)
+# wireguard-tools   Settings-Tools-WireGuard    (function wireguard_gen)
 #
 # For VPN On/Off status in the system tray, I use the Linux Mint
 # Cinnamon applet "NordVPN Indicator".  Github may have similar apps.
@@ -135,19 +136,20 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2189.  Recommend configuring the
+# The Main Menu starts on line 2266.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
-# Add your Whitelist commands to "function whitelist_commands".
-# Set up a default NordVPN config in "function set_defaults".
+# Add your Whitelist commands to "function whitelist_commands"
+# Set up a default NordVPN config in "function set_defaults"
 #
 # Change the main menu figlet ASCII style in "function custom_ascii"
 # Change the figlet ASCII style for headings in "function heading"
 # Change the highlighted text and indicator colors under "COLORS"
 #
-# Note: "Restart" and "IPTables" require a sudo password
-#   - see "function frestart"
-#   - see 'function fiptables'
+# Note: These functions require a sudo password:
+#   - function frestart
+#   - function fiptables
+#   - function wireguard_gen
 #
 # ==End================================================================
 #
@@ -1863,11 +1865,10 @@ function allvpnservers {
     done
 }
 function nordapi {
+    # Some commands copied from:
+    # https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
     heading "NordVPN API"
-    echo
-    echo "Some commands copied from"
-    echo -e "${EColor}https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/${Color_Off}"
-    echo "Requires 'curl' and 'jq'"
+    echo "Query the NordVPN Public API.  Requires 'curl' and 'jq'"
     echo "Commands may take a few seconds to complete."
     echo
     if [[ "$connected" == "connected" ]]; then
@@ -1957,6 +1958,80 @@ function change_host {
     echo "(Does not affect 'Rate VPN Server')"
     echo
 }
+function wireguard_gen {
+    # Based on Tomba's NordLynx2WireGuard script
+    # https://github.com/TomBayne/tombas-script-repo
+    heading "WireGuard"
+    echo "Generate a WireGuard config file from your currently active"
+    echo "NordLynx connection.  Requires WireGuard/WireGuard-Tools."
+    echo "Commands require sudo."
+    echo
+    wgcity=$( echo "$city" | tr -d ' ' )
+    wgconfig=( "$wgcity"_"$server"_wg.conf )    # Filename
+    wgdir=$( pwd )                              # Directory
+    wgfull="$wgdir/$wgconfig"                   # Full path and filename
+    #
+    if ! command -v wg &> /dev/null; then
+        echo -e "${WColor}WireGuard-Tools could not be found.${Color_Off}"
+        echo "Please install WireGuard/WireGuard-Tools."
+        echo
+        return
+    elif [[ "$connected" != "connected" ]] || [[ "$technology" != "nordlynx" ]]; then
+        echo -e "The VPN is $connectedc."
+        echo -e "The Technology is set to ${TColor}$technologyd${Color_Off}."
+        echo -e "${WColor}Must connect to your chosen server using NordLynx.${Color_Off}"
+        echo
+        return
+    elif [ -e "$wgconfig" ]; then
+        echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
+        echo -e "${WColor}$wgfull already exists${Color_Off}"
+        echo
+        return
+    fi
+    echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
+    echo -e "${CIColor}$city ${COColor}$country ${IPColor}$ip ${Color_Off}"
+    echo
+    echo -e "Generate WireGuard config file:"
+    echo -e "${LColor}$wgfull${Color_Off}"
+    echo
+    echo
+    read -n 1 -r -p "Proceed? (y/n) "; echo
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        #
+        address=$(/sbin/ifconfig nordlynx | grep 'inet ' | tr -s ' ' | cut -d" " -f3)
+        listenport=$(sudo wg showconf nordlynx | grep 'ListenPort = .*')
+        privatekey=$(sudo wg showconf nordlynx | grep 'PrivateKey = .*')
+        publickey=$(sudo wg showconf nordlynx | grep 'PublicKey = .*')
+        endpoint=$(sudo wg showconf nordlynx | grep 'Endpoint = .*')
+        #
+        echo "# $server.nordvpn.com" >> "$wgconfig"
+        echo "# $city $country" >> "$wgconfig"
+        echo "# Server $ip" >> "$wgconfig"
+        echo >> "$wgconfig"
+        echo "[INTERFACE]" >> "$wgconfig"
+        echo "Address = ${address}" >> "$wgconfig"
+        echo "${privatekey}" >> "$wgconfig"
+        echo "DNS = 103.86.96.100" >> "$wgconfig"
+        echo >> "$wgconfig"
+        echo "[PEER]" >> "$wgconfig"
+        echo "${endpoint}" >> "$wgconfig"
+        echo "${publickey}" >> "$wgconfig"
+        echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgconfig"
+        echo "PersistentKeepalive = 25" >> "$wgconfig"
+        #
+        #sudo -K     # timeout sudo
+        echo
+        echo -e "${EColor}Completed \u2705${Color_Off}" # unicode checkmark
+        echo
+        echo -e "cat ${LColor}$wgfull${Color_Off}"
+        echo
+        cat "$wgconfig"
+        # open with default editor
+        # nohup xdg-open "$wgconfig" > /dev/null 2>&1 &
+    fi
+    echo
+}
 function ftools {
     heading "Tools"
     if [[ "$connected" == "connected" ]]; then
@@ -1973,7 +2048,7 @@ function ftools {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=("NordVPN API" "Rate VPN Server" "www.speedtest.net" "youtube-dl" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "world map" "Change Host" "Exit")
+    nettools=("NordVPN API" "Rate VPN Server" "WireGuard" "www.speedtest.net" "youtube-dl" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "world map" "Change Host" "Exit")
     numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
@@ -1983,6 +2058,9 @@ function ftools {
                 ;;
             "Rate VPN Server")
                 rate_server
+                ;;
+            "WireGuard")
+                wireguard_gen
                 ;;
             "www.speedtest.net")
                 xdg-open http://www.speedtest.net/  # default browser
@@ -2114,8 +2192,7 @@ function fscriptinfo {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
     # https://unix.stackexchange.com/questions/3886/difference-between-nohup-disown-and
-    # command > /dev/null 2>&1 &
-        xdg-open "$0"
+        nohup xdg-open "$0" > /dev/null 2>&1 &
         exit
     fi
 }
