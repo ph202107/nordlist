@@ -23,7 +23,7 @@ nord_version="nordvpn"           # latest version
 #
 function default_settings {
     lbreak
-    # After intallation is complete, these settings will be applied
+    # After installation is complete, these settings will be applied
     #
     nordvpn set technology nordlynx
     nordvpn whitelist add subnet 192.168.1.0/24
