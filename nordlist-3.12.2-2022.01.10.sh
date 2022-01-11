@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.12.2 on Linux Mint 20.2
-# January 6, 2022
+# Tested with NordVPN Version 3.12.2 on Linux Mint 20.3
+# January 10, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -88,6 +88,10 @@ exitlogo="y"
 # the server load.  Requires 'curl' and 'jq'.  "y" or "n"
 exitping="n"
 #
+# Open http links in a new Firefox window.  "y" or "n"
+# Choose "n" to use the default browser.
+usefirefox="n"
+#
 # Set 'menuwidth' to your terminal width or lower eg. menuwidth="70"
 # Lowering the value will compact the menus horizontally.
 # Leave blank to have the menu width change with the window size.
@@ -136,7 +140,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2266.  Recommend configuring the
+# The Main Menu starts on line 2279.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -556,6 +560,15 @@ function warning {
     if [[ "$connected" == "connected" ]]; then
         echo -e "${WColor}** Changing this setting will disconnect the VPN **${Color_Off}"
         echo
+    fi
+}
+function openlink {
+    # $1 = URL or link to open
+    #
+    if [[ "$1" == *"http"* ]] && [[ "$usefirefox" =~ ^[Yy]$ ]]; then
+        nohup /usr/bin/firefox --new-window "$1" > /dev/null 2>&1 &
+    else
+        nohup xdg-open "$1" > /dev/null 2>&1 &
     fi
 }
 function fcountries {
@@ -1338,9 +1351,9 @@ function fcustomdns {
 function fwhitelist {
     heading "Whitelist"
     echo "Restore a default whitelist after installation, using 'Reset'"
-    echo "or making other changes.  Edit the script to modify"
+    echo "or making other changes. Edit the script to modify the function"
     echo
-    echo -e "${LColor}function whitelist_commands${Color_Off}"
+    echo -e "${LColor}whitelist_commands${Color_Off}"
     #
     startline=$(grep -m1 -n "whitelist_start" "$0" | cut -f1 -d':')
     endline=$(( $(grep -m1 -n "whitelist_end" "$0" | cut -f1 -d':') - 1 ))
@@ -1451,17 +1464,17 @@ function faccount {
                 nordvpn --version
                 ;;
             "Changelog")
-                nordrel="https://nordvpn.com/blog/nordvpn-linux-release-notes/"
+                nordrelease="https://nordvpn.com/blog/nordvpn-linux-release-notes/"
                 echo
                 #zcat "$nordchangelog"
                 #zless +G "$nordchangelog"
                 # version numbers are not in order (latest release != last entry)
                 zless -p$( nordvpn --version | cut -f3 -d' ' ) "$nordchangelog"
                 #
-                read -n 1 -r -p "$(echo -e "Open ${EColor}$nordrel${Color_Off} ? (y/n) ")"
+                read -n 1 -r -p "$(echo -e "Open ${EColor}$nordrelease${Color_Off} ? (y/n) ")"
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    xdg-open "$nordrel"
+                    openlink "$nordrelease"
                 fi
                 ;;
             "Nord Manual")
@@ -1865,7 +1878,7 @@ function allvpnservers {
     done
 }
 function nordapi {
-    # Some commands copied from:
+    # Commands copied from:
     # https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
     heading "NordVPN API"
     echo "Query the NordVPN Public API.  Requires 'curl' and 'jq'"
@@ -1991,7 +2004,7 @@ function wireguard_gen {
     echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
     echo -e "${CIColor}$city ${COColor}$country ${IPColor}$ip ${Color_Off}"
     echo
-    echo -e "Generate WireGuard config file:"
+    echo "Generate WireGuard config file:"
     echo -e "${LColor}$wgfull${Color_Off}"
     echo
     echo
@@ -2027,8 +2040,10 @@ function wireguard_gen {
         echo -e "cat ${LColor}$wgfull${Color_Off}"
         echo
         cat "$wgconfig"
+        #
+        #highlight -O xterm256 "$wgconfig"
         # open with default editor
-        # nohup xdg-open "$wgconfig" > /dev/null 2>&1 &
+        # openlink "$wgconfig"
     fi
     echo
 }
@@ -2063,12 +2078,11 @@ function ftools {
                 wireguard_gen
                 ;;
             "www.speedtest.net")
-                xdg-open http://www.speedtest.net/  # default browser
-                #/usr/bin/firefox --new-window http://www.speedtest.net/
-                #/usr/bin/firefox --new-window https://speedof.me/
-                #/usr/bin/firefox --new-window https://fast.com
-                #/usr/bin/firefox --new-window https://www.linode.com/speed-test/
-                #/usr/bin/firefox --new-window http://speedtest-blr1.digitalocean.com/
+                openlink "http://www.speedtest.net/"
+                #openlink "https://speedof.me/"
+                #openlink "https://fast.com"
+                #openlink "https://www.linode.com/speed-test/"
+                #openlink "http://speedtest-blr1.digitalocean.com/"
                 ;;
             "youtube-dl")
                 # test speed by downloading a youtube video to /dev/null
@@ -2111,13 +2125,13 @@ function ftools {
                 mtr $nordhost
                 ;;
             "ipleak.net")
-                xdg-open https://ipleak.net/
+                openlink "https://ipleak.net/"
                 ;;
             "dnsleaktest.com")
-                xdg-open https://dnsleaktest.com/
+                openlink "https://dnsleaktest.com/"
                 ;;
             "test-ipv6.com")
-                xdg-open https://test-ipv6.com/
+                openlink "https://test-ipv6.com/"
                 ;;
             "world map")
                 # may be possible to highlight location
@@ -2191,8 +2205,7 @@ function fscriptinfo {
     read -n 1 -r -p "Open $0 with the default editor? (y/n) "
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-    # https://unix.stackexchange.com/questions/3886/difference-between-nohup-disown-and
-        nohup xdg-open "$0" > /dev/null 2>&1 &
+        openlink "$0"
         exit
     fi
 }
@@ -2344,8 +2357,7 @@ function main_menu {
                 echo
                 nordvpn connect us8247
                 status
-                xdg-open https://discord.gg/83jsvGqpGk  # default browser
-                # /usr/bin/firefox --new-window https://discord.gg/83jsvGqpGk
+                openlink "https://discord.gg/83jsvGqpGk"
                 break
                 ;;
             "QuickConnect")
@@ -2624,8 +2636,11 @@ main_menu start
 #   https://downloads.nordcdn.com/configs/archives/servers/ovpn.zip
 #   https://nordvpn.com/servers/tools/
 #
-# Create WireGuard configs
-#   https://github.com/TomBayne/tombas-script-repo/blob/main/NordLynx2Wireguard.sh
+# Manage NordVPN OpenVPN connections
+#   https://github.com/jotyGill/openpyn-nordvpn
+#
+# OpenVPN Control Script
+#   https://gist.github.com/aivanise/58226db6491f3339cbfa645a9dc310c0
 #
 # NordLynx stability issues
 #   install WireGuard
@@ -2637,6 +2652,14 @@ main_menu start
 #
 # NordVPN Linux GUI
 #   https://github.com/GoBig87/NordVpnLinuxGUI
+#   https://github.com/morpheusthewhite/nordpy
+#   https://github.com/JimR21/nordvpn-linux-gui
+#   https://github.com/byoso/Nord-Manager
+#   https://github.com/insan271/gui-nordvpn-linux
+#   https://github.com/vfosterm/NordVPN-NetworkManager-Gui
+#
+# Output recommended servers with option to ping each server
+#   https://github.com/trishmapow/nordvpn-tools
 #
 # NordVPN status and settings tray app.
 #   https://github.com/dvilelaf/NordIndicator
