@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.2 on Linux Mint 20.3
-# January 10, 2022
+# January 13, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -89,7 +89,7 @@ exitlogo="y"
 exitping="n"
 #
 # Open http links in a new Firefox window.  "y" or "n"
-# Choose "n" to use the default browser.
+# Choose "n" to use the default browser or method.
 usefirefox="n"
 #
 # Set 'menuwidth' to your terminal width or lower eg. menuwidth="70"
@@ -140,7 +140,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2279.  Recommend configuring the
+# The Main Menu starts on line 2277.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1350,17 +1350,8 @@ function fcustomdns {
 }
 function fwhitelist {
     heading "Whitelist"
-    echo "Restore a default whitelist after installation, using 'Reset'"
-    echo "or making other changes. Edit the script to modify the function"
-    echo
-    echo -e "${LColor}whitelist_commands${Color_Off}"
-    #
-    startline=$(grep -m1 -n "whitelist_start" "$0" | cut -f1 -d':')
-    endline=$(( $(grep -m1 -n "whitelist_end" "$0" | cut -f1 -d':') - 1 ))
-    numlines=$(( $endline - $startline ))
-    cat -n "$0" | head -n $endline | tail -n $numlines
-    #highlight -l -O xterm256 "$0" | head -n $endline | tail -n $numlines
-    #
+    echo "Restore a default whitelist after installation, using 'Reset' or"
+    echo "making other changes. Edit the script to modify the function."
     echo
     echo -e "${EColor}Current Settings:${Color_Off}"
     if nordvpn settings | grep -i -q "whitelist"; then
@@ -1368,6 +1359,13 @@ function fwhitelist {
     else
         echo "No whitelist entries."
     fi
+    echo
+    echo -e "${LColor}whitelist_commands${Color_Off}"
+    startline=$(grep -m1 -n "whitelist_start" "$0" | cut -f1 -d':')
+    endline=$(( $(grep -m1 -n "whitelist_end" "$0" | cut -f1 -d':') - 1 ))
+    numlines=$(( $endline - $startline ))
+    cat -n "$0" | head -n $endline | tail -n $numlines
+    #highlight -l -O xterm256 "$0" | head -n $endline | tail -n $numlines
     echo
     echo -e "Type ${WColor}C${Color_Off} to clear the current whitelist."
     echo
@@ -2023,7 +2021,7 @@ function wireguard_gen {
         echo "# Server $ip" >> "$wgconfig"
         echo >> "$wgconfig"
         echo "[INTERFACE]" >> "$wgconfig"
-        echo "Address = ${address}" >> "$wgconfig"
+        echo "Address = ${address}/32" >> "$wgconfig"
         echo "${privatekey}" >> "$wgconfig"
         echo "DNS = 103.86.96.100" >> "$wgconfig"
         echo >> "$wgconfig"
