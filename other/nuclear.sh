@@ -38,6 +38,8 @@ function lbreak {
 }
 function trashnord {
     lbreak
+    sudo echo "OK"
+    lbreak
     nordvpn set killswitch disabled
     nordvpn disconnect
     sudo systemctl stop nordvpnd.service
