@@ -140,7 +140,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2267.  Recommend configuring the
+# The Main Menu starts on line 2265.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1105,7 +1105,6 @@ function change_setting {
                 echo
             fi
             nordvpn set $1 enabled $chgloc; wait
-            echo
         else
             if [[ "$1" == "firewall" ]] && [[ "$killswitch" == "enabled" ]]; then
                 # when changing the setting from IPTables
@@ -1115,7 +1114,6 @@ function change_setting {
                 echo
             fi
             nordvpn set $1 disabled; wait
-            echo
         fi
     else
         echo -e "$chgind Keep $chgname $chgvarc."
