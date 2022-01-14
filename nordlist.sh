@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.2 on Linux Mint 20.3
-# January 13, 2022
+# January 14, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -140,7 +140,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2277.  Recommend configuring the
+# The Main Menu starts on line 2267.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -426,22 +426,22 @@ function set_vars {
     #
     # To display the protocol for either Technology whether connected or disconnected.
     if [[ "$connected" == "connected" ]]; then
-        protocold=$protocol2
+        protocold="$protocol2"
     elif [[ "$technology" == "nordlynx" ]]; then
         protocold="UDP"
     else
-        protocold=$protocol
+        protocold="$protocol"
     fi
     #
     if [[ "$connected" == "connected" ]]; then
-        connectedc="${CNColor}$connected${Color_Off}"
-        connectedcl="${CNColor}${connected^}${Color_Off}"
+        connectedc=(${CNColor}"$connected"${Color_Off})
+        connectedcl=(${CNColor}"${connected^}"${Color_Off})
     else
-        connectedc="${DNColor}$connected${Color_Off}"
-        connectedcl="${DNColor}${connected^}${Color_Off}"
+        connectedc=(${DNColor}"$connected"${Color_Off})
+        connectedcl=(${DNColor}"${connected^}"${Color_Off})
     fi
     #
-    transferc="${DLColor}\u25bc $transferd ${ULColor}\u25b2 $transferu${Color_Off}"
+    transferc=(${DLColor}"\u25bc $transferd"${ULColor}" \u25b2 $transferu"${Color_Off})
     #
     techpro=(${TIColor}"[$technologyd $protocold]"${Color_Off})
     #
@@ -470,11 +470,9 @@ function set_vars {
     if [[ "$obfuscate" == "enabled" ]]; then
         ob=(${EIColor}[OB]${Color_Off})
         obfuscatec=(${EColor}"$obfuscate"${Color_Off})
-        obprompt=$(echo -e "${DColor}Disable${Color_Off} Obfuscate? (y/n) ")
     else
         ob=(${DIColor}[OB]${Color_Off})
         obfuscatec=(${DColor}"$obfuscate"${Color_Off})
-        obprompt=$(echo -e "${EColor}Enable${Color_Off} Obfuscate? (y/n) ")
     fi
     #
     if [[ "$notify" == "enabled" ]]; then
@@ -672,7 +670,7 @@ function fhostname {
     echo "Leave blank to quit."
     read -r -p "Enter the server name (eg. us9364): " specsrvr
     echo
-    if [[ "$specsrvr" == "" ]]; then return; fi
+    if [[ -z $specsrvr ]]; then return; fi
     if [[ "$specsrvr" == *"nord"* ]]; then specsrvr=$( echo "$specsrvr" | cut -f1 -d'.' ); fi
     if [[ "$specsrvr" == *"socks"* ]]; then echo -e "${WColor}Unable to connect to SOCKS servers${Color_Off}"; echo; return; fi
     if [[ "$specsrvr" == *"-"* ]] && [[ "$specsrvr" != *"onion"* ]] && [[ "$technology" == "nordlynx" ]]; then
@@ -769,8 +767,7 @@ function fobservers {
         echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
         REPLY="y"
     else
-        read -n 1 -r -p "Proceed? (y/n) "
-        echo
+        read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
@@ -819,8 +816,7 @@ function fdoublevpn {
         echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
         REPLY="y"
     else
-        read -n 1 -r -p "Proceed? (y/n) "
-        echo
+        read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
@@ -868,8 +864,7 @@ function fonion {
         echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
         REPLY="y"
     else
-        read -n 1 -r -p "Proceed? (y/n) "
-        echo
+        read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
@@ -913,8 +908,7 @@ function fp2p {
         echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
         REPLY="y"
     else
-        read -n 1 -r -p "Proceed? (y/n) "
-        echo
+        read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
@@ -952,11 +946,10 @@ function ftechnology {
         echo -e "${FColor}[F]ast3 is enabled.  Changing the Technology.${Color_Off}"
         REPLY="y"
     elif [[ "$technology" == "openvpn" ]]; then
-        read -n 1 -r -p "Change the Technology to NordLynx? (y/n) "
+        read -n 1 -r -p "Change the Technology to NordLynx? (y/n) "; echo
     else
-        read -n 1 -r -p "Change the Technology to OpenVPN? (y/n) "
+        read -n 1 -r -p "Change the Technology to OpenVPN? (y/n) "; echo
     fi
-    echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
         if [[ "$technology" == "openvpn" ]]; then
@@ -977,7 +970,6 @@ function ftechnology {
     else
         echo
         echo -e "Continue to use ${TColor}$technologyd${Color_Off}."
-        echo
     fi
     if [[ "$1" == "obback" ]]; then
         set_vars
@@ -996,7 +988,7 @@ function fprotocol {
         echo
         echo "Change Technology to OpenVPN to use TCP or UDP."
         echo
-        read -n 1 -r -p "Go to the 'Technology' setting? (y/n) "
+        read -n 1 -r -p "Go to the 'Technology' setting? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             ftechnology
@@ -1013,11 +1005,10 @@ function fprotocol {
             echo -e "${FColor}[F]ast3 is enabled.  Changing the Protocol.${Color_Off}"
             REPLY="y"
         elif [[ "$protocol" == "UDP" ]]; then
-            read -n 1 -r -p "Change the Protocol to TCP? (y/n) "
+            read -n 1 -r -p "Change the Protocol to TCP? (y/n) "; echo
         else
-            read -n 1 -r -p "Change the Protocol to UDP? (y/n) "
+            read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
         fi
-        echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             discon2
             if [[ "$protocol" == "UDP" ]]; then
@@ -1025,11 +1016,9 @@ function fprotocol {
             else
                 nordvpn set protocol UDP; wait
             fi
-            echo
         else
             echo
             echo -e "Continue to use ${TColor}$protocol${Color_Off}."
-            echo
         fi
     fi
     main_menu
@@ -1054,11 +1043,10 @@ function ask_protocol {
         fi
         return
     elif [[ "$protocol" == "UDP" ]]; then
-        read -n 1 -r -p "Change the Protocol to TCP? (y/n) "
+        read -n 1 -r -p "Change the Protocol to TCP? (y/n) "; echo
     else
-        read -n 1 -r -p "Change the Protocol to UDP? (y/n) "
+        read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
     fi
-    echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
         if [[ "$protocol" == "UDP" ]]; then
@@ -1077,12 +1065,13 @@ function change_setting {
     # $1 = Nord command
     # $2 = override fast2 and main_menu
     #
-    if [[ "$1" == "firewall" ]]; then chgname="the Firewall"; chgvar="$firewall"; chgind="$fw"; chgloc=""; fi
-    if [[ "$1" == "killswitch" ]]; then chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks"; chgloc=""; fi
-    if [[ "$1" == "cybersec" ]]; then chgname="CyberSec"; chgvar="$cybersec"; chgind="$cs"; chgloc=""; fi
-    if [[ "$1" == "notify" ]]; then chgname="Notify"; chgvar="$notify"; chgind="$no"; chgloc=""; fi
-    if [[ "$1" == "autoconnect" ]]; then chgname="Auto-Connect"; chgvar="$autocon"; chgind="$ac"; chgloc="$acwhere"; fi
-    if [[ "$1" == "ipv6" ]]; then chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6"; chgloc=""; fi
+    if [[ "$1" == "firewall" ]]; then chgname="the Firewall"; chgvar="$firewall"; chgind="$fw"; chgloc=""
+    elif [[ "$1" == "killswitch" ]]; then chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks"; chgloc=""
+    elif [[ "$1" == "cybersec" ]]; then chgname="CyberSec"; chgvar="$cybersec"; chgind="$cs"; chgloc=""
+    elif [[ "$1" == "notify" ]]; then chgname="Notify"; chgvar="$notify"; chgind="$no"; chgloc=""
+    elif [[ "$1" == "autoconnect" ]]; then chgname="Auto-Connect"; chgvar="$autocon"; chgind="$ac"; chgloc="$acwhere"
+    elif [[ "$1" == "ipv6" ]]; then chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6"; chgloc=""
+    else echo -e "${WColor}$1 not defined${Color_Off}"; echo; return; fi
     #
     if [[ "$chgvar" == "enabled" ]]; then
         chgvarc=(${EColor}"$chgvar"${Color_Off})
@@ -1097,8 +1086,7 @@ function change_setting {
         echo -e "${FColor}[F]ast2 is enabled.  Changing the setting.${Color_Off}"
         REPLY="y"
     else
-        read -n 1 -r -p "$chgprompt"
-        echo
+        read -n 1 -r -p "$chgprompt"; echo
     fi
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -1211,7 +1199,7 @@ function fautoconnect {
         echo "     must support obfuscation."
         echo
     fi
-    if [[ "$autocon" == "disabled" ]] && [[ "$acwhere" != "" ]]; then
+    if [[ "$autocon" == "disabled" ]] && [[ -n $acwhere ]]; then
         echo -e "Auto-Connect location: ${LColor}$acwhere${Color_Off}"
         echo
     fi
@@ -1233,7 +1221,7 @@ function fobfuscate {
         echo "Obfuscation is not available when using NordLynx."
         echo "Change Technology to OpenVPN to use Obfuscation."
         echo
-        read -n 1 -r -p "Go to the 'Technology' setting and return? (y/n) "
+        read -n 1 -r -p "Go to the 'Technology' setting and return? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             ftechnology "obback"
@@ -1252,13 +1240,17 @@ function fobfuscate {
         echo
         echo -e "$ob Obfuscate is $obfuscatec."
         echo
+        if [[ "$obfuscate" == "enabled" ]]; then
+            obprompt=$(echo -e "${DColor}Disable${Color_Off} Obfuscate? (y/n) ")
+        else
+            obprompt=$(echo -e "${EColor}Enable${Color_Off} Obfuscate? (y/n) ")
+        fi
         if [[ "$fast3" =~ ^[Yy]$ ]]; then
             echo -e "${FColor}[F]ast3 is enabled.  Changing the setting.${Color_Off}"
             REPLY="y"
         else
-            read -n 1 -r -p "$obprompt"
+            read -n 1 -r -p "$obprompt"; echo
         fi
-        echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             discon2
             if [[ "$obfuscate" == "enabled" ]]; then
@@ -1271,7 +1263,6 @@ function fobfuscate {
         else
             echo
             echo -e "$ob Keep Obfuscate $obfuscatec."
-            echo
         fi
     fi
     main_menu
@@ -1368,14 +1359,20 @@ function fwhitelist {
     #highlight -l -O xterm256 "$0" | head -n $endline | tail -n $numlines
     echo
     echo -e "Type ${WColor}C${Color_Off} to clear the current whitelist."
+    echo -e "Type ${FIColor}E${Color_Off} to edit the script."
     echo
-    read -n 1 -r -p "Apply your default whitelist settings? (y/n/C) "; echo
+    read -n 1 -r -p "Apply your default whitelist settings? (y/n/C/E) "; echo
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         whitelist_commands
     elif [[ $REPLY =~ ^[Cc]$ ]]; then
         nordvpn whitelist remove all
         echo
+    elif [[ $REPLY =~ ^[Ee]$ ]]; then
+        echo -e "Modify ${LColor}function whitelist_commands${Color_Off} starting on line ${FIColor}$(( $startline + 1 ))${Color_Off}"
+        echo
+        openlink "$0"
+        exit
     else
         echo "No changes made."
         echo
@@ -1450,8 +1447,7 @@ function faccount {
                 echo
                 echo -e "${WColor}** Untested **${Color_Off}"
                 echo
-                read -n 1 -r -p "Proceed? (y/n) "
-                echo
+                read -n 1 -r -p "Proceed? (y/n) "; echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     discon2
                     nordvpn register
@@ -1469,8 +1465,7 @@ function faccount {
                 # version numbers are not in order (latest release != last entry)
                 zless -p$( nordvpn --version | cut -f3 -d' ' ) "$nordchangelog"
                 #
-                read -n 1 -r -p "$(echo -e "Open ${EColor}$nordrelease${Color_Off} ? (y/n) ")"
-                echo
+                read -n 1 -r -p "$(echo -e "Open ${EColor}$nordrelease${Color_Off} ? (y/n) ")"; echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     openlink "$nordrelease"
                 fi
@@ -1510,8 +1505,7 @@ function frestart {
     echo "sudo systemctl restart nordvpn.service"
     echo -e ${Color_Off}
     echo
-    read -n 1 -r -p "Proceed? (y/n) "
-    echo
+    read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if [[ "$killswitch" == "enabled" ]]; then
@@ -1563,8 +1557,7 @@ function freset {
     echo "Apply your default configuration"
     echo -e ${Color_Off}
     echo
-    read -n 1 -r -p "Proceed? (y/n) "
-    echo
+    read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         # first four redundant
@@ -1585,7 +1578,7 @@ function freset {
         echo -e "${WColor}** Reminder **${Color_Off}"
         echo -e "${LColor}Reconfigure the Whitelist and other settings.${Color_Off}"
         echo
-        read -n 1 -s -r -p "Press any key to restart services..."
+        read -n 1 -s -r -p "Press any key to restart services..."; echo
         set_vars
         frestart "plusdefaults"
     fi
@@ -1645,8 +1638,7 @@ function fiptables {
                 echo
                 echo -e ${WColor}"Flush the IPTables and clear all of your Firewall rules."${Color_Off}
                 echo
-                read -n 1 -r -p "Proceed? (y/n) "
-                echo
+                read -n 1 -r -p "Proceed? (y/n) "; echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     echo
                     echo -e ${LColor}"IPTables Before:"${Color_Off}
@@ -1755,7 +1747,7 @@ function rate_server {
         echo
         read -n 1 -r -p "$(echo -e Rating 1-5 [e${LColor}x${Color_Off}it]): " rating
         echo
-        if [[ $rating =~ ^[Xx]$ ]] || [[ $rating == "" ]]; then
+        if [[ $rating =~ ^[Xx]$ ]] || [[ -z $rating ]]; then
             break
         elif (( 1 <= $rating )) && (( $rating <= 5 )); then
             echo
@@ -1780,7 +1772,7 @@ function server_load {
     echo "Checking the server load..."
     echo
     sload=$(timeout 10 curl --silent https://api.nordvpn.com/server/stats/$nordhost | jq .percent)
-    if [[ $sload == "" ]]; then
+    if [[ -z $sload ]]; then
         echo "Request timed out."
     elif (( $sload <= 30 )); then
         echo -e "$nordhost load = ${EIColor}$sload%${Color_Off}"
@@ -2139,7 +2131,7 @@ function ftools {
                 echo "- 'a' and 'z' to zoom"
                 echo "- 'q' to quit"
                 echo
-                read -n 1 -r -p "telnet mapscii.me? (y/n) "
+                read -n 1 -r -p "telnet mapscii.me? (y/n) "; echo
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     telnet mapscii.me
@@ -2167,8 +2159,7 @@ function fdefaults {
     echo -e "$defaultsc  Disconnect and apply the NordVPN settings"
     echo "  specified in 'function set_defaults'."
     echo
-    read -n 1 -r -p "Proceed? (y/n) "
-    echo
+    read -n 1 -r -p "Proceed? (y/n) "; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
         set_defaults
@@ -2200,8 +2191,7 @@ function fscriptinfo {
     echo
     echo "Need to edit the script to change these settings."
     echo
-    read -n 1 -r -p "Open $0 with the default editor? (y/n) "
-    echo
+    read -n 1 -r -p "Open $0 with the default editor? (y/n) "; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         openlink "$0"
         exit
@@ -2231,7 +2221,7 @@ function fquickconnect {
     else
         bestserver="$(timeout 10 curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
     fi
-    if [[ "$bestserver" == "" ]]; then
+    if [[ -z $bestserver ]]; then
         echo "Request timed out. Using 'nordvpn connect'"
     else
         echo -e "Connecting to ${LColor}$bestserver${Color_Off}"
@@ -2265,7 +2255,7 @@ function main_menu {
     else
         echo
         echo
-        read -n 1 -s -r -p "Press any key for the menu... "
+        read -n 1 -s -r -p "Press any key for the menu... "; echo
         echo
     fi
     #
@@ -2542,7 +2532,7 @@ if (( $numupdate > 0 )); then
     echo "nordvpn disconnect"
     echo
     echo
-    read -n 1 -s -r -p "Press any key for the menu... "
+    read -n 1 -s -r -p "Press any key for the menu... "; echo
     echo
 fi
 #
