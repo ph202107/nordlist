@@ -1,5 +1,3 @@
-Updated January 13, 2022
-
 Bash script to use with the NordVPN Linux CLI.  
 Requires bash version 4 or greater.  
 Tested with Linux Mint only (Debian/Ubuntu base).   
