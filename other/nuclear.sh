@@ -55,13 +55,15 @@ function trashnord {
 }
 function installnord {
     lbreak
-    if [ -e /etc/apt/sources.list.d/nordvpn.list ]; then
+    if [[ -e /etc/apt/sources.list.d/nordvpn.list ]]; then
         echo -e ${LGreen}"NordVPN repository found."${Color_Off}
     else
-        echo -e ${BRed}"NordVPN repository not found.  Adding the repository."${Color_Off}
+        echo -e ${LGreen}"Adding the NordVPN repository."${Color_Off}
         echo
         cd ~/Downloads
         wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
+        echo
+        echo
         sudo apt install ~/Downloads/nordvpn-release_1.0.0_all.deb -y
         # or: sudo dpkg -i ~/Downloads/nordvpn-release_1.0.0_all.deb -y
     fi
@@ -81,8 +83,7 @@ function loginnord {
     fi
     nordvpn login
     echo
-    read -n 1 -r -p "Press any key after login is complete... "
-    echo
+    read -n 1 -r -p "Press any key after login is complete... "; echo
 }
 function flushtables {
     sudo iptables -S
@@ -146,7 +147,7 @@ echo
 nordvpn --version
 lbreak
 #
-# If the repository gets removed after "purge" then try the alternate install method:
+# Alternate install method:
 #  sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
 # On subsequent reinstalls the repository won't be removed
 #
