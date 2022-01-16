@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.2 on Linux Mint 20.3
-# January 14, 2022
+# January 16, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -40,9 +40,10 @@
 #
 # =====================================================================
 # Other small programs used:
-# highlight         Settings-Script             (function fscriptinfo)
-# youtube-dl        Settings-Tools-youtube-dl   (function ftools)
-# wireguard-tools   Settings-Tools-WireGuard    (function wireguard_gen)
+# wireguard-tools  Settings-Tools-WireGuard     (function wireguard_gen)
+# speedtest-cli    Settings-Tools-speedtest-cli (function ftools)
+# youtube-dl       Settings-Tools-youtube-dl    (function ftools)
+# highlight        Settings-Script              (function fscriptinfo)
 #
 # For VPN On/Off status in the system tray, I use the Linux Mint
 # Cinnamon applet "NordVPN Indicator".  Github may have similar apps.
@@ -140,7 +141,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2267.  Recommend configuring the
+# The Main Menu starts on line 2286.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1105,7 +1106,6 @@ function change_setting {
                 echo
             fi
             nordvpn set $1 enabled $chgloc; wait
-            echo
         else
             if [[ "$1" == "firewall" ]] && [[ "$killswitch" == "enabled" ]]; then
                 # when changing the setting from IPTables
@@ -1115,13 +1115,11 @@ function change_setting {
                 echo
             fi
             nordvpn set $1 disabled; wait
-            echo
         fi
     else
         echo -e "$chgind Keep $chgname $chgvarc."
-        echo
     fi
-    if [[ "$2" == "override" ]]; then return; fi
+    if [[ "$2" == "override" ]]; then echo; return; fi
     main_menu
 }
 function ffirewall {
@@ -1367,7 +1365,6 @@ function fwhitelist {
         whitelist_commands
     elif [[ $REPLY =~ ^[Cc]$ ]]; then
         nordvpn whitelist remove all
-        echo
     elif [[ $REPLY =~ ^[Ee]$ ]]; then
         echo -e "Modify ${LColor}function whitelist_commands${Color_Off} starting on line ${FIColor}$(( $startline + 1 ))${Color_Off}"
         echo
@@ -1378,8 +1375,7 @@ function fwhitelist {
         echo
     fi
     nordvpn settings | grep -A100 -i "whitelist" --color=none
-    echo
-    if [[ "$1" == "back" ]]; then return; fi
+    if [[ "$1" == "back" ]]; then echo; return; fi
     main_menu
 }
 function login_nogui {
@@ -1985,7 +1981,7 @@ function wireguard_gen {
         echo -e "${WColor}Must connect to your chosen server using NordLynx.${Color_Off}"
         echo
         return
-    elif [ -e "$wgconfig" ]; then
+    elif [[ -e "$wgconfig" ]]; then
         echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
         echo -e "${WColor}$wgfull already exists${Color_Off}"
         echo
@@ -2053,7 +2049,7 @@ function ftools {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=("NordVPN API" "Rate VPN Server" "WireGuard" "www.speedtest.net" "youtube-dl" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "world map" "Change Host" "Exit")
+    nettools=("NordVPN API" "Rate VPN Server" "WireGuard" "speedtest-cli" "www.speedtest.net" "youtube-dl" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "world map" "Change Host" "Exit")
     numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
@@ -2066,6 +2062,29 @@ function ftools {
                 ;;
             "WireGuard")
                 wireguard_gen
+                ;;
+            "speedtest-cli")
+                heading "SpeedTest"
+                echo
+                echo "Test Options"
+                echo
+                echo -e "  - ${UPColor}(B)${Color_Off}oth download and upload"
+                echo -e "  - ${DLColor}(D)${Color_Off}ownload only"
+                echo -e "  - ${ULColor}(U)${Color_Off}pload only"
+                echo
+                speedprompt=$(echo -e "Select a test (${UPColor}B${Color_Off}/${DLColor}D${Color_Off}/${ULColor}U${Color_Off}): ")
+                read -n 1 -r -p "$speedprompt"; echo
+                echo
+                if [[ $REPLY =~ ^[Bb]$ ]]; then
+                    speedtest-cli
+                elif [[ $REPLY =~ ^[Dd]$ ]]; then
+                    speedtest-cli --no-upload
+                elif [[ $REPLY =~ ^[Uu]$ ]]; then
+                    speedtest-cli --no-download
+                else
+                    echo "No test"
+                fi
+                echo
                 ;;
             "www.speedtest.net")
                 openlink "http://www.speedtest.net/"
