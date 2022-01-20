@@ -5,7 +5,7 @@ Fully customizable.
 
 It looks like this:   
 https://i.imgur.com/iz0505v.png   
-https://i.imgur.com/dKnK7u9.png   
+https://i.imgur.com/RFnQIib.png   
 https://i.imgur.com/To2BbUI.png   
 https://i.imgur.com/077qYI3.png   
 
