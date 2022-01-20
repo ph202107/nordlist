@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.3 on Linux Mint 20.3
-# January 19, 2022
+# January 20, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -10,7 +10,7 @@
 # lot of comments to help fellow newbies customize the script.
 #
 # It looks like this:
-# https://i.imgur.com/GbUdJLr.png
+# https://i.imgur.com/iz0505v.png
 # https://i.imgur.com/dKnK7u9.png
 # https://i.imgur.com/To2BbUI.png
 # https://i.imgur.com/077qYI3.png
@@ -141,7 +141,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2286.  Recommend configuring the
+# The Main Menu starts on line 2297.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -284,10 +284,10 @@ function logo {
         #
     fi
     echo -e $connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ip ${Color_Off}
-    echo -e $techpro$fw$ks$cs$ob$no$ac$ip6$dns$fst
+    echo -e $techpro$fw$ks$cs$ob$no$ac$ip6$dns$wl$fst
     echo -e $transferc ${UPColor}$uptime ${Color_Off}
     if [[ -n $transferc ]]; then echo; fi
-    # all indicators: $techpro$fw$ks$cs$ob$no$ac$ip6$dns$fst
+    # all indicators: $techpro$fw$ks$cs$ob$no$ac$ip6$dns$wl$fst
 }
 function heading {
     clear -x
@@ -420,6 +420,7 @@ function set_vars {
     ipversion6=$(nsetsbl "IPv6" | cut -f2 -d' ')
     dns_set=$(nsetsbl "DNS" | cut -f2 -d' ')                # disabled or not=disabled
     dns_srvrs=$(nsetsbl "DNS" | tr '[:lower:]' '[:upper:]') # Server IPs, includes "DNS: "
+    whitelist=$( printf '%s\n' "${nsets[@]}" | grep -A100 -i "whitelist" )
     #
     # Prefer common spelling.
     if [[ "$technology" == "openvpn" ]]; then technologyd="OpenVPN"
@@ -439,7 +440,7 @@ function set_vars {
     if [[ "$connected" == "connected" ]]; then
         connectedc=(${CNColor}"$connected"${Color_Off})
         connectedcl=(${CNColor}"${connected^}"${Color_Off}:)
-        transferc=(${DLColor}"\u25bc $transferd"${ULColor}" \u25b2 $transferu"${Color_Off})
+        transferc=(${DLColor}"\u25bc $transferd"${ULColor}" \u25b2 $transferu "${Color_Off})
     else
         connectedc=(${DNColor}"$connected"${Color_Off})
         connectedcl=(${DNColor}"${connected^}"${Color_Off})
@@ -498,6 +499,12 @@ function set_vars {
         dns=(${DIColor}[DNS]${Color_Off})
     else
         dns=(${EIColor}[DNS]${Color_Off})
+    fi
+    #
+    if [[ -n "${whitelist[@]}" ]]; then # not empty
+        wl=(${EIColor}[WL]${Color_Off})
+    else
+        wl=(${DIColor}[WL]${Color_Off})
     fi
     #
     if [[ ${allfast[@]} =~ [Yy] ]]; then
@@ -1343,8 +1350,8 @@ function fwhitelist {
     echo "making other changes. Edit the script to modify the function."
     echo
     echo -e "${EColor}Current Settings:${Color_Off}"
-    if nordvpn settings | grep -i -q "whitelist"; then
-        nordvpn settings | grep -A100 -i "whitelist" --color=none
+    if [[ -n "${whitelist[@]}" ]]; then
+        printf '%s\n' "${whitelist[@]}"
     else
         echo "No whitelist entries."
     fi
@@ -1363,8 +1370,10 @@ function fwhitelist {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         whitelist_commands
+        set_vars
     elif [[ $REPLY =~ ^[Cc]$ ]]; then
         nordvpn whitelist remove all
+        set_vars
     elif [[ $REPLY =~ ^[Ee]$ ]]; then
         echo -e "Modify ${LColor}function whitelist_commands${Color_Off} starting on line ${FIColor}$(( $startline + 1 ))${Color_Off}"
         echo
@@ -1372,9 +1381,11 @@ function fwhitelist {
         exit
     else
         echo "No changes made."
-        echo
     fi
-    nordvpn settings | grep -A100 -i "whitelist" --color=none
+    if [[ -n "${whitelist[@]}" ]]; then
+        echo
+        printf '%s\n' "${whitelist[@]}"
+    fi
     if [[ "$1" == "back" ]]; then echo; return; fi
     main_menu
 }
@@ -2419,7 +2430,7 @@ function main_menu {
                 # submenu for settings
                 heading "Settings"
                 echo
-                echo -e "$techpro$fw$ks$cs$ob$no$ac$ip6$dns$fst"
+                echo -e "$techpro$fw$ks$cs$ob$no$ac$ip6$dns$wl$fst"
                 echo
                 PS3=$'\n''Choose a Setting: '
                 submsett=("Technology" "Protocol" "Firewall" "KillSwitch" "CyberSec" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
