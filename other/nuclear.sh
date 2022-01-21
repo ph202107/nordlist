@@ -16,6 +16,7 @@ nord_version="nordvpn"           # latest version
 #nord_version="nordvpn=3.11.0-1"
 #nord_version="nordvpn=3.12.0-1"
 #nord_version="nordvpn=3.12.1-1"
+#nord_version="nordvpn=3.12.2"
 #
 # list version numbers:
 #   apt-cache showpkg nordvpn
