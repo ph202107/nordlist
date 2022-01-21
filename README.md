@@ -1,6 +1,8 @@
-Current issues with NordVPN 3.12.3
+Current issues with NordVPN Version 3.12.3
  - Notify setting is still broken
  - Problems connecting to Groups (P2P, Obfuscated, etc.)
+
+===================================
 
 Bash script to use with the NordVPN Linux CLI.  
 Requires bash version 4 or greater.  
