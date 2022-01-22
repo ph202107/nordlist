@@ -1,4 +1,4 @@
-Current issues with NordVPN Version 3.12.3
+NordVPN Version 3.12.3 currently has these issues:
  - Notify setting is still broken
  - Problems connecting to Groups (P2P, Obfuscated, etc.)
 
