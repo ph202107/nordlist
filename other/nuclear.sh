@@ -17,6 +17,8 @@ nord_version="nordvpn"           # latest version
 #nord_version="nordvpn=3.12.0-1"
 #nord_version="nordvpn=3.12.1-1"
 #nord_version="nordvpn=3.12.2"
+#nord_version="nordvpn=3.12.3"
+#
 #
 # list version numbers:
 #   apt-cache showpkg nordvpn
@@ -63,7 +65,6 @@ function installnord {
         echo
         cd ~/Downloads
         wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
-        echo
         echo
         sudo apt install ~/Downloads/nordvpn-release_1.0.0_all.deb -y
         # or: sudo dpkg -i ~/Downloads/nordvpn-release_1.0.0_all.deb -y
@@ -124,7 +125,11 @@ echo -e "${LGreen}Currently installed:${Color_Off}"
 nordvpn --version
 echo
 echo -e "${LGreen}Version to install:${Color_Off}"
-echo "$nord_version"
+if [[ "$nord_version" == "nordvpn" ]]; then
+    echo "$nord_version  (latest available)"
+else
+    echo "$nord_version"
+fi
 echo
 echo
 read -n 1 -r -p "Go nuclear? (y/n) "; echo
