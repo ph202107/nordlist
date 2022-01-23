@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.3 on Linux Mint 20.3
-# January 20, 2022
+# January 23, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -141,7 +141,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2297.  Recommend configuring the
+# The Main Menu starts on line 2300.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -424,23 +424,23 @@ function set_vars {
     #
     # Prefer common spelling.
     if [[ "$technology" == "openvpn" ]]; then technologyd="OpenVPN"
-    elif [[ "$technology" == "nordlynx" ]]; then technologyd="NordLynx"; fi
+    elif [[ "$technology" == "nordlynx" ]]; then technologyd="NordLynx"
+    fi
+    technologydc=(${TColor}"$technologyd"${Color_Off})
     #
     # To display the protocol for either Technology whether connected or disconnected.
-    if [[ "$connected" == "connected" ]]; then
-        protocold="$protocol2"
-    elif [[ "$technology" == "nordlynx" ]]; then
-        protocold="UDP"
-    else
-        protocold="$protocol"
+    if [[ "$connected" == "connected" ]]; then protocold="$protocol2"
+    elif [[ "$technology" == "nordlynx" ]]; then protocold="UDP"
+    else protocold="$protocol"
     fi
+    protocoldc=(${TColor}"$protocold"${Color_Off})
     #
     techpro=(${TIColor}"[$technologyd $protocold]"${Color_Off})
     #
     if [[ "$connected" == "connected" ]]; then
         connectedc=(${CNColor}"$connected"${Color_Off})
         connectedcl=(${CNColor}"${connected^}"${Color_Off}:)
-        transferc=(${DLColor}"\u25bc $transferd"${ULColor}" \u25b2 $transferu "${Color_Off})
+        transferc=(${DLColor}"\u25bc $transferd "${ULColor}"\u25b2 $transferu "${Color_Off})
     else
         connectedc=(${DNColor}"$connected"${Color_Off})
         connectedcl=(${DNColor}"${connected^}"${Color_Off})
@@ -704,7 +704,7 @@ function fallgroups {
     numgroups=${#grouplist[@]}
     echo "Groups that are available with"
     echo
-    echo -e "Technology: ${TColor}$technologyd${Color_Off}"
+    echo -e "Technology: $technologydc"
     if [[ "$technology" == "openvpn" ]]; then
         echo -e "Obfuscate: $obfuscatec"
     fi
@@ -948,7 +948,7 @@ function ftechnology {
     echo "NordLynx is built around the WireGuard VPN protocol"
     echo " and may be faster with less overhead."
     echo
-    echo -e "Currently using ${TColor}$technologyd${Color_Off}."
+    echo -e "Currently using $technologydc."
     echo
     if [[ "$fast3" =~ ^[Yy]$ ]]; then
         echo -e "${FColor}[F]ast3 is enabled.  Changing the Technology.${Color_Off}"
@@ -977,7 +977,7 @@ function ftechnology {
         fi
     else
         echo
-        echo -e "Continue to use ${TColor}$technologyd${Color_Off}."
+        echo -e "Continue to use $technologydc."
     fi
     if [[ "$1" == "obback" ]]; then
         set_vars
@@ -989,9 +989,9 @@ function fprotocol {
     heading "Protocol"
     if [[ "$technology" == "nordlynx" ]]; then
         echo
-        echo -e "Technology is currently set to ${TColor}$technologyd${Color_Off}."
+        echo -e "Technology is currently set to $technologydc."
         echo
-        echo "No protocol to specify when using NordLynx,"
+        echo "No protocol to specify when using $technologyd,"
         echo "WireGuard supports UDP only."
         echo
         echo "Change Technology to OpenVPN to use TCP or UDP."
@@ -1007,7 +1007,7 @@ function fprotocol {
         echo "TCP is more reliable but also slightly slower than UDP and"
         echo " is mainly used for web browsing."
         echo
-        echo -e "The Protocol is set to ${TColor}$protocol${Color_Off}."
+        echo -e "The Protocol is set to $protocoldc."
         echo
         if [[ "$fast3" =~ ^[Yy]$ ]]; then
             echo -e "${FColor}[F]ast3 is enabled.  Changing the Protocol.${Color_Off}"
@@ -1026,7 +1026,7 @@ function fprotocol {
             fi
         else
             echo
-            echo -e "Continue to use ${TColor}$protocol${Color_Off}."
+            echo -e "Continue to use $protocoldc."
         fi
     fi
     main_menu
@@ -1037,7 +1037,7 @@ function ask_protocol {
     #
     # set $protocol if technology just changed from NordLynx
     set_vars
-    echo -e "The Protocol is set to ${TColor}$protocol${Color_Off}."
+    echo -e "The Protocol is set to $protocoldc."
     echo
     if [[ "$fast6" =~ ^[Yy]$ ]]; then
         echo -e "${FColor}[F]ast6 is enabled.  Always choose $fast6p.${Color_Off}"
@@ -1065,7 +1065,7 @@ function ask_protocol {
         echo
     else
         echo
-        echo -e "Continue to use ${TColor}$protocol${Color_Off}."
+        echo -e "Continue to use $protocoldc."
         echo
     fi
 }
@@ -1079,7 +1079,8 @@ function change_setting {
     elif [[ "$1" == "notify" ]]; then chgname="Notify"; chgvar="$notify"; chgind="$no"; chgloc=""
     elif [[ "$1" == "autoconnect" ]]; then chgname="Auto-Connect"; chgvar="$autocon"; chgind="$ac"; chgloc="$acwhere"
     elif [[ "$1" == "ipv6" ]]; then chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6"; chgloc=""
-    else echo -e "${WColor}$1 not defined${Color_Off}"; echo; return; fi
+    else echo -e "${WColor}$1 not defined${Color_Off}"; echo; return
+    fi
     #
     if [[ "$chgvar" == "enabled" ]]; then
         chgvarc=(${EColor}"$chgvar"${Color_Off})
@@ -1221,9 +1222,9 @@ function fobfuscate {
     # must disconnect/reconnect to change setting
     heading "Obfuscate"
     if [[ "$technology" == "nordlynx" ]]; then
-        echo -e "Technology is currently set to ${TColor}$technologyd${Color_Off}."
+        echo -e "Technology is currently set to $technologydc."
         echo
-        echo "Obfuscation is not available when using NordLynx."
+        echo "Obfuscation is not available when using $technologyd."
         echo "Change Technology to OpenVPN to use Obfuscation."
         echo
         read -n 1 -r -p "Go to the 'Technology' setting and return? (y/n) "; echo
@@ -1476,6 +1477,7 @@ function faccount {
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     openlink "$nordrelease"
                 fi
+                # also here: https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
                 ;;
             "Nord Manual")
                 echo
@@ -1597,7 +1599,9 @@ function fiptables_status {
     echo -e "The VPN is $connectedc.  ${IPColor}$ip${Color_Off}"
     echo -e "$fw The Firewall is $firewallc."
     echo -e "$ks The Kill Switch is $killswitchc."
-    nordvpn settings | grep -A100 -i "whitelist" --color=none
+    if [[ -n "${whitelist[@]}" ]]; then
+        printf '%s\n' "${whitelist[@]}"
+    fi
     echo
     echo -e ${LColor}"sudo iptables -S"${Color_Off}
     sudo iptables -S
@@ -1988,7 +1992,7 @@ function wireguard_gen {
         return
     elif [[ "$connected" != "connected" ]] || [[ "$technology" != "nordlynx" ]]; then
         echo -e "The VPN is $connectedc."
-        echo -e "The Technology is set to ${TColor}$technologyd${Color_Off}."
+        echo -e "The Technology is set to $technologydc."
         echo -e "${WColor}Must connect to your chosen server using NordLynx.${Color_Off}"
         echo
         return
@@ -2187,13 +2191,12 @@ function fdefaults {
     defaultsc=(${LColor}"[Defaults]"${Color_Off}'\n')
     echo
     echo -e "$defaultsc  Disconnect and apply the NordVPN settings"
-    echo "  specified in 'function set_defaults'."
+    echo "  specified in 'function set_defaults'"
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
         set_defaults
-        echo
         read -n 1 -r -p "$(echo -e "$defaultsc  Go to the 'Whitelist' setting? (y/n) ")"
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -2554,6 +2557,8 @@ numupdate=$( nordvpn status | grep -i "update" | tr -d '-' | wc -w )
 numtail=$(( $numupdate + 3 ))
 #
 if (( $numupdate > 0 )); then
+    clear -x
+    echo
     echo -e "${WColor}** A NordVPN update is available **${Color_Off}"
     echo
     echo -e "${LColor}Before updating:${Color_Off}"
