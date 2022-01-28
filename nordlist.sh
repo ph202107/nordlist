@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.3 on Linux Mint 20.3
-# January 23, 2022
+# January 28, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -27,7 +27,7 @@
 #       "chmod +x nordlist.sh"
 # 3) For the customized menu ASCII, to generate ASCII headings, and to
 #       use NordVPN API functions these small programs are required *
-#       eg "sudo apt-get install figlet lolcat curl jq"
+#       eg "sudo apt install figlet lolcat curl jq"
 # 4) At the terminal type "nordlist.sh"
 #
 # =====================================================================
@@ -40,9 +40,10 @@
 #
 # =====================================================================
 # Other small programs used:
+#
 # wireguard-tools  Settings-Tools-WireGuard     (function wireguard_gen)
 # speedtest-cli    Settings-Tools-speedtest-cli (function ftools)
-# youtube-dl       Settings-Tools-youtube-dl    (function ftools)
+# yt-dlp           Settings-Tools-youtube-dlp   (function ftools)
 # highlight        Settings-Script              (function fscriptinfo)
 #
 # For VPN On/Off status in the system tray, I use the Linux Mint
@@ -141,7 +142,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2300.  Recommend configuring the
+# The Main Menu starts on line 2309.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1802,6 +1803,14 @@ function allvpnservers {
         readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
         #
         # Use a text file instead:
+        #   - retrieve the full server list by going to Settings - Tools - NordVPN API - All VPN Servers
+        #   - in gnome-terminal click on Edit - Preferences - Scrolling and ensure "Scrollback" is 6000 lines or unlimited
+        #   - in gnome-terminal click on Terminal - Reset and Clear
+        #   - then choose "1) List All Servers"
+        #   - select-all and copy, paste into a text file.
+        #   - remove the lines that are not VPN servers, and save the file.  eg. ~/allnordservers.txt
+        #   - comment-out the "readarray" command above, and uncomment the "readarray" command on the line below.
+        #
         #readarray -t allnordservers < <( cat ~/allnordservers.txt ); echo -e "${LColor}(Using text file)${Color_Off}"
     fi
     echo "Count: ${#allnordservers[@]}"
@@ -1978,7 +1987,7 @@ function wireguard_gen {
     heading "WireGuard"
     echo "Generate a WireGuard config file from your currently active"
     echo "NordLynx connection.  Requires WireGuard/WireGuard-Tools."
-    echo "Commands require sudo."
+    echo "Commands require sudo. Note: Keep your Private Key secure."
     echo
     wgcity=$( echo "$city" | tr -d ' ' )
     wgconfig=( "$wgcity"_"$server"_wg.conf )    # Filename
@@ -2064,7 +2073,7 @@ function ftools {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=("NordVPN API" "Rate VPN Server" "WireGuard" "speedtest-cli" "www.speedtest.net" "youtube-dl" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "world map" "Change Host" "Exit")
+    nettools=("NordVPN API" "Rate VPN Server" "WireGuard" "speedtest-cli" "www.speedtest.net" "youtube-dlp" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "world map" "Change Host" "Exit")
     numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
@@ -2108,11 +2117,11 @@ function ftools {
                 #openlink "https://www.linode.com/speed-test/"
                 #openlink "http://speedtest-blr1.digitalocean.com/"
                 ;;
-            "youtube-dl")
+            "youtube-dlp")
                 # test speed by downloading a youtube video to /dev/null
                 # this video is about 60MB, can use any video
                 echo
-                youtube-dl -f best --no-part --no-cache-dir -o /dev/null --newline https://www.youtube.com/watch?v=bkZac30P5DM
+                yt-dlp -f b --no-part --no-cache-dir -o /dev/null --newline https://www.youtube.com/watch?v=bkZac30P5DM
                 echo
                 ;;
             "ping vpn")
