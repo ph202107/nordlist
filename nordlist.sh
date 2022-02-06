@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.3 on Linux Mint 20.3
-# January 28, 2022
+# February 5, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -80,6 +80,11 @@ default_host="ca1425.nordvpn.com"   # eg. "ca1425.nordvpn.com"
 #nordchangelog="/var/lib/dpkg/info/nordvpn.changelog"
 nordchangelog="/usr/share/doc/nordvpn/changelog.gz"
 #
+# Specify the absolute path and filename to store a local list of all
+# the NordVPN servers.  Avoids API server timeouts.  Create the list at:
+# Settings - Tools - NordVPN API - All VPN Servers - Update List
+allvpnfile="/home/$USER/Downloads/allnordservers.txt"
+#
 # Always 'Rate Server' when disconnecting via the main menu. "y" or "n"
 alwaysrate="y"
 #
@@ -142,7 +147,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2309.  Recommend configuring the
+# The Main Menu starts on line 2339.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1104,8 +1109,8 @@ function change_setting {
             if [[ "$1" == "cybersec" ]] && [[ "$dns_set" != "disabled" ]]; then
                 nordvpn set dns disabled; wait
                 echo
-            elif [[ "$1" == "autoconnect" ]]; then
-                echo -e "Enable $chgname ${LColor}$chgloc${Color_Off}"
+            elif [[ "$1" == "autoconnect" ]] && [[ -n $acwhere ]]; then
+                echo -e "$chgname to ${LColor}$chgloc${Color_Off}"
                 echo
             elif [[ "$1" == "killswitch" ]] && [[ "$firewall" == "disabled" ]]; then
                 # when connecting to Groups or changing the setting from IPTables
@@ -1798,25 +1803,20 @@ function server_load {
 function allvpnservers {
     heading "All Servers"
     if (( ${#allnordservers[@]} == 0 )); then
-        echo "Retrieving the list of NordVPN servers..."
-        echo "  (To use a text file see 'function allvpnservers')"
-        readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
-        #
-        # Use a text file instead:
-        #   - retrieve the full server list by going to Settings - Tools - NordVPN API - All VPN Servers
-        #   - in gnome-terminal click on Edit - Preferences - Scrolling and ensure "Scrollback" is 6000 lines or unlimited
-        #   - in gnome-terminal click on Terminal - Reset and Clear
-        #   - then choose "1) List All Servers"
-        #   - select-all and copy, paste into a text file.
-        #   - remove the lines that are not VPN servers, and save the file.  eg. ~/allnordservers.txt
-        #   - comment-out the "readarray" command above, and uncomment the "readarray" command on the line below.
-        #
-        #readarray -t allnordservers < <( cat ~/allnordservers.txt ); echo -e "${LColor}(Using text file)${Color_Off}"
+        if [[ -e "$allvpnfile" ]]; then
+            echo -e "${EColor}Server list retrieved on:${Color_Off}"
+            echo "$( cat "$allvpnfile" | head -n 1 )"
+            readarray -t allnordservers < <( cat "$allvpnfile" | tail -n +3 )
+        else
+            echo "Retrieving the list of NordVPN servers..."
+            readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
+        fi
     fi
-    echo "Count: ${#allnordservers[@]}"
+    echo
+    echo "Server Count: ${#allnordservers[@]}"
     echo
     PS3=$'\n''Choose an option: '
-    submallvpn=("List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Exit")
+    submallvpn=("List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Update List" "Exit")
     numsubmallvpn=${#submallvpn[@]}
     select smavpn in "${submallvpn[@]}"
     do
@@ -1875,6 +1875,35 @@ function allvpnservers {
             "Connect")
                 fhostname
                 ;;
+            "Update List")
+                echo
+                if [[ -e "$allvpnfile" ]]; then
+                    echo -e "${EColor}Server list retrieved on:${Color_Off}"
+                    cat "$allvpnfile" | head -n 1
+                    echo
+                    read -n 1 -r -p "Update the list? (y/n) "; echo
+                else
+                    echo -e "${WColor}$allvpnfile does not exist.${Color_Off}"
+                    echo
+                    read -n 1 -r -p "Create the file? (y/n) "; echo
+                fi
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    if [[ -e "$allvpnfile" ]]; then
+                        date > "$allvpnfile"
+                        echo >> "$allvpnfile"
+                        echo "Retrieving the list of NordVPN servers..."
+                        curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort >> "$allvpnfile"
+                        readarray -t allnordservers < <( cat "$allvpnfile" | tail -n +3 )
+                    else
+                        date > "$allvpnfile"
+                        echo >> "$allvpnfile"
+                        printf '%s\n' "${allnordservers[@]}" >> "$allvpnfile"
+                    fi
+                    echo -e "Saved as ${LColor}$allvpnfile${Color_Off}"
+                    echo
+                fi
+                ;;
             "Exit")
                 nordapi
                 ;;
@@ -1895,7 +1924,7 @@ function nordapi {
     echo "Commands may take a few seconds to complete."
     echo
     if [[ "$connected" == "connected" ]]; then
-        echo -e "Connected to ${EColor}$server.nordvpn.com${Color_Off}"
+        echo -e "Connected to: ${EColor}$server.nordvpn.com${Color_Off}"
     fi
     echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
     echo
@@ -1996,7 +2025,8 @@ function wireguard_gen {
     #
     if ! command -v wg &> /dev/null; then
         echo -e "${WColor}WireGuard-Tools could not be found.${Color_Off}"
-        echo "Please install WireGuard/WireGuard-Tools."
+        echo "Please install WireGuard and WireGuard-Tools."
+        echo "eg. 'sudo apt install wireguard wireguard-tools'"
         echo
         return
     elif [[ "$connected" != "connected" ]] || [[ "$technology" != "nordlynx" ]]; then
@@ -2382,7 +2412,6 @@ function main_menu {
                 # Example: NordVPN discord  https://discord.gg/83jsvGqpGk
                 heading "Discord"
                 discon2
-                echo
                 echo "Connect to us8247 for Discord"
                 echo
                 nordvpn connect us8247
@@ -2402,7 +2431,6 @@ function main_menu {
                 fcountries
                 ;;
             "Groups")
-                # submenu for groups
                 heading "Groups"
                 echo
                 PS3=$'\n''Choose a Group: '
@@ -2439,7 +2467,6 @@ function main_menu {
                 done
                 ;;
             "Settings")
-                # submenu for settings
                 heading "Settings"
                 echo
                 echo -e "$techpro$fw$ks$cs$ob$no$ac$ip6$dns$wl$fst"
@@ -2537,8 +2564,8 @@ function main_menu {
 }
 #
 echo
-echo "Bash Version $BASH_VERSION"
 if (( BASH_VERSINFO < 4 )); then
+    echo "Bash Version $BASH_VERSION"
     echo -e "${WColor}Bash v4.0 or higher is required.${Color_Off}"
     echo
     exit 1
@@ -2698,6 +2725,12 @@ main_menu start
 #
 # NordVPN status and settings tray app.
 #   https://github.com/dvilelaf/NordIndicator
+#
+# Cinnamon Applets (Cinnamon Desktop Environment)
+#   NordVPN Indicator
+#       https://cinnamon-spices.linuxmint.com/applets/view/331
+#   VPN Look-Out Applet
+#       https://cinnamon-spices.linuxmint.com/applets/view/305
 #
 # Other Troubleshooting
 #   systemctl status nordvpnd.service
