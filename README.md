@@ -29,6 +29,6 @@ Or:
 
 Then:   
 - Make the script executable with "chmod +x nordlist.sh"
-- Recommended: "sudo apt-get install figlet lolcat curl jq"
+- Recommended: "sudo apt install figlet lolcat curl jq"
 - Customization notes are included in the script
 
