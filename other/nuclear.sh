@@ -83,7 +83,21 @@ function loginnord {
         sudo systemctl start nordvpnd.service; wait
         lbreak
     fi
+    if id -nG "$USER" | grep -qw "nordvpn"; then
+        echo -e "${LGreen}$USER belongs to the 'nordvpn' group${Color_Off}"
+        lbreak
+    else
+        # for first-time installation
+        echo -e "${BRed}$USER does not belong to the 'nordvpn' group${Color_Off}"
+        echo "Run:"
+        echo -e "${LGreen}sudo usermod -aG nordvpn $USER ${Color_Off}"
+        echo "and reboot."
+        lbreak
+        exit
+    fi
     nordvpn login
+    # nordvpn login --legacy
+    # nordvpn login --username <username> --password <password>
     echo
     read -n 1 -r -p "Press any key after login is complete... "; echo
 }
