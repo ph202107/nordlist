@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.3 on Linux Mint 20.3
-# February 5, 2022
+# February 6, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -80,6 +80,10 @@ default_host="ca1425.nordvpn.com"   # eg. "ca1425.nordvpn.com"
 #nordchangelog="/var/lib/dpkg/info/nordvpn.changelog"
 nordchangelog="/usr/share/doc/nordvpn/changelog.gz"
 #
+# Save generated WireGuard config files into this folder.
+# Use the absolute path, no trailing slash (/)
+wgdir="/home/$USER/Downloads"
+#
 # Specify the absolute path and filename to store a local list of all
 # the NordVPN servers.  Avoids API server timeouts.  Create the list at:
 # Settings - Tools - NordVPN API - All VPN Servers - Update List
@@ -147,7 +151,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2339.  Recommend configuring the
+# The Main Menu starts on line 2344.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1801,6 +1805,7 @@ function server_load {
     echo
 }
 function allvpnservers {
+    # API timeout error "parse error: Invalid numeric literal at line 1, column 6"
     heading "All Servers"
     if (( ${#allnordservers[@]} == 0 )); then
         if [[ -e "$allvpnfile" ]]; then
@@ -1809,6 +1814,7 @@ function allvpnservers {
             readarray -t allnordservers < <( cat "$allvpnfile" | tail -n +3 )
         else
             echo "Retrieving the list of NordVPN servers..."
+            echo "Choose 'Update List' to save a local copy of the server list."
             readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
         fi
     fi
@@ -2020,7 +2026,6 @@ function wireguard_gen {
     echo
     wgcity=$( echo "$city" | tr -d ' ' )
     wgconfig=( "$wgcity"_"$server"_wg.conf )    # Filename
-    wgdir=$( pwd )                              # Directory
     wgfull="$wgdir/$wgconfig"                   # Full path and filename
     #
     if ! command -v wg &> /dev/null; then
