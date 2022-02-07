@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.3 on Linux Mint 20.3
-# February 6, 2022
+# February 7, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -151,7 +151,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2344.  Recommend configuring the
+# The Main Menu starts on line 2352.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1805,12 +1805,13 @@ function server_load {
     echo
 }
 function allvpnservers {
-    # API timeout error "parse error: Invalid numeric literal at line 1, column 6"
+    # API timeout/rejection error "parse error: Invalid numeric literal at line 1, column 6"
+    # If you get this error try again later.
     heading "All Servers"
     if (( ${#allnordservers[@]} == 0 )); then
         if [[ -e "$allvpnfile" ]]; then
             echo -e "${EColor}Server list retrieved on:${Color_Off}"
-            echo "$( cat "$allvpnfile" | head -n 1 )"
+            cat "$allvpnfile" | head -n 1
             readarray -t allnordservers < <( cat "$allvpnfile" | tail -n +3 )
         else
             echo "Retrieving the list of NordVPN servers..."
@@ -1896,18 +1897,25 @@ function allvpnservers {
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     if [[ -e "$allvpnfile" ]]; then
-                        date > "$allvpnfile"
-                        echo >> "$allvpnfile"
                         echo "Retrieving the list of NordVPN servers..."
-                        curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort >> "$allvpnfile"
-                        readarray -t allnordservers < <( cat "$allvpnfile" | tail -n +3 )
+                        echo
+                        readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
+                    fi
+                    if (( ${#allnordservers[@]} < 1000 )); then
+                        echo
+                        echo -e "${WColor}Server list is empty. Parse Error? Try again later.${Color_Off}"
+                        echo
+                        if [[ -e "$allvpnfile" ]]; then
+                            # rebuild array if it was blanked out on retrieval attempt
+                            readarray -t allnordservers < <( cat "$allvpnfile" | tail -n +3 )
+                        fi
                     else
                         date > "$allvpnfile"
                         echo >> "$allvpnfile"
                         printf '%s\n' "${allnordservers[@]}" >> "$allvpnfile"
+                        echo -e "Saved as ${LColor}$allvpnfile${Color_Off}"
+                        echo
                     fi
-                    echo -e "Saved as ${LColor}$allvpnfile${Color_Off}"
-                    echo
                 fi
                 ;;
             "Exit")
