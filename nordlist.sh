@@ -151,7 +151,7 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2352.  Recommend configuring the
+# The Main Menu starts on line 2347.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -2048,7 +2048,7 @@ function wireguard_gen {
         echo -e "${WColor}Must connect to your chosen server using NordLynx.${Color_Off}"
         echo
         return
-    elif [[ -e "$wgconfig" ]]; then
+    elif [[ -e "$wgfull" ]]; then
         echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
         echo -e "${WColor}$wgfull already exists${Color_Off}"
         echo
@@ -2071,20 +2071,20 @@ function wireguard_gen {
         publickey=$(sudo wg showconf nordlynx | grep 'PublicKey = .*')
         endpoint=$(sudo wg showconf nordlynx | grep 'Endpoint = .*')
         #
-        echo "# $server.nordvpn.com" >> "$wgconfig"
-        echo "# $city $country" >> "$wgconfig"
-        echo "# Server $ip" >> "$wgconfig"
-        echo >> "$wgconfig"
-        echo "[INTERFACE]" >> "$wgconfig"
-        echo "Address = ${address}/32" >> "$wgconfig"
-        echo "${privatekey}" >> "$wgconfig"
-        echo "DNS = 103.86.96.100" >> "$wgconfig"
-        echo >> "$wgconfig"
-        echo "[PEER]" >> "$wgconfig"
-        echo "${endpoint}" >> "$wgconfig"
-        echo "${publickey}" >> "$wgconfig"
-        echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgconfig"
-        echo "PersistentKeepalive = 25" >> "$wgconfig"
+        echo "# $server.nordvpn.com" >> "$wgfull"
+        echo "# $city $country" >> "$wgfull"
+        echo "# Server $ip" >> "$wgfull"
+        echo >> "$wgfull"
+        echo "[INTERFACE]" >> "$wgfull"
+        echo "Address = ${address}/32" >> "$wgfull"
+        echo "${privatekey}" >> "$wgfull"
+        echo "DNS = 103.86.96.100" >> "$wgfull"
+        echo >> "$wgfull"
+        echo "[PEER]" >> "$wgfull"
+        echo "${endpoint}" >> "$wgfull"
+        echo "${publickey}" >> "$wgfull"
+        echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgfull"
+        echo "PersistentKeepalive = 25" >> "$wgfull"
         #
         #sudo -K     # timeout sudo
         echo
@@ -2092,11 +2092,11 @@ function wireguard_gen {
         echo
         echo -e "cat ${LColor}$wgfull${Color_Off}"
         echo
-        cat "$wgconfig"
+        cat "$wgfull"
         #
-        #highlight -O xterm256 "$wgconfig"
+        #highlight -O xterm256 "$wgfull"
         # open with default editor
-        # openlink "$wgconfig"
+        # openlink "$wgfull"
     fi
     echo
 }
@@ -2184,18 +2184,13 @@ function ftools {
                 echo "(CTRL-C to quit)"
                 echo -e ${Color_Off}
                 echo -e "${LColor}===== Google =====${Color_Off}"
-                ping -c 5 8.8.8.8
-                echo
-                ping -c 5 8.8.4.4
-                echo
+                ping -c 5 8.8.8.8; echo
+                ping -c 5 8.8.4.4; echo
                 echo -e "${LColor}===== Cloudflare =====${Color_Off}"
-                ping -c 5 1.1.1.1
-                echo
-                ping -c 5 1.0.0.1
-                echo
+                ping -c 5 1.1.1.1; echo
+                ping -c 5 1.0.0.1; echo
                 echo -e "${LColor}===== Telstra =====${Color_Off}"
-                ping -c 5 139.130.4.5
-                echo
+                ping -c 5 139.130.4.5; echo
                 ;;
             "my traceroute")
                 mtr $nordhost
@@ -2356,7 +2351,7 @@ function main_menu {
     # change "Vancouver" in both the first(horizontal) and second(vertical)
     # list to "Melbourne", and where it says
     # "nordvpn connect Vancouver" change it to
-    # "nordvpn connect Melbourne".  That's it.
+    # "nordvpn connect Melbourne". That's it.
     #
     # An almost unlimited number of menu items can be added.
     # Submenu items can be copied to the main menu for easier access.
