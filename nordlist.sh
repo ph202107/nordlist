@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.3 on Linux Mint 20.3
-# February 7, 2022
+# February 8, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -151,15 +151,17 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# The Main Menu starts on line 2347.  Recommend configuring the
+# Visual
+# Change the main menu figlet ASCII style in "function custom_ascii"
+# Change the figlet ASCII style for headings in "function heading"
+# Change the highlighted text and indicator colors under "COLORS"
+#
+# =====================================================================
+# The Main Menu starts on line 2348.  Recommend configuring the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
 # Set up a default NordVPN config in "function set_defaults"
-#
-# Change the main menu figlet ASCII style in "function custom_ascii"
-# Change the figlet ASCII style for headings in "function heading"
-# Change the highlighted text and indicator colors under "COLORS"
 #
 # Note: These functions require a sudo password:
 #   - function frestart
@@ -168,88 +170,66 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # ==End================================================================
 #
-# COLORS
-#
-# Regular
-Black='\033[0;30m'
-Red='\033[0;31m'
-Green='\033[0;32m'
-Yellow='\033[0;33m'
-Blue='\033[0;34m'
-Purple='\033[0;35m'
-Cyan='\033[0;36m'
-White='\033[0;97m'
-#
-# Light
-LGrey='\033[0;37m'
-DGrey='\033[0;90m'  # Dark
-LRed='\033[0;91m'
-LGreen='\033[0;92m'
-LYellow='\033[0;93m'
-LBlue='\033[0;94m'
-LPurple='\033[0;95m'
-LCyan='\033[0;96m'
-#
-# Bold
-BBlack='\033[1;30m'
-BRed='\033[1;31m'
-BGreen='\033[1;32m'
-BYellow='\033[1;33m'
-BBlue='\033[1;34m'
-BPurple='\033[1;35m'
-BCyan='\033[1;36m'
-BWhite='\033[1;37m'
-#
-# Underline
-UBlack='\033[4;30m'
-URed='\033[4;31m'
-UGreen='\033[4;32m'
-UYellow='\033[4;33m'
-UBlue='\033[4;34m'
-UPurple='\033[4;35m'
-UCyan='\033[4;36m'
-UWhite='\033[4;37m'
-#
-# Background
-# eg: ${White}${On_Red} = White text on red background
-On_Black='\033[40m'
-On_Red='\033[41m'
-On_Green='\033[42m'
-On_Yellow='\033[43m'
-On_Blue='\033[44m'
-On_Purple='\033[45m'
-On_Cyan='\033[46m'
-On_White='\033[47m'
-#
-Color_Off='\033[0m'
-#
-# Change colors here if needed.
-#
-EColor=${LGreen}        # Enabled text
-EIColor=${BGreen}       # Enabled indicator
-DColor=${LRed}          # Disabled text
-DIColor=${BRed}         # Disabled indicator
-FColor=${LYellow}       # [F]ast text
-FIColor=${BYellow}      # [F]ast indicator
-TColor=${BPurple}       # Technology and Protocol text
-TIColor=${BPurple}      # Technology and Protocol indicator
-#
-WColor=${BRed}          # Warnings, errors, disconnects
-LColor=${LCyan}         # 'Changes' lists and key info text
-SColor=${BBlue}         # Color for the std_ascii image
-HColor=${BGreen}        # Non-figlet headings
-# logo
-CNColor=${LGreen}       # Connected status
-DNColor=${LRed}         # Disconnected status
-CIColor=${Color_Off}    # City name
-COColor=${Color_Off}    # Country name
-SVColor=${Color_Off}    # Server name
-IPColor=${Color_Off}    # IP address
-DLColor=${Green}        # Download stat
-ULColor=${Yellow}       # Upload stat
-UPColor=${Cyan}         # Uptime stat
-#
-#
+function whitelist_commands {
+    # Add your whitelist configuration commands here.
+    # Enter one command per line.
+    # whitelist_start_donotremove
+    #
+    #nordvpn whitelist remove all
+    #nordvpn whitelist add subnet 192.168.1.0/24
+    #
+    # whitelist_end_donotremove
+    echo
+}
+function set_defaults {
+    # Calling this function can be useful to change multiple settings
+    # at once and get back to a typical configuration.
+    #
+    # Configure as needed and comment-out the line below.
+    echo -e "${WColor}** 'function set_defaults' not configured **${Color_Off}"; echo; return
+    #
+    # Notes:
+    # - NordLynx is UDP only
+    # - Obfuscate requires OpenVPN
+    # - Kill Switch requires Firewall
+    # - Cybersec disables CustomDNS and vice versa
+    #
+    # For each setting uncomment one of the two choices (or neither).
+    #
+    #if [[ "$technology" == "openvpn" ]]; then nordvpn set technology nordlynx; set_vars; fi
+    if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; set_vars; fi
+    #
+    if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi    # uppercase TCP
+    #if [[ "$protocol" == "UDP" ]]; then nordvpn set protocol TCP; fi   # uppercase UDP
+    #
+    if [[ "$firewall" == "disabled" ]]; then nordvpn set firewall enabled; fi
+    #if [[ "$firewall" == "enabled" ]]; then nordvpn set firewall disabled; fi
+    #
+    #if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
+    if [[ "$killswitch" == "enabled" ]]; then nordvpn set killswitch disabled; fi
+    #
+    #if [[ "$cybersec" == "disabled" ]]; then nordvpn set cybersec enabled; fi
+    if [[ "$cybersec" == "enabled" ]]; then nordvpn set cybersec disabled; fi
+    #
+    #if [[ "$obfuscate" == "disabled" ]]; then nordvpn set obfuscate enabled; fi
+    if [[ "$obfuscate" == "enabled" ]]; then nordvpn set obfuscate disabled; fi
+    #
+    #if [[ "$notify" == "disabled" ]]; then nordvpn set notify enabled; fi
+    if [[ "$notify" == "enabled" ]]; then nordvpn set notify disabled; fi
+    #
+    #if [[ "$autocon" == "disabled" ]]; then nordvpn set autoconnect enabled $acwhere; fi
+    if [[ "$autocon" == "enabled" ]]; then nordvpn set autoconnect disabled; fi
+    #
+    #if [[ "$ipversion6" == "disabled" ]]; then nordvpn set ipv6 enabled; fi
+    if [[ "$ipversion6" == "enabled" ]]; then nordvpn set ipv6 disabled; fi
+    #
+    #if [[ "$dns_set" == "disabled" ]]; then nordvpn set dns $default_dns; fi
+    if [[ "$dns_set" != "disabled" ]]; then nordvpn set dns disabled; fi
+    #
+    echo
+    echo -e "${LColor}Default configuration applied.${Color_Off}"
+    echo
+}
 function std_ascii {
     # This ASCII can display above the main menu if you
     # prefer to use other ASCII art.
@@ -321,66 +301,87 @@ function heading {
     fi
     COLUMNS=$menuwidth
 }
-function whitelist_commands {
-    # Add your whitelist configuration commands here.
-    # Enter one command per line.
-    # whitelist_start_donotremove
-    #
-    #nordvpn whitelist remove all
-    #nordvpn whitelist add subnet 192.168.1.0/24
-    #
-    # whitelist_end_donotremove
-    echo
-}
-function set_defaults {
-    # Calling this function can be useful to change multiple settings
-    # at once and get back to a typical configuration.
-    #
-    # Configure as needed and comment-out the line below.
-    echo -e "${WColor}** 'function set_defaults' not configured **${Color_Off}"; echo; return
-    #
-    # Notes:
-    # - NordLynx is UDP only
-    # - Obfuscate requires OpenVPN
-    # - Kill Switch requires Firewall
-    # - Cybersec disables CustomDNS and vice versa
-    #
-    # For each setting uncomment one of the two choices (or neither).
-    #
-    #if [[ "$technology" == "openvpn" ]]; then nordvpn set technology nordlynx; set_vars; fi
-    if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; set_vars; fi
-    #
-    if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi    # uppercase TCP
-    #if [[ "$protocol" == "UDP" ]]; then nordvpn set protocol TCP; fi   # uppercase UDP
-    #
-    if [[ "$firewall" == "disabled" ]]; then nordvpn set firewall enabled; fi
-    #if [[ "$firewall" == "enabled" ]]; then nordvpn set firewall disabled; fi
-    #
-    #if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
-    if [[ "$killswitch" == "enabled" ]]; then nordvpn set killswitch disabled; fi
-    #
-    #if [[ "$cybersec" == "disabled" ]]; then nordvpn set cybersec enabled; fi
-    if [[ "$cybersec" == "enabled" ]]; then nordvpn set cybersec disabled; fi
-    #
-    #if [[ "$obfuscate" == "disabled" ]]; then nordvpn set obfuscate enabled; fi
-    if [[ "$obfuscate" == "enabled" ]]; then nordvpn set obfuscate disabled; fi
-    #
-    #if [[ "$notify" == "disabled" ]]; then nordvpn set notify enabled; fi
-    if [[ "$notify" == "enabled" ]]; then nordvpn set notify disabled; fi
-    #
-    #if [[ "$autocon" == "disabled" ]]; then nordvpn set autoconnect enabled $acwhere; fi
-    if [[ "$autocon" == "enabled" ]]; then nordvpn set autoconnect disabled; fi
-    #
-    #if [[ "$ipversion6" == "disabled" ]]; then nordvpn set ipv6 enabled; fi
-    if [[ "$ipversion6" == "enabled" ]]; then nordvpn set ipv6 disabled; fi
-    #
-    #if [[ "$dns_set" == "disabled" ]]; then nordvpn set dns $default_dns; fi
-    if [[ "$dns_set" != "disabled" ]]; then nordvpn set dns disabled; fi
-    #
-    echo
-    echo -e "${LColor}Default configuration applied.${Color_Off}"
-    echo
-}
+#
+# ===== COLORS ========================================================
+#
+# Regular
+Black='\033[0;30m'
+Red='\033[0;31m'
+Green='\033[0;32m'
+Yellow='\033[0;33m'
+Blue='\033[0;34m'
+Purple='\033[0;35m'
+Cyan='\033[0;36m'
+White='\033[0;97m'
+#
+# Light
+LGrey='\033[0;37m'
+DGrey='\033[0;90m'  # Dark
+LRed='\033[0;91m'
+LGreen='\033[0;92m'
+LYellow='\033[0;93m'
+LBlue='\033[0;94m'
+LPurple='\033[0;95m'
+LCyan='\033[0;96m'
+#
+# Bold
+BBlack='\033[1;30m'
+BRed='\033[1;31m'
+BGreen='\033[1;32m'
+BYellow='\033[1;33m'
+BBlue='\033[1;34m'
+BPurple='\033[1;35m'
+BCyan='\033[1;36m'
+BWhite='\033[1;37m'
+#
+# Underline
+UBlack='\033[4;30m'
+URed='\033[4;31m'
+UGreen='\033[4;32m'
+UYellow='\033[4;33m'
+UBlue='\033[4;34m'
+UPurple='\033[4;35m'
+UCyan='\033[4;36m'
+UWhite='\033[4;37m'
+#
+# Background
+# eg: ${White}${On_Red} = White text on red background
+On_Black='\033[40m'
+On_Red='\033[41m'
+On_Green='\033[42m'
+On_Yellow='\033[43m'
+On_Blue='\033[44m'
+On_Purple='\033[45m'
+On_Cyan='\033[46m'
+On_White='\033[47m'
+#
+Color_Off='\033[0m'
+#
+# =============== Change colors here if needed. =======================
+#
+EColor=${LGreen}        # Enabled text
+EIColor=${BGreen}       # Enabled indicator
+DColor=${LRed}          # Disabled text
+DIColor=${BRed}         # Disabled indicator
+FColor=${LYellow}       # [F]ast text
+FIColor=${BYellow}      # [F]ast indicator
+TColor=${BPurple}       # Technology and Protocol text
+TIColor=${BPurple}      # Technology and Protocol indicator
+#
+WColor=${BRed}          # Warnings, errors, disconnects
+LColor=${LCyan}         # 'Changes' lists and key info text
+SColor=${BBlue}         # Color for the std_ascii image
+HColor=${BGreen}        # Non-figlet headings
+# logo
+CNColor=${LGreen}       # Connected status
+DNColor=${LRed}         # Disconnected status
+CIColor=${Color_Off}    # City name
+COColor=${Color_Off}    # Country name
+SVColor=${Color_Off}    # Server name
+IPColor=${Color_Off}    # IP address
+DLColor=${Green}        # Download stat
+ULColor=${Yellow}       # Upload stat
+UPColor=${Cyan}         # Uptime stat
 #
 # =====================================================================
 #
