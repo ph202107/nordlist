@@ -77,23 +77,21 @@ function installnord {
 }
 function loginnord {
     lbreak
-    if ! systemctl is-active --quiet nordvpnd; then
-        echo -e "${LGreen}Starting the service... ${Color_Off}"
-        echo "sudo systemctl start nordvpnd.service"
-        sudo systemctl start nordvpnd.service; wait
-        lbreak
-    fi
     if id -nG "$USER" | grep -qw "nordvpn"; then
         echo -e "${LGreen}$USER belongs to the 'nordvpn' group${Color_Off}"
         lbreak
     else
         # for first-time installation
         echo -e "${BRed}$USER does not belong to the 'nordvpn' group${Color_Off}"
-        echo "Run:"
         echo -e "${LGreen}sudo usermod -aG nordvpn $USER ${Color_Off}"
-        echo "and reboot."
+        sudo usermod -aG nordvpn $USER
         lbreak
-        exit
+    fi
+    if ! systemctl is-active --quiet nordvpnd; then
+        echo -e "${LGreen}Starting the service... ${Color_Off}"
+        echo "sudo systemctl start nordvpnd.service"
+        sudo systemctl start nordvpnd.service; wait
+        lbreak
     fi
     nordvpn login
     # nordvpn login --legacy
