@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.12.3 on Linux Mint 20.3
-# February 8, 2022
+# Tested with NordVPN Version 3.12.4 on Linux Mint 20.3
+# February 10, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -17,6 +17,7 @@
 #
 # https://github.com/ph202107/nordlist
 # /u/pennyhoard20 on reddit
+# suggestions/feedback welcome
 #
 # =====================================================================
 # Instructions
@@ -48,6 +49,12 @@
 #
 # For VPN On/Off status in the system tray, I use the Linux Mint
 # Cinnamon applet "NordVPN Indicator".  Github may have similar apps.
+#
+# =====================================================================
+# Note: These functions require a sudo password:
+#   - function frestart
+#   - function fiptables
+#   - function wireguard_gen
 #
 # =====================================================================
 # CUSTOMIZATION
@@ -154,19 +161,16 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Visual
 # Change the main menu figlet ASCII style in "function custom_ascii"
 # Change the figlet ASCII style for headings in "function heading"
-# Change the highlighted text and indicator colors under "COLORS"
+# Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2348.  Recommend configuring the
+# The Main Menu starts on line 2354 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
 # Set up a default NordVPN config in "function set_defaults"
 #
-# Note: These functions require a sudo password:
-#   - function frestart
-#   - function fiptables
-#   - function wireguard_gen
+# Enjoy!
 #
 # ==End================================================================
 #
@@ -301,88 +305,90 @@ function heading {
     fi
     COLUMNS=$menuwidth
 }
+function colors {
+    #
+    # Regular
+    Black='\033[0;30m'
+    Red='\033[0;31m'
+    Green='\033[0;32m'
+    Yellow='\033[0;33m'
+    Blue='\033[0;34m'
+    Purple='\033[0;35m'
+    Cyan='\033[0;36m'
+    White='\033[0;97m'
+    #
+    # Light
+    LGrey='\033[0;37m'
+    DGrey='\033[0;90m'  # Dark
+    LRed='\033[0;91m'
+    LGreen='\033[0;92m'
+    LYellow='\033[0;93m'
+    LBlue='\033[0;94m'
+    LPurple='\033[0;95m'
+    LCyan='\033[0;96m'
+    #
+    # Bold
+    BBlack='\033[1;30m'
+    BRed='\033[1;31m'
+    BGreen='\033[1;32m'
+    BYellow='\033[1;33m'
+    BBlue='\033[1;34m'
+    BPurple='\033[1;35m'
+    BCyan='\033[1;36m'
+    BWhite='\033[1;37m'
+    #
+    # Underline
+    UBlack='\033[4;30m'
+    URed='\033[4;31m'
+    UGreen='\033[4;32m'
+    UYellow='\033[4;33m'
+    UBlue='\033[4;34m'
+    UPurple='\033[4;35m'
+    UCyan='\033[4;36m'
+    UWhite='\033[4;37m'
+    #
+    # Background
+    # eg: ${White}${On_Red} = White text on red background
+    On_Black='\033[40m'
+    On_Red='\033[41m'
+    On_Green='\033[42m'
+    On_Yellow='\033[43m'
+    On_Blue='\033[44m'
+    On_Purple='\033[45m'
+    On_Cyan='\033[46m'
+    On_White='\033[47m'
+    #
+    Color_Off='\033[0m'
+    #
+    # ============== Change colors here if needed. ====================
+    #
+    EColor=${LGreen}        # Enabled text
+    EIColor=${BGreen}       # Enabled indicator
+    DColor=${LRed}          # Disabled text
+    DIColor=${BRed}         # Disabled indicator
+    FColor=${LYellow}       # [F]ast text
+    FIColor=${BYellow}      # [F]ast indicator
+    TColor=${BPurple}       # Technology and Protocol text
+    TIColor=${BPurple}      # Technology and Protocol indicator
+    #
+    WColor=${BRed}          # Warnings, errors, disconnects
+    LColor=${LCyan}         # 'Changes' lists and key info text
+    SColor=${BBlue}         # Color for the std_ascii image
+    HColor=${BGreen}        # Non-figlet headings
+    # logo
+    CNColor=${LGreen}       # Connected status
+    DNColor=${LRed}         # Disconnected status
+    CIColor=${Color_Off}    # City name
+    COColor=${Color_Off}    # Country name
+    SVColor=${Color_Off}    # Server name
+    IPColor=${Color_Off}    # IP address
+    DLColor=${Green}        # Download stat
+    ULColor=${Yellow}       # Upload stat
+    UPColor=${Cyan}         # Uptime stat
+    #
+}
 #
-# ===== COLORS ========================================================
-#
-# Regular
-Black='\033[0;30m'
-Red='\033[0;31m'
-Green='\033[0;32m'
-Yellow='\033[0;33m'
-Blue='\033[0;34m'
-Purple='\033[0;35m'
-Cyan='\033[0;36m'
-White='\033[0;97m'
-#
-# Light
-LGrey='\033[0;37m'
-DGrey='\033[0;90m'  # Dark
-LRed='\033[0;91m'
-LGreen='\033[0;92m'
-LYellow='\033[0;93m'
-LBlue='\033[0;94m'
-LPurple='\033[0;95m'
-LCyan='\033[0;96m'
-#
-# Bold
-BBlack='\033[1;30m'
-BRed='\033[1;31m'
-BGreen='\033[1;32m'
-BYellow='\033[1;33m'
-BBlue='\033[1;34m'
-BPurple='\033[1;35m'
-BCyan='\033[1;36m'
-BWhite='\033[1;37m'
-#
-# Underline
-UBlack='\033[4;30m'
-URed='\033[4;31m'
-UGreen='\033[4;32m'
-UYellow='\033[4;33m'
-UBlue='\033[4;34m'
-UPurple='\033[4;35m'
-UCyan='\033[4;36m'
-UWhite='\033[4;37m'
-#
-# Background
-# eg: ${White}${On_Red} = White text on red background
-On_Black='\033[40m'
-On_Red='\033[41m'
-On_Green='\033[42m'
-On_Yellow='\033[43m'
-On_Blue='\033[44m'
-On_Purple='\033[45m'
-On_Cyan='\033[46m'
-On_White='\033[47m'
-#
-Color_Off='\033[0m'
-#
-# =============== Change colors here if needed. =======================
-#
-EColor=${LGreen}        # Enabled text
-EIColor=${BGreen}       # Enabled indicator
-DColor=${LRed}          # Disabled text
-DIColor=${BRed}         # Disabled indicator
-FColor=${LYellow}       # [F]ast text
-FIColor=${BYellow}      # [F]ast indicator
-TColor=${BPurple}       # Technology and Protocol text
-TIColor=${BPurple}      # Technology and Protocol indicator
-#
-WColor=${BRed}          # Warnings, errors, disconnects
-LColor=${LCyan}         # 'Changes' lists and key info text
-SColor=${BBlue}         # Color for the std_ascii image
-HColor=${BGreen}        # Non-figlet headings
-# logo
-CNColor=${LGreen}       # Connected status
-DNColor=${LRed}         # Disconnected status
-CIColor=${Color_Off}    # City name
-COColor=${Color_Off}    # Country name
-SVColor=${Color_Off}    # Server name
-IPColor=${Color_Off}    # IP address
-DLColor=${Green}        # Download stat
-ULColor=${Yellow}       # Upload stat
-UPColor=${Cyan}         # Uptime stat
-#
+# =====================================================================
 # =====================================================================
 #
 function nstatbl {
@@ -2572,6 +2578,7 @@ function main_menu {
     exit
 }
 #
+colors
 echo
 if (( BASH_VERSINFO < 4 )); then
     echo "Bash Version $BASH_VERSION"
