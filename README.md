@@ -1,6 +1,7 @@
-NordVPN Version 3.12.3 currently has these issues:
+NordVPN Version 3.12.4 currently has these issues:
  - Notify setting is still broken
- - Problems connecting to Groups (P2P, Obfuscated, etc.)
+ - Problems connecting to Groups (P2P, Obfuscated, etc.) when specifying a supported location.   
+ -- "The specified server is not available at the moment or does not support your connection settings."
 
 ===================================
 
