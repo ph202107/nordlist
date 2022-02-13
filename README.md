@@ -1,8 +1,12 @@
 NordVPN Version 3.12.4 currently has these issues:
- - Notify setting is still broken
- - Problems connecting to Groups (P2P, Obfuscated, etc.) when specifying a supported location.   
- -- "The specified server is not available at the moment or does not support your connection settings."
 
+ - Problems connecting to any specific location while the Kill Switch is enabled.  
+ - Problems connecting to Groups when specifying a location. 
+ 
+ "The specified server is not available at the moment or does not support your connection settings."
+
+- Notify setting is still broken (for the last 6 versions, since 3.11.0-1)
+ 
 ===================================
 
 Bash script to use with the NordVPN Linux CLI.  
