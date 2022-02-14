@@ -5,9 +5,9 @@ NordVPN Version 3.12.4 currently has these issues:
  
  "The specified server is not available at the moment or does not support your connection settings."
 
-- Notify setting is still broken (for the last 6 versions, since 3.11.0-1)
+- Notify setting is still broken (has been broken for the last 6 versions, since 3.11.0-1)
 
-If the above issues are deal-breakers there are no known issues using nordlist.sh with NordVPN 3.10.0-1.  
+NordVPN v3.10.0-1 does not have these problems and nordlist.sh should also work fine using this downgraded version.  
 
 Can easily downgrade using /other/nuclear.sh (if it's compatible with your distro).
  
