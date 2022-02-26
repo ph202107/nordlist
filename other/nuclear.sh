@@ -55,11 +55,11 @@ function trashnord {
     lbreak
     sudo apt autoremove --purge nordvpn* -y
     lbreak
-    # ==============================
+    # ====================================
     sudo rm -rf -v /var/lib/nordvpn
     sudo rm -rf -v /var/run/nordvpn
-    rm -rf -v ~/.config/nordvpn
-    # ==============================
+    rm -rf -v /home/$USER/.config/nordvpn
+    # ====================================
 }
 function installnord {
     lbreak
