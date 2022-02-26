@@ -1,18 +1,3 @@
-NordVPN Version 3.12.4 currently has these issues:
-
- - Problems connecting to any specific location while the Kill Switch is enabled.  
- - Problems connecting to Groups when specifying a location. 
- 
- "The specified server is not available at the moment or does not support your connection settings."
-
-- Notify setting is still broken (has been broken for the last 6 versions, since 3.11.0-1)
-
-NordVPN v3.10.0-1 does not have these problems and nordlist.sh should also work fine using this downgraded version.  
-
-Can easily downgrade using /other/nuclear.sh (if it's compatible with your distro).
- 
-===================================
-
 Bash script to use with the NordVPN Linux CLI.  
 Requires bash version 4 or greater.  
 Tested with Linux Mint only (Debian/Ubuntu base).   
@@ -41,3 +26,14 @@ Then:
 - Recommended: "sudo apt install figlet lolcat curl jq"
 - Customization notes are included in the script
 
+=================================
+
+NordVPN Version 3.12.4 currently has these issues:
+
+ - Problems connecting to any specific location while the Kill Switch is enabled.  
+ - Problems connecting to Groups when specifying a location. 
+ - The Notify setting has been broken for the last 6 versions, since 3.11.0-1.
+
+NordVPN v3.10.0-1 does not have these problems and nordlist.sh should also work fine using this downgraded version.  
+
+Can easily downgrade using /other/nuclear.sh if it's compatible with your distro.
