@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.4 on Linux Mint 20.3
-# February 13, 2022
+# February 26, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -164,7 +164,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2354 (function main_menu). Configure the
+# The Main Menu starts on line 2356 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1218,8 +1218,8 @@ function fautoconnect {
     echo "Automatically connect to the VPN on startup."
     echo
     if [[ "$obfuscate" == "enabled" ]]; then
-        echo -e "$ob When obfuscate is enabled, the Auto-Connect location"
-        echo "     must support obfuscation."
+        echo -e "$ob When obfuscate is enabled, the Auto-Connect"
+        echo "     location must support obfuscation."
         echo
     fi
     if [[ "$autocon" == "disabled" ]] && [[ -n $acwhere ]]; then
@@ -1817,16 +1817,16 @@ function allvpnservers {
     heading "All Servers"
     if (( ${#allnordservers[@]} == 0 )); then
         if [[ -e "$allvpnfile" ]]; then
-            echo -e "${EColor}Server list retrieved on:${Color_Off}"
+            echo -e "${EColor}Server List${Color_Off}"
             cat "$allvpnfile" | head -n 1
-            readarray -t allnordservers < <( cat "$allvpnfile" | tail -n +3 )
+            readarray -t allnordservers < <( cat "$allvpnfile" | tail -n +4 )
         else
             echo "Retrieving the list of NordVPN servers..."
             echo "Choose 'Update List' to save a local copy of the server list."
+            echo
             readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
         fi
     fi
-    echo
     echo "Server Count: ${#allnordservers[@]}"
     echo
     PS3=$'\n''Choose an option: '
@@ -1892,8 +1892,8 @@ function allvpnservers {
             "Update List")
                 echo
                 if [[ -e "$allvpnfile" ]]; then
-                    echo -e "${EColor}Server list retrieved on:${Color_Off}"
-                    cat "$allvpnfile" | head -n 1
+                    echo -e "${EColor}Server List${Color_Off}"
+                    cat "$allvpnfile" | head -n 2
                     echo
                     read -n 1 -r -p "Update the list? (y/n) "; echo
                 else
@@ -1914,13 +1914,15 @@ function allvpnservers {
                         echo
                         if [[ -e "$allvpnfile" ]]; then
                             # rebuild array if it was blanked out on retrieval attempt
-                            readarray -t allnordservers < <( cat "$allvpnfile" | tail -n +3 )
+                            readarray -t allnordservers < <( cat "$allvpnfile" | tail -n +4 )
                         fi
                     else
-                        date > "$allvpnfile"
+                        echo "Retrieved on: $( date )" > "$allvpnfile"
+                        echo "Server Count: ${#allnordservers[@]}" >> "$allvpnfile"
                         echo >> "$allvpnfile"
                         printf '%s\n' "${allnordservers[@]}" >> "$allvpnfile"
                         echo -e "Saved as ${LColor}$allvpnfile${Color_Off}"
+                        cat "$allvpnfile" | head -n 2
                         echo
                     fi
                 fi
@@ -2085,7 +2087,7 @@ function wireguard_gen {
         echo "[INTERFACE]" >> "$wgfull"
         echo "Address = ${address}/32" >> "$wgfull"
         echo "${privatekey}" >> "$wgfull"
-        echo "DNS = 103.86.96.100" >> "$wgfull"
+        echo "DNS = 103.86.96.100, 103.86.99.100" >> "$wgfull"
         echo >> "$wgfull"
         echo "[PEER]" >> "$wgfull"
         echo "${endpoint}" >> "$wgfull"
@@ -2700,6 +2702,9 @@ main_menu start
 #       SSH
 #           5. Run 'nordvpn login --callback <copied link>'
 #           6. Run 'nordvpn account' to verify that the login was successful
+#
+# Whoops! Connection failed. Please try again. If the problem persists, contact our customer support.
+#   Change technology setting and retest.  NordLynx to OpenVPN or vice versa.
 #
 # After system crash or hard restart
 # 'Whoops! Connection failed. Please try again. If problem persists, contact our customer support.'
