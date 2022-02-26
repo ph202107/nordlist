@@ -8,16 +8,18 @@
 # Choose the NordVPN app version to install
 #   (uncomment one of the following)
 #
-nord_version="nordvpn"           # latest version
-#nord_version="nordvpn=3.7.4"
-#nord_version="nordvpn=3.8.10"
-#nord_version="nordvpn=3.9.5-1"
-#nord_version="nordvpn=3.10.0-1"
-#nord_version="nordvpn=3.11.0-1"
-#nord_version="nordvpn=3.12.0-1"
-#nord_version="nordvpn=3.12.1-1"
-#nord_version="nordvpn=3.12.2"
-#nord_version="nordvpn=3.12.3"
+nord_version="nordvpn"              # install the latest version available
+#nord_version="nordvpn=3.7.4"       # 12 Jun 2020
+#nord_version="nordvpn=3.8.10"      # 05 Jan 2021
+#nord_version="nordvpn=3.9.5-1"     # 25 May 2021
+#nord_version="nordvpn=3.10.0-1"    # 26 May 2021
+#nord_version="nordvpn=3.11.0-1"    # 28 Sep 2021
+#
+#nord_version="nordvpn=3.12.0-1"    # 03 Nov 2021
+#nord_version="nordvpn=3.12.1-1"    # 18 Nov 2021
+#nord_version="nordvpn=3.12.2"      # 16 Dec 2021
+#nord_version="nordvpn=3.12.3"      # 11 Jan 2022
+#nord_version="nordvpn=3.12.4"      # 10 Feb 2022
 #
 #
 # list version numbers:
@@ -53,8 +55,11 @@ function trashnord {
     lbreak
     sudo apt autoremove --purge nordvpn* -y
     lbreak
-    sudo rm -rf -v /var/lib/nordvpn     # should be gone already
+    # ==============================
+    sudo rm -rf -v /var/lib/nordvpn
+    sudo rm -rf -v /var/run/nordvpn
     rm -rf -v ~/.config/nordvpn
+    # ==============================
 }
 function installnord {
     lbreak
@@ -81,7 +86,7 @@ function loginnord {
         echo -e "${LGreen}$USER belongs to the 'nordvpn' group${Color_Off}"
         lbreak
     else
-        # for first-time installation
+        # for first-time installation (might also require reboot)
         echo -e "${BRed}$USER does not belong to the 'nordvpn' group${Color_Off}"
         echo -e "${LGreen}sudo usermod -aG nordvpn $USER ${Color_Off}"
         sudo usermod -aG nordvpn $USER
@@ -131,7 +136,11 @@ Color_Off='\033[0m'
 #
 clear -x
 echo -e ${BRed}
-figlet -f slant NUCLEAR
+if command -v figlet &> /dev/null; then
+    figlet -f slant NUCLEAR
+else
+    echo "///  NUCLEAR   ///"
+fi
 echo -e ${Color_Off}
 echo -e "${LGreen}Currently installed:${Color_Off}"
 nordvpn --version
@@ -168,4 +177,6 @@ lbreak
 # Alternate install method:
 #  sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
 # On subsequent reinstalls the repository won't be removed
+#
+# https://nordvpn.com/blog/nordvpn-linux-release-notes/
 #
