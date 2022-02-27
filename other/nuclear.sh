@@ -68,7 +68,7 @@ function installnord {
     else
         echo -e ${LGreen}"Adding the NordVPN repository."${Color_Off}
         echo
-        cd ~/Downloads
+        cd /home/$USER/Downloads
         wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
         echo
         sudo apt install ~/Downloads/nordvpn-release_1.0.0_all.deb -y
