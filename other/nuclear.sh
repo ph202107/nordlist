@@ -71,8 +71,8 @@ function installnord {
         cd /home/$USER/Downloads
         wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
         echo
-        sudo apt install ~/Downloads/nordvpn-release_1.0.0_all.deb -y
-        # or: sudo dpkg -i ~/Downloads/nordvpn-release_1.0.0_all.deb -y
+        sudo apt install /home/$USER/Downloads/nordvpn-release_1.0.0_all.deb -y
+        # or: sudo dpkg -i /home/$USER/Downloads/nordvpn-release_1.0.0_all.deb -y
     fi
     lbreak
     sudo apt update
