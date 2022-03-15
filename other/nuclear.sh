@@ -20,6 +20,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.12.2"      # 16 Dec 2021
 #nord_version="nordvpn=3.12.3"      # 11 Jan 2022
 #nord_version="nordvpn=3.12.4"      # 10 Feb 2022
+#nord_version="nordvpn=3.12.5"      # 15 Mar 2022
 #
 #
 # list version numbers:
