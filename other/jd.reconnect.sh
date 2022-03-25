@@ -3,15 +3,15 @@
 # This script works with the NordVPN Linux CLI and the JDownloader2
 # "reconnect" option.  It might also work with other applications.
 #
-# Tested on Linux Mint 20.3
-# Requires 'curl' and 'jq'.  eg "sudo apt install curl jq"
-# Make sure the script is executable, eg "chmod +x jd.reconnect.sh"
-#
 # The script creates a list of the top 20 Recommended Servers based on
 # your current location.  When the script is called it checks if your
 # current server is in the list, deletes that entry, and connects to
 # the next server. When no servers remain it connects to another city
 # and retrieves a new list.
+#
+# Tested on Linux Mint 20.3
+# Requires 'curl' and 'jq'.  eg "sudo apt install curl jq"
+# Make sure the script is executable, eg "chmod +x jd.reconnect.sh"
 #
 # In JDownloader2:
 #   Settings - Reconnect
