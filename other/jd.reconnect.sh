@@ -14,10 +14,10 @@
 # and retrieves a new list.
 #
 # In JDownloader2:
-#   Settings - Reconnect - Enable reconnect
-#   Reconnect Method: External Tool
-#   Command to use = full path to this script
-#   Usage (JD2 toolbar button):
+#   Settings - Reconnect
+#       Reconnect Method: External Tool
+#       Command to use = full path to this script
+#   Usage: (JD2 toolbar button)
 #       "Perform a Reconnect"
 #
 # To start off with a fresh list or a new location simply delete the
