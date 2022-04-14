@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.12.5 on Linux Mint 20.3
-# March 15, 2022
+# April 13, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -55,6 +55,7 @@
 #   - function frestart
 #   - function fiptables
 #   - function wireguard_gen
+#   - function fcustomdns "Flush DNS Cache"
 #
 # =====================================================================
 # CUSTOMIZATION
@@ -79,9 +80,9 @@ acwhere=""
 #default_dns="192.168.1.70"; dnsdesc="PiHole"
 default_dns="103.86.96.100 103.86.99.100"; dnsdesc="Nord"
 #
-# Specify a VPN hostname/IP to use for testing while the VPN is off.
+# Specify a VPN hostname to use for testing while the VPN is off.
 # Can still enter any hostname later, this is just a default choice.
-default_host="ca1425.nordvpn.com"   # eg. "ca1425.nordvpn.com"
+default_host="ca1425.nordvpn.com"
 #
 # Confirm the location of the NordVPN changelog on your system.
 #nordchangelog="/var/lib/dpkg/info/nordvpn.changelog"
@@ -164,7 +165,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2356 (function main_menu). Configure the
+# The Main Menu starts on line 2380 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -200,8 +201,8 @@ function set_defaults {
     #
     # For each setting uncomment one of the two choices (or neither).
     #
-    #if [[ "$technology" == "openvpn" ]]; then nordvpn set technology nordlynx; set_vars; fi
-    if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; set_vars; fi
+    if [[ "$technology" == "openvpn" ]]; then nordvpn set technology nordlynx; set_vars; fi
+    #if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; set_vars; fi
     #
     if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi    # uppercase TCP
     #if [[ "$protocol" == "UDP" ]]; then nordvpn set protocol TCP; fi   # uppercase UDP
@@ -277,7 +278,7 @@ function logo {
         custom_ascii
         #
     fi
-    echo -e $connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ip ${Color_Off}
+    echo -e $connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr ${Color_Off}
     echo -e $techpro$fw$ks$cs$ob$no$ac$ip6$dns$wl$fst
     echo -e $transferc ${UPColor}$uptime ${Color_Off}
     if [[ -n $transferc ]]; then echo; fi
@@ -417,11 +418,11 @@ function set_vars {
     city=$(nstatbl "City" | cut -f2 -d':' | cut -c 2-)
     ip=$(nstatbl "Server IP" | cut -f 2-3 -d' ')        # includes "IP: "
     ipaddr=$(echo "$ip" | cut -f2 -d' ')                # IP address only
-    technology2=$(nstatbl "technology" | cut -f3 -d' ') # variable not used
+    #technology2=$(nstatbl "technology" | cut -f3 -d' ')    # variable not used
     protocol2=$(nstatbl "protocol" | cut -f3 -d' ' | tr '[:lower:]' '[:upper:]')
     transferd=$(nstatbl "Transfer" | cut -f 2-3 -d' ')  # download stat with units
     transferu=$(nstatbl "Transfer" | cut -f 5-6 -d' ')  # upload stat with units
-    transfer="\u25bc $transferd  \u25b2 $transferu"     # unicode up/down arrows
+    #transfer="\u25bc $transferd  \u25b2 $transferu"    # unicode up/down arrows
     uptime=$(nstatbl "Uptime" | cut -f 1-5 -d' ')
     #
     # "nordvpn settings" - array nsets (all elements lowercase) - search function nsetsbl
@@ -443,89 +444,89 @@ function set_vars {
     if [[ "$technology" == "openvpn" ]]; then technologyd="OpenVPN"
     elif [[ "$technology" == "nordlynx" ]]; then technologyd="NordLynx"
     fi
-    technologydc=(${TColor}"$technologyd"${Color_Off})
+    technologydc="${TColor}$technologyd${Color_Off}"
     #
     # To display the protocol for either Technology whether connected or disconnected.
     if [[ "$connected" == "connected" ]]; then protocold="$protocol2"
     elif [[ "$technology" == "nordlynx" ]]; then protocold="UDP"
     else protocold="$protocol"
     fi
-    protocoldc=(${TColor}"$protocold"${Color_Off})
+    protocoldc="${TColor}$protocold${Color_Off}"
     #
-    techpro=(${TIColor}"[$technologyd $protocold]"${Color_Off})
+    techpro="${TIColor}[$technologyd $protocold]${Color_Off}"
     #
     if [[ "$connected" == "connected" ]]; then
-        connectedc=(${CNColor}"$connected"${Color_Off})
-        connectedcl=(${CNColor}"${connected^}"${Color_Off}:)
-        transferc=(${DLColor}"\u25bc $transferd "${ULColor}"\u25b2 $transferu "${Color_Off})
+        connectedc="${CNColor}$connected${Color_Off}"
+        connectedcl="${CNColor}${connected^}${Color_Off}:"
+        transferc="${DLColor}\u25bc $transferd ${ULColor}\u25b2 $transferu ${Color_Off}"
     else
-        connectedc=(${DNColor}"$connected"${Color_Off})
-        connectedcl=(${DNColor}"${connected^}"${Color_Off})
+        connectedc="${DNColor}$connected${Color_Off}"
+        connectedcl="${DNColor}${connected^}${Color_Off}"
         transferc=""
     fi
     #
     if [[ "$firewall" == "enabled" ]]; then
-        fw=(${EIColor}[FW]${Color_Off})
-        firewallc=(${EColor}"$firewall"${Color_Off})
+        fw="${EIColor}[FW]${Color_Off}"
+        firewallc="${EColor}$firewall${Color_Off}"
     else
-        fw=(${DIColor}[FW]${Color_Off})
-        firewallc=(${DColor}"$firewall"${Color_Off})
+        fw="${DIColor}[FW]${Color_Off}"
+        firewallc="${DColor}$firewall${Color_Off}"
     fi
     #
     if [[ "$killswitch" == "enabled" ]]; then
-        ks=(${EIColor}[KS]${Color_Off})
-        killswitchc=(${EColor}"$killswitch"${Color_Off})
+        ks="${EIColor}[KS]${Color_Off}"
+        killswitchc="${EColor}$killswitch${Color_Off}"
     else
-        ks=(${DIColor}[KS]${Color_Off})
-        killswitchc=(${DColor}"$killswitch"${Color_Off})
+        ks="${DIColor}[KS]${Color_Off}"
+        killswitchc="${DColor}$killswitch${Color_Off}"
     fi
     #
     if [[ "$cybersec" == "enabled" ]]; then
-        cs=(${EIColor}[CS]${Color_Off})
+        cs="${EIColor}[CS]${Color_Off}"
     else
-        cs=(${DIColor}[CS]${Color_Off})
+        cs="${DIColor}[CS]${Color_Off}"
     fi
     #
     if [[ "$obfuscate" == "enabled" ]]; then
-        ob=(${EIColor}[OB]${Color_Off})
-        obfuscatec=(${EColor}"$obfuscate"${Color_Off})
+        ob="${EIColor}[OB]${Color_Off}"
+        obfuscatec="${EColor}$obfuscate${Color_Off}"
     else
-        ob=(${DIColor}[OB]${Color_Off})
-        obfuscatec=(${DColor}"$obfuscate"${Color_Off})
+        ob="${DIColor}[OB]${Color_Off}"
+        obfuscatec="${DColor}$obfuscate${Color_Off}"
     fi
     #
     if [[ "$notify" == "enabled" ]]; then
-        no=(${EIColor}[NO]${Color_Off})
+        no="${EIColor}[NO]${Color_Off}"
     else
-        no=(${DIColor}[NO]${Color_Off})
+        no="${DIColor}[NO]${Color_Off}"
     fi
     #
     if [[ "$autocon" == "enabled" ]]; then
-        ac=(${EIColor}[AC]${Color_Off})
+        ac="${EIColor}[AC]${Color_Off}"
     else
-        ac=(${DIColor}[AC]${Color_Off})
+        ac="${DIColor}[AC]${Color_Off}"
     fi
     #
     if [[ "$ipversion6" == "enabled" ]]; then
-        ip6=(${EIColor}[IP6]${Color_Off})
+        ip6="${EIColor}[IP6]${Color_Off}"
     else
-        ip6=(${DIColor}[IP6]${Color_Off})
+        ip6="${DIColor}[IP6]${Color_Off}"
     fi
     #
     if [[ "$dns_set" == "disabled" ]]; then # reversed
-        dns=(${DIColor}[DNS]${Color_Off})
+        dns="${DIColor}[DNS]${Color_Off}"
     else
-        dns=(${EIColor}[DNS]${Color_Off})
+        dns="${EIColor}[DNS]${Color_Off}"
     fi
     #
-    if [[ -n "${whitelist[@]}" ]]; then # not empty
-        wl=(${EIColor}[WL]${Color_Off})
+    if [[ -n "${whitelist[*]}" ]]; then # not empty
+        wl="${EIColor}[WL]${Color_Off}"
     else
-        wl=(${DIColor}[WL]${Color_Off})
+        wl="${DIColor}[WL]${Color_Off}"
     fi
     #
-    if [[ ${allfast[@]} =~ [Yy] ]]; then
-        fst=(${FIColor}[F]${Color_Off})
+    if [[ ${allfast[*]} =~ [Yy] ]]; then
+        fst="${FIColor}[F]${Color_Off}"
     else
         fst=""
     fi
@@ -859,6 +860,7 @@ function fdoublevpn {
         echo "Connect to the Double_VPN group."
         echo
         nordvpn connect Double_VPN
+        # nordvpn connect --group Double_VPN <country_code>
         status
         exit
     else
@@ -1100,10 +1102,10 @@ function change_setting {
     fi
     #
     if [[ "$chgvar" == "enabled" ]]; then
-        chgvarc=(${EColor}"$chgvar"${Color_Off})
+        chgvarc="${EColor}$chgvar${Color_Off}"
         chgprompt=$(echo -e "${DColor}Disable${Color_Off} $chgname? (y/n) ")
     else
-        chgvarc=(${DColor}"$chgvar"${Color_Off})
+        chgvarc="${DColor}$chgvar${Color_Off}"
         chgprompt=$(echo -e "${EColor}Enable${Color_Off} $chgname? (y/n) ")
     fi
     echo -e "$chgind $chgname is $chgvarc."
@@ -1316,7 +1318,7 @@ function fcustomdns {
     fi
     echo
     PS3=$'\n''Choose an Option: '
-    submcdns=("Nord (103.86.96.100, 103.86.99.100)" "AdGuard (94.140.14.14 94.140.15.15)" "Quad9 (9.9.9.9, 149.112.112.11)" "Cloudflare (1.1.1.1, 1.0.0.1)" "Google (8.8.8.8, 8.8.4.4)" "Specify or Default" "Disable Custom DNS" "Exit")
+    submcdns=("Nord (103.86.96.100, 103.86.99.100)" "AdGuard (94.140.14.14 94.140.15.15)" "Quad9 (9.9.9.9, 149.112.112.11)" "Cloudflare (1.1.1.1, 1.0.0.1)" "Google (8.8.8.8, 8.8.4.4)" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Exit")
     numsubmcnds=${#submcdns[@]}
     select cdns in "${submcdns[@]}"
     do
@@ -1350,6 +1352,23 @@ function fcustomdns {
                 nordvpn set dns disabled; wait
                 echo
                 ;;
+            "Flush DNS Cache")
+                # https://devconnected.com/how-to-flush-dns-cache-on-linux/
+                echo
+                if command -v systemd-resolve &> /dev/null; then
+                    sudo echo
+                    sudo systemd-resolve --statistics | grep "Current Cache Size"
+                    echo -e ${WColor}"  == Flush =="${Color_Off}
+                    sudo systemd-resolve --flush-caches
+                    sudo systemd-resolve --statistics | grep "Current Cache Size"
+                else
+                    echo -e ${WColor}"systemd-resolve not found"${Color_Off}
+                    echo "For alternate methods see:"
+                    echo " https://devconnected.com/how-to-flush-dns-cache-on-linux/ "
+                    # sudo lsof -i :53 -S
+                fi
+                echo
+                ;;
             "Exit")
                 main_menu
                 ;;
@@ -1368,7 +1387,7 @@ function fwhitelist {
     echo "making other changes. Edit the script to modify the function."
     echo
     echo -e "${EColor}Current Settings:${Color_Off}"
-    if [[ -n "${whitelist[@]}" ]]; then
+    if [[ -n "${whitelist[*]}" ]]; then
         printf '%s\n' "${whitelist[@]}"
     else
         echo "No whitelist entries."
@@ -1400,7 +1419,7 @@ function fwhitelist {
     else
         echo "No changes made."
     fi
-    if [[ -n "${whitelist[@]}" ]]; then
+    if [[ -n "${whitelist[*]}" ]]; then
         echo
         printf '%s\n' "${whitelist[@]}"
     fi
@@ -1413,8 +1432,6 @@ function login_nogui {
     echo -e "${LColor}      nordvpn login --legacy${Color_Off}"
     echo -e "${LColor}      nordvpn login --username <username> --password <password>${Color_Off}"
     echo
-    echo "Future use:"
-    echo
     echo -e "${WColor}If you don't have a web browser on the device:${Color_Off}"
     echo -e "${LColor}Nord Account login without a GUI ('man nordvpn' Note 2)${Color_Off}"
     echo
@@ -1426,7 +1443,7 @@ function login_nogui {
     echo -e "${FColor}  Computer${Color_Off}"
     echo "      2. Open the copied URL in your web browser"
     echo "      3. Complete the login procedure"
-    echo "      4. Right click on the 'Return to App' button and select 'Copy link'"
+    echo "      4. Right click on the 'Continue' button and select 'Copy link'"
     echo -e "${EColor}  SSH${Color_Off}"
     echo "      5. Run 'nordvpn login --callback <copied link>'"
     echo "      6. Run 'nordvpn account' to verify that the login was successful"
@@ -1494,7 +1511,7 @@ function faccount {
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     openlink "$nordrelease"
                 fi
-                # also here: https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
+                # https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
                 ;;
             "Nord Manual")
                 echo
@@ -1505,6 +1522,9 @@ function faccount {
                 echo "email: support@nordvpn.com"
                 echo "https://support.nordvpn.com/"
                 echo "https://nordvpn.com/contact-us/"
+                echo
+                echo "Direct link to online chat:"
+                echo "https://v2.zopim.com/widget/popout.html?key=oxKZnmXv4KZ1uFO78i56rMEovdYXH2jm"
                 echo
                 ;;
             "Exit")
@@ -1616,7 +1636,7 @@ function fiptables_status {
     echo -e "The VPN is $connectedc.  ${IPColor}$ip${Color_Off}"
     echo -e "$fw The Firewall is $firewallc."
     echo -e "$ks The Kill Switch is $killswitchc."
-    if [[ -n "${whitelist[@]}" ]]; then
+    if [[ -n "${whitelist[*]}" ]]; then
         printf '%s\n' "${whitelist[@]}"
     fi
     echo
@@ -2041,9 +2061,10 @@ function wireguard_gen {
     echo "NordLynx connection.  Requires WireGuard/WireGuard-Tools."
     echo "Commands require sudo. Note: Keep your Private Key secure."
     echo
+    set_vars
     wgcity=$( echo "$city" | tr -d ' ' )
-    wgconfig=( "$wgcity"_"$server"_wg.conf )    # Filename
-    wgfull="$wgdir/$wgconfig"                   # Full path and filename
+    wgconfig="$wgcity"_"$server"_wg.conf    # Filename
+    wgfull="$wgdir/$wgconfig"               # Full path and filename
     #
     if ! command -v wg &> /dev/null; then
         echo -e "${WColor}WireGuard-Tools could not be found.${Color_Off}"
@@ -2075,12 +2096,12 @@ function wireguard_gen {
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         #
         address=$(/sbin/ifconfig nordlynx | grep 'inet ' | tr -s ' ' | cut -d" " -f3)
-        listenport=$(sudo wg showconf nordlynx | grep 'ListenPort = .*')
+        #listenport=$(sudo wg showconf nordlynx | grep 'ListenPort = .*')
         privatekey=$(sudo wg showconf nordlynx | grep 'PrivateKey = .*')
         publickey=$(sudo wg showconf nordlynx | grep 'PublicKey = .*')
         endpoint=$(sudo wg showconf nordlynx | grep 'Endpoint = .*')
         #
-        echo "# $server.nordvpn.com" >> "$wgfull"
+        echo "# $server.nordvpn.com" > "$wgfull"
         echo "# $city $country" >> "$wgfull"
         echo "# Server $ip" >> "$wgfull"
         echo >> "$wgfull"
@@ -2125,7 +2146,7 @@ function ftools {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=("NordVPN API" "Rate VPN Server" "WireGuard" "speedtest-cli" "www.speedtest.net" "youtube-dlp" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "world map" "Change Host" "Exit")
+    nettools=("NordVPN API" "Rate VPN Server" "WireGuard" "speedtest-cli" "www.speedtest.net" "youtube-dlp" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "world map" "Change Host" "Exit")
     numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
@@ -2213,6 +2234,9 @@ function ftools {
             "test-ipv6.com")
                 openlink "https://test-ipv6.com/"
                 ;;
+            "ipx.ac")
+                openlink "https://ipx.ac/"
+                ;;
             "world map")
                 # may be possible to highlight location
                 echo
@@ -2244,7 +2268,7 @@ function ftools {
     done
 }
 function fdefaults {
-    defaultsc=(${LColor}"[Defaults]"${Color_Off}'\n')
+    defaultsc="${LColor}[Defaults]${Color_Off}"'\n'
     echo
     echo -e "$defaultsc  Disconnect and apply the NordVPN settings"
     echo "  specified in 'function set_defaults'"
@@ -2715,6 +2739,9 @@ main_menu start
 #   https://support.nordvpn.com/Connectivity/Linux/1061938702/How-to-connect-to-NordVPN-using-Linux-Network-Manager.htm
 #   https://downloads.nordcdn.com/configs/archives/servers/ovpn.zip
 #   https://nordvpn.com/servers/tools/
+#   Obfuscated Server ovpn config files
+#       https://support.nordvpn.com/Connectivity/macOS/1061815912/Manual-connection-setup-with-Tunnelblick-on-macOS.htm
+#       https://downloads.nordcdn.com/configs/archives/servers/ovpn_xor.zip
 #
 # Manage NordVPN OpenVPN connections
 #   https://github.com/jotyGill/openpyn-nordvpn
