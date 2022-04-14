@@ -23,6 +23,11 @@
 # To start off with a fresh list or a new location simply delete the
 # existing server list.  A new list will be created.
 #
+# Known Issue
+#   Connection may fail if you have another computer already connected 
+#   to the target server using the same technology and protocol.
+#   Can delete the in-use server from the list or use another city.
+#
 # Specify the full path and filename to use for the server list.
 # (Use the absolute path)
 jdlist="/home/$USER/Downloads/jd.nordservers.txt"
@@ -69,7 +74,7 @@ function getnextcity {
 }
 function getserverload {
     if [[ "$showserverload" =~ ^[Yy]$ ]]; then
-        sload=$(timeout 10 curl --silent https://api.nordvpn.com/server/stats/$currenthost | jq .percent)
+        sload=$(timeout 10 curl --silent https://api.nordvpn.com/server/stats/"$currenthost" | jq .percent)
         if [[ -n "$sload" ]]; then
             serverload=" ($sload% load)"
         else
@@ -83,9 +88,8 @@ if [[ ! -e "$jdlist" ]]; then
     getserverlist
 fi
 #
-getcurrentinfo
-#
 # check if the current hostname is in the list
+getcurrentinfo
 if grep "$currenthost" "$jdlist"; then
     # remove the current hostname and save the list
     # grep inverse
@@ -93,7 +97,7 @@ if grep "$currenthost" "$jdlist"; then
 fi
 #
 # get the next server from the top of the list
-nextserver=$( cat "$jdlist" | head -n 1 | cut -f1 -d'.' )
+nextserver=$( head -n 1 "$jdlist" | cut -f1 -d'.' )
 #
 if [[ "$nextserver" == "EOF" ]]; then
     # if there are no more servers then change city and get a new list
