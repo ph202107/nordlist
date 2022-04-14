@@ -24,7 +24,6 @@ nord_version="nordvpn"              # install the latest version available
 #
 #
 # list version numbers:
-#   apt-cache showpkg nordvpn
 #   apt list -a nordvpn
 #
 function default_settings {
@@ -59,21 +58,21 @@ function trashnord {
     # ====================================
     sudo rm -rf -v /var/lib/nordvpn
     sudo rm -rf -v /var/run/nordvpn
-    rm -rf -v /home/$USER/.config/nordvpn
+    rm -rf -v "/home/$USER/.config/nordvpn"
     # ====================================
 }
 function installnord {
     lbreak
     if [[ -e /etc/apt/sources.list.d/nordvpn.list ]]; then
-        echo -e ${LGreen}"NordVPN repository found."${Color_Off}
+        echo -e "${LGreen}NordVPN repository found.${Color_Off}"
     else
-        echo -e ${LGreen}"Adding the NordVPN repository."${Color_Off}
+        echo -e "${LGreen}Adding the NordVPN repository.${Color_Off}"
         echo
-        cd /home/$USER/Downloads
+        cd "/home/$USER/Downloads" || exit
         wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
         echo
-        sudo apt install /home/$USER/Downloads/nordvpn-release_1.0.0_all.deb -y
-        # or: sudo dpkg -i /home/$USER/Downloads/nordvpn-release_1.0.0_all.deb -y
+        sudo apt install "/home/$USER/Downloads/nordvpn-release_1.0.0_all.deb" -y
+        # or: sudo dpkg -i "/home/$USER/Downloads/nordvpn-release_1.0.0_all.deb" -y
     fi
     lbreak
     sudo apt update
@@ -90,7 +89,7 @@ function loginnord {
         # for first-time installation (might also require reboot)
         echo -e "${BRed}$USER does not belong to the 'nordvpn' group${Color_Off}"
         echo -e "${LGreen}sudo usermod -aG nordvpn $USER ${Color_Off}"
-        sudo usermod -aG nordvpn $USER
+        sudo usermod -aG nordvpn "$USER"
         lbreak
     fi
     if ! systemctl is-active --quiet nordvpnd; then
@@ -107,7 +106,7 @@ function loginnord {
 }
 function flushtables {
     sudo iptables -S
-    echo -e ${BRed}"** flush **"${Color_Off}
+    echo -e "${BRed}** Flush **${Color_Off}"
     # https://www.cyberciti.biz/tips/linux-iptables-how-to-flush-all-rules.html
     # Accept all traffic first to avoid ssh lockdown
     sudo iptables -P INPUT ACCEPT
@@ -136,13 +135,13 @@ BRed='\033[1;31m'
 Color_Off='\033[0m'
 #
 clear -x
-echo -e ${BRed}
+echo -e "${BRed}"
 if command -v figlet &> /dev/null; then
     figlet -f slant NUCLEAR
 else
     echo "///  NUCLEAR   ///"
 fi
-echo -e ${Color_Off}
+echo -e "${Color_Off}"
 echo -e "${LGreen}Currently installed:${Color_Off}"
 nordvpn --version
 echo
@@ -163,7 +162,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     default_settings
 else
     lbreak
-    echo -e ${BRed}"** ABORT **"${Color_Off}
+    echo -e "${BRed}** ABORT **${Color_Off}"
 fi
 lbreak
 nordvpn status
@@ -180,4 +179,4 @@ lbreak
 # On subsequent reinstalls the repository won't be removed
 #
 # https://nordvpn.com/blog/nordvpn-linux-release-notes/
-#
+# https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
