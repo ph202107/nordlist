@@ -1,7 +1,8 @@
 #!/bin/bash
+# shellcheck disable=SC2034    # unused color variables
 #
 # Tested with NordVPN Version 3.12.5 on Linux Mint 20.3
-# April 26, 2022
+# April 27, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -169,7 +170,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2417 (function main_menu). Configure the
+# The Main Menu starts on line 2431 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -265,10 +266,10 @@ function custom_ascii {
         #figlet NordVPN                         # standard font in mono
         #figlet NordVPN | lolcat -p 0.8         # standard font colorized
         #figlet -f slant NordVPN | lolcat       # slant font, colorized
-        #figlet "$city" | lolcat -p 1             # display the city name, more rainbow
-        figlet -f slant "$city" | lolcat         # city in slant font
-        #figlet "$country" | lolcat -p 1.5        # display the country
-        #figlet "$transferd" | lolcat  -p 1       # display the download statistic
+        #figlet "$city" | lolcat -p 1           # display the city name, more rainbow
+        figlet -f slant "$city" | lolcat       # city in slant font
+        #figlet "$country" | lolcat -p 1.5      # display the country
+        #figlet "$transferd" | lolcat  -p 1     # display the download statistic
         #
     else
         figlet NordVPN                          # style when disconnected
@@ -1389,6 +1390,7 @@ function fcustomdns {
                 echo "Specify a Hostname to lookup. "
                 read -r -p "Hit 'Enter' for [$dns_defhost]: " testhost
                 testhost=${testhost:-$dns_defhost}
+                echo; echo -e "${EColor}dig @<DNS> $testhost${Color_Off}"
                 for i in "${submcdns[@]}"
                 do
                     dnsheader=$( echo "$i" | cut -f1 -d' ' )
@@ -1397,8 +1399,8 @@ function fcustomdns {
                     if [[ $dnsip1 =~ [0-9] ]]; then     # contains numbers
                         echo
                         echo -e "${LColor}===== $dnsheader =====${Color_Off}"
-                        echo "dig $dnsip1 $( timeout 5 dig @"$dnsip1" "$testhost" | grep -i "Query time" | cut -f3 -d';' )"
-                        echo "dig $dnsip2 $( timeout 5 dig @"$dnsip2" "$testhost" | grep -i "Query time" | cut -f3 -d';' )"
+                        echo "$dnsip1 $( timeout 5 dig @"$dnsip1" "$testhost" | grep -i "Query time" | cut -f3 -d';' )"
+                        echo "$dnsip2 $( timeout 5 dig @"$dnsip2" "$testhost" | grep -i "Query time" | cut -f3 -d';' )"
                     fi
                 done
                 echo
@@ -1553,12 +1555,25 @@ function faccount {
                 ;;
             "Support")
                 echo
+                echo -e "${LColor}Support${Color_Off}"
                 echo "email: support@nordvpn.com"
                 echo "https://support.nordvpn.com/"
                 echo "https://nordvpn.com/contact-us/"
                 echo
-                echo "Direct link to online chat:"
+                echo -e "${LColor}Direct link to online chat${Color_Off}"
                 echo "https://v2.zopim.com/widget/popout.html?key=oxKZnmXv4KZ1uFO78i56rMEovdYXH2jm"
+                echo
+                echo -e "${LColor}Terms of Service${Color_Off}"
+                echo "https://my.nordaccount.com/legal/terms-of-service/"
+                echo
+                echo -e "${LColor}Privacy Policy${Color_Off}"
+                echo "https://my.nordaccount.com/legal/privacy-policy/"
+                echo
+                echo -e "${LColor}Warrant Canary (bottom of page)${Color_Off}"
+                echo "https://nordvpn.com/security-efforts/"
+                echo
+                echo -e "${LColor}Bug Bounty${Color_Off}"
+                echo "https://hackerone.com/nordsecurity?type=team"
                 echo
                 ;;
             "Exit")
