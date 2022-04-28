@@ -1,8 +1,8 @@
 #!/bin/bash
-# shellcheck disable=SC2034    # unused color variables
+# shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
 # Tested with NordVPN Version 3.12.5 on Linux Mint 20.3
-# April 27, 2022
+# April 28, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -87,7 +87,7 @@ default_host="ca1425.nordvpn.com"
 #
 # Specify any hostname to lookup when testing DNS response time.
 # Can also enter a different hostname later.
-dns_defhost="support.nordvpn.com"
+dns_defhost="canadiantire.ca"
 #
 # Confirm the location of the NordVPN changelog on your system.
 #nordchangelog="/var/lib/dpkg/info/nordvpn.changelog"
@@ -170,7 +170,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2431 (function main_menu). Configure the
+# The Main Menu starts on line 2430 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1297,16 +1297,6 @@ function fobfuscate {
     fi
     main_menu
 }
-function nordsetdns {
-    echo
-    set_vars
-    if [[ "$cybersec" == "enabled" ]]; then
-        nordvpn set cybersec disabled; wait
-        echo
-    fi
-    nordvpn set dns $1 $2 $3; wait
-    echo
-}
 function fcustomdns {
     heading "CustomDNS"
     echo "The NordVPN app automatically uses NordVPN DNS servers"
@@ -1325,34 +1315,41 @@ function fcustomdns {
     PS3=$'\n''Choose an Option: '
     # Note submcdns[@] - new entries should keep the same format for the "Test Servers" option
     # eg Name<space>DNS1<space>DNS2
-    submcdns=("Nord 103.86.96.100 103.86.99.100" "AdGuard 94.140.14.14 94.140.15.15" "Quad9 9.9.9.9 149.112.112.11" "CB-Security 185.228.168.9 185.228.169.9" "OpenDNS 208.67.222.222 208.67.220.220" "Cloudflare 1.1.1.1 1.0.0.1" "Google 8.8.8.8 8.8.4.4" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
+    submcdns=("Nord 103.86.96.100 103.86.99.100" "AdGuard 94.140.14.14 94.140.15.15" "Quad9 9.9.9.9 149.112.112.11" "CB-Security 185.228.168.9 185.228.169.9" "OpenDNS 208.67.220.220 208.67.222.222" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
     numsubmcnds=${#submcdns[@]}
     select cdns in "${submcdns[@]}"
     do
         case $cdns in
             "Nord 103.86.96.100 103.86.99.100")
-                nordsetdns "103.86.96.100" "103.86.99.100"
+                echo
+                nordvpn set dns 103.86.96.100 103.86.99.100
                 ;;
             "AdGuard 94.140.14.14 94.140.15.15")
-                nordsetdns "94.140.14.14" "94.140.15.15"
+                echo
+                nordvpn set dns 94.140.14.14 94.140.15.15
                 ;;
             "Quad9 9.9.9.9 149.112.112.11")
-                nordsetdns "9.9.9.9" "149.112.112.11"
+                echo
+                nordvpn set dns 9.9.9.9 149.112.112.11
                 ;;
             "CB-Security 185.228.168.9 185.228.169.9")
                 # Clean Browsing Security 185.228.168.9 185.228.169.9
                 # Clean Browsing Adult 185.228.168.10 185.228.169.11
                 # Clean Browsing Family 185.228.168.168 185.228.169.168
-                nordsetdns "185.228.168.9" "185.228.169.9"
+                echo
+                nordvpn set dns 185.228.168.9 185.228.169.9
                 ;;
-            "OpenDNS 208.67.222.222 208.67.220.220")
-                nordsetdns "208.67.222.222" "208.67.220.220"
+            "OpenDNS 208.67.220.220 208.67.222.222")
+                echo
+                nordvpn set dns 208.67.220.220 208.67.222.222
                 ;;
-            "Cloudflare 1.1.1.1 1.0.0.1")
-                nordsetdns "1.1.1.1" "1.0.0.1"
+            "Cloudflare 1.0.0.1 1.1.1.1")
+                echo
+                nordvpn set dns 1.0.0.1 1.1.1.1
                 ;;
-            "Google 8.8.8.8 8.8.4.4")
-                nordsetdns "8.8.8.8" "8.8.4.4"
+            "Google 8.8.4.4 8.8.8.8")
+                echo
+                nordvpn set dns 8.8.4.4 8.8.8.8
                 ;;
             "Specify or Default")
                 echo
@@ -1361,7 +1358,8 @@ function fcustomdns {
                 echo
                 read -r -p "Up to 3 DNS server IPs: " dns3srvrs
                 dns3srvrs=${dns3srvrs:-$default_dns}
-                nordsetdns "$dns3srvrs"
+                echo
+                nordvpn set dns $dns3srvrs
                 ;;
             "Disable Custom DNS")
                 echo
