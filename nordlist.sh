@@ -170,7 +170,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2430 (function main_menu). Configure the
+# The Main Menu starts on line 2449 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -603,7 +603,7 @@ function openlink {
 function fcountries {
     # submenu for all available countries
     heading "Countries"
-    countrylist=($(nordvpn countries | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort))
+    readarray -t countrylist < <( nordvpn countries | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
     # Replaced "Bosnia_And_Herzegovina" with "Sarajevo" to help compact the list.
     countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Sarajevo}")
     countrylist+=( "Exit" )
@@ -642,7 +642,7 @@ function cities {
         echo -e "$ob Cities in $xcountry with Obfuscation support"
         echo
     fi
-    citylist=($(nordvpn cities $xcountry | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort))
+    readarray -t citylist < <( nordvpn cities $xcountry | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
     citylist+=( "Default" )
     citylist+=( "Exit" )
     numcities=${#citylist[@]}
@@ -722,7 +722,7 @@ function fhostname {
 function fallgroups {
     # all available groups
     heading "All Groups"
-    grouplist=($(nordvpn groups | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort))
+    readarray -t grouplist < <( nordvpn groups | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
     grouplist+=( "Exit" )
     numgroups=${#grouplist[@]}
     echo "Groups that are available with"
@@ -1096,15 +1096,32 @@ function ask_protocol {
 function change_setting {
     # $1 = Nord command
     # $2 = override fast2 and main_menu
+    chgloc=""
     #
-    if [[ "$1" == "firewall" ]]; then chgname="the Firewall"; chgvar="$firewall"; chgind="$fw"; chgloc=""
-    elif [[ "$1" == "killswitch" ]]; then chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks"; chgloc=""
-    elif [[ "$1" == "cybersec" ]]; then chgname="CyberSec"; chgvar="$cybersec"; chgind="$cs"; chgloc=""
-    elif [[ "$1" == "notify" ]]; then chgname="Notify"; chgvar="$notify"; chgind="$no"; chgloc=""
-    elif [[ "$1" == "autoconnect" ]]; then chgname="Auto-Connect"; chgvar="$autocon"; chgind="$ac"; chgloc="$acwhere"
-    elif [[ "$1" == "ipv6" ]]; then chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6"; chgloc=""
-    else echo -e "${WColor}$1 not defined${Color_Off}"; echo; return
-    fi
+    case "$1" in
+        "firewall")
+            chgname="the Firewall"; chgvar="$firewall"; chgind="$fw"
+            ;;
+        "killswitch")
+            chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks"
+            ;;
+        "cybersec")
+            chgname="CyberSec"; chgvar="$cybersec"; chgind="$cs"
+            ;;
+        "notify")
+            chgname="Notify"; chgvar="$notify"; chgind="$no"
+            ;;
+        "autoconnect")
+            chgname="Auto-Connect"; chgvar="$autocon"; chgind="$ac"; chgloc="$acwhere"
+            ;;
+        "ipv6")
+            chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6"
+            ;;
+        *)
+            echo -e "${WColor}$1 not defined${Color_Off}"; echo
+            return
+            ;;
+    esac
     #
     if [[ "$chgvar" == "enabled" ]]; then
         chgvarc="${EColor}$chgvar${Color_Off}"
@@ -2386,11 +2403,13 @@ function fquickconnect {
     fi
     if [[ -z $bestserver ]]; then
         echo "Request timed out. Using 'nordvpn connect'"
+        echo
+        nordvpn connect
     else
         echo -e "Connecting to ${LColor}$bestserver${Color_Off}"
+        echo
+        nordvpn connect "$bestserver"
     fi
-    echo
-    nordvpn connect $bestserver
     status
     exit
 }
