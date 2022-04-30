@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
 # Tested with NordVPN Version 3.12.5 on Linux Mint 20.3
-# April 28, 2022
+# April 30, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -87,7 +87,7 @@ default_host="ca1425.nordvpn.com"
 #
 # Specify any hostname to lookup when testing DNS response time.
 # Can also enter a different hostname later.
-dns_defhost="canadiantire.ca"
+dns_defhost="reddit.com"
 #
 # Confirm the location of the NordVPN changelog on your system.
 #nordchangelog="/var/lib/dpkg/info/nordvpn.changelog"
@@ -170,7 +170,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2449 (function main_menu). Configure the
+# The Main Menu starts on line 2455 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1448,8 +1448,11 @@ function fwhitelist {
     startline=$(grep -m1 -n "whitelist_start" "$0" | cut -f1 -d':')
     endline=$(( $(grep -m1 -n "whitelist_end" "$0" | cut -f1 -d':') - 1 ))
     numlines=$(( endline - startline ))
-    cat -n "$0" | head -n $endline | tail -n $numlines
-    #highlight -l -O xterm256 "$0" | head -n $endline | tail -n $numlines
+    if command -v highlight &> /dev/null; then
+        highlight -l -O xterm256 "$0" | head -n "$endline" | tail -n "$numlines"
+    else
+        cat -n "$0" | head -n "$endline" | tail -n "$numlines"
+    fi
     echo
     echo -e "Type ${WColor}C${Color_Off} to clear the current whitelist."
     echo -e "Type ${FIColor}E${Color_Off} to edit the script."
@@ -2179,16 +2182,16 @@ function wireguard_gen {
         echo "${publickey}" >> "$wgfull"
         echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgfull"
         echo "PersistentKeepalive = 25" >> "$wgfull"
-        #
-        #sudo -K     # timeout sudo
         echo
         echo -e "${EColor}Completed \u2705${Color_Off}" # unicode checkmark
         echo
-        echo -e "cat ${LColor}$wgfull${Color_Off}"
+        echo -e "Saved as ${LColor}$wgfull${Color_Off}"
         echo
-        cat "$wgfull"
-        #
-        #highlight -O xterm256 "$wgfull"
+        if command -v highlight &> /dev/null; then
+            highlight -O xterm256 "$wgfull"
+        else
+            cat "$wgfull"
+        fi
         # open with default editor
         # openlink "$wgfull"
     fi
@@ -2366,8 +2369,11 @@ function fscriptinfo {
     startline=$(grep -m1 -n "CUSTOM" "$0" | cut -f1 -d':')
     endline=$(grep -m1 -n "End" "$0" | cut -f1 -d':')
     numlines=$(( endline - startline + 2 ))
-    #cat -n "$0" | head -n $endline | tail -n $numlines
-    highlight -l -O xterm256 "$0" | head -n "$endline" | tail -n "$numlines"
+    if command -v highlight &> /dev/null; then
+        highlight -l -O xterm256 "$0" | head -n "$endline" | tail -n "$numlines"
+    else
+        cat -n "$0" | head -n "$endline" | tail -n "$numlines"
+    fi
     echo
     echo "Need to edit the script to change these settings."
     echo
