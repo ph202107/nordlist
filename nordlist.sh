@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
 # Tested with NordVPN Version 3.12.5 on Linux Mint 20.3
-# April 30, 2022
+# May 11, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -112,6 +112,9 @@ exitlogo="y"
 # the server load.  Requires 'curl' and 'jq'.  "y" or "n"
 exitping="n"
 #
+# Show your external IP address when the script exits. "y" or "n"
+exitip="n"
+#
 # Open http links in a new Firefox window.  "y" or "n"
 # Choose "n" to use the default browser or method.
 usefirefox="n"
@@ -170,7 +173,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2455 (function main_menu). Configure the
+# The Main Menu starts on line 2477 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -406,9 +409,6 @@ function nsetsbl {
     printf '%s\n' "${nsets[@]}" | grep -i "$1"
 }
 function set_vars {
-    #
-    # VARIABLES
-    #
     # Store info in arrays (BASH v4)
     readarray -t nstat < <( nordvpn status | tr -d '\r' )
     readarray -t nsets < <( nordvpn settings | tr -d '\r' | tr '[:upper:]' '[:lower:]' )
@@ -416,18 +416,18 @@ function set_vars {
     # "nordvpn status" - array nstat - search function nstatbl
     # When disconnected, $connected is the only variable from nstat
     connected=$(nstatbl "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')
-    nordhost=$(nstatbl "Current server" | cut -f3 -d' ') # full hostname
-    server=$(echo "$nordhost" | cut -f1 -d'.')           # shortened hostname
-    # country and city names may have spaces eg. "United States"
+    nordhost=$(nstatbl "Current server" | cut -f3 -d' ')    # full hostname
+    server=$(echo "$nordhost" | cut -f1 -d'.')              # shortened hostname
+    # country and city names may have spaces
     country=$(nstatbl "Country" | cut -f2 -d':' | cut -c 2-)
     city=$(nstatbl "City" | cut -f2 -d':' | cut -c 2-)
-    ip=$(nstatbl "Server IP" | cut -f 2-3 -d' ')        # includes "IP: "
-    ipaddr=$(echo "$ip" | cut -f2 -d' ')                # IP address only
+    ip=$(nstatbl "Server IP" | cut -f 2-3 -d' ')            # includes "IP: "
+    ipaddr=$(echo "$ip" | cut -f2 -d' ')                    # IP address only
     #technology2=$(nstatbl "technology" | cut -f3 -d' ')    # variable not used
     protocol2=$(nstatbl "protocol" | cut -f3 -d' ' | tr '[:lower:]' '[:upper:]')
-    transferd=$(nstatbl "Transfer" | cut -f 2-3 -d' ')  # download stat with units
-    transferu=$(nstatbl "Transfer" | cut -f 5-6 -d' ')  # upload stat with units
-    #transfer="\u25bc $transferd  \u25b2 $transferu"    # unicode up/down arrows
+    transferd=$(nstatbl "Transfer" | cut -f 2-3 -d' ')      # download stat with units
+    transferu=$(nstatbl "Transfer" | cut -f 5-6 -d' ')      # upload stat with units
+    #transfer="\u25bc $transferd  \u25b2 $transferu"        # unicode up/down arrows
     uptime=$(nstatbl "Uptime" | cut -f 1-5 -d' ')
     #
     # "nordvpn settings" - array nsets (all elements lowercase) - search function nsetsbl
@@ -561,6 +561,22 @@ function discon2 {
         echo
     fi
 }
+function ipinfobl {
+    printf '%s\n' "${ipinfo[@]}" | grep -m1 -i "$1" | cut -f4 -d'"'
+}
+function getexternalip {
+    echo -n "External IP: "
+    readarray -t ipinfo < <( timeout 5 curl --silent ipinfo.io )
+    extip=$( ipinfobl "ip" )
+    exthost=$( ipinfobl "hostname" )
+    extorg=$( ipinfobl "org" )
+    extcity=$( ipinfobl "city" )
+    extregion=$( ipinfobl "region" )
+    extcountry=$( ipinfobl "country" )
+    echo -e "${IPColor}$extip  $exthost${Color_Off}"
+    echo -e "${SVColor}$extorg ${CIColor}$extcity $extregion ${COColor}$extcountry${Color_Off}"
+    echo
+}
 function status {
     echo
     nordvpn settings
@@ -580,6 +596,9 @@ function status {
             echo
             server_load
         fi
+    fi
+    if [[ "$exitip" =~ ^[Yy]$ ]]; then
+        getexternalip
     fi
     date
     echo
@@ -1332,7 +1351,7 @@ function fcustomdns {
     PS3=$'\n''Choose an Option: '
     # Note submcdns[@] - new entries should keep the same format for the "Test Servers" option
     # eg Name<space>DNS1<space>DNS2
-    submcdns=("Nord 103.86.96.100 103.86.99.100" "AdGuard 94.140.14.14 94.140.15.15" "Quad9 9.9.9.9 149.112.112.11" "CB-Security 185.228.168.9 185.228.169.9" "OpenDNS 208.67.220.220 208.67.222.222" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
+    submcdns=("Nord 103.86.96.100 103.86.99.100" "AdGuard 94.140.14.14 94.140.15.15" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
     numsubmcnds=${#submcdns[@]}
     select cdns in "${submcdns[@]}"
     do
@@ -1345,9 +1364,9 @@ function fcustomdns {
                 echo
                 nordvpn set dns 94.140.14.14 94.140.15.15
                 ;;
-            "Quad9 9.9.9.9 149.112.112.11")
+            "OpenDNS 208.67.220.220 208.67.222.222")
                 echo
-                nordvpn set dns 9.9.9.9 149.112.112.11
+                nordvpn set dns 208.67.220.220 208.67.222.222
                 ;;
             "CB-Security 185.228.168.9 185.228.169.9")
                 # Clean Browsing Security 185.228.168.9 185.228.169.9
@@ -1356,9 +1375,9 @@ function fcustomdns {
                 echo
                 nordvpn set dns 185.228.168.9 185.228.169.9
                 ;;
-            "OpenDNS 208.67.220.220 208.67.222.222")
+            "Quad9 9.9.9.9 149.112.112.11")
                 echo
-                nordvpn set dns 208.67.220.220 208.67.222.222
+                nordvpn set dns 9.9.9.9 149.112.112.11
                 ;;
             "Cloudflare 1.0.0.1 1.1.1.1")
                 echo
@@ -1884,17 +1903,16 @@ function server_load {
         echo
         return
     fi
-    echo "Checking the server load..."
-    echo
+    echo -ne "$nordhost load = "
     sload=$(timeout 10 curl --silent https://api.nordvpn.com/server/stats/"$nordhost" | jq .percent)
     if [[ -z $sload ]]; then
         echo "Request timed out."
     elif (( sload <= 30 )); then
-        echo -e "$nordhost load = ${EIColor}$sload%${Color_Off}"
+        echo -e "${EIColor}$sload%${Color_Off}"
     elif (( sload <= 60 )); then
-        echo -e "$nordhost load = ${FIColor}$sload%${Color_Off}"
+        echo -e "${FIColor}$sload%${Color_Off}"
     else
-        echo -e "$nordhost load = ${DIColor}$sload%${Color_Off}"
+        echo -e "${DIColor}$sload%${Color_Off}"
     fi
     echo
 }
@@ -2213,7 +2231,7 @@ function ftools {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=("NordVPN API" "Rate VPN Server" "WireGuard" "speedtest-cli" "www.speedtest.net" "youtube-dlp" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "ipinfo.io" "world map" "Change Host" "Exit")
+    nettools=( "NordVPN API" "External IP" "WireGuard" "Rate VPN Server" "speedtest-cli" "www.speedtest.net" "youtube-dlp" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "ipinfo.io" "world map" "Change Host" "Exit" )
     numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
@@ -2221,11 +2239,15 @@ function ftools {
             "NordVPN API")
                 nordapi
                 ;;
-            "Rate VPN Server")
-                rate_server
+            "External IP")
+                echo
+                getexternalip
                 ;;
             "WireGuard")
                 wireguard_gen
+                ;;
+            "Rate VPN Server")
+                rate_server
                 ;;
             "speedtest-cli")
                 heading "SpeedTest"
