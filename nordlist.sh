@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
 # Tested with NordVPN Version 3.12.5 on Linux Mint 20.3
-# May 11, 2022
+# May 20, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -173,7 +173,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2477 (function main_menu). Configure the
+# The Main Menu starts on line 2489 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -186,12 +186,12 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 function whitelist_commands {
     # Add your whitelist configuration commands here.
     # Enter one command per line.
-    # whitelist_start_donotremove
+    # whitelist_start (keep this line)
     #
     #nordvpn whitelist remove all
     #nordvpn whitelist add subnet 192.168.1.0/24
     #
-    # whitelist_end_donotremove
+    # whitelist_end (keep this line)
     echo
 }
 function set_defaults {
@@ -573,9 +573,18 @@ function getexternalip {
     extcity=$( ipinfobl "city" )
     extregion=$( ipinfobl "region" )
     extcountry=$( ipinfobl "country" )
-    echo -e "${IPColor}$extip  $exthost${Color_Off}"
-    echo -e "${SVColor}$extorg ${CIColor}$extcity $extregion ${COColor}$extcountry${Color_Off}"
-    echo
+    if [[ -n "${ipinfo[*]}" ]]; then # not empty
+        echo -e "${IPColor}$extip  $exthost${Color_Off}"
+        echo -e "${SVColor}$extorg ${CIColor}$extcity $extregion ${COColor}$extcountry${Color_Off}"
+        echo
+    else
+        set_vars
+        echo -n "Request timed out"
+        if [[ "$connected" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
+            echo -ne " - $ks"
+        fi
+        echo; echo
+    fi
 }
 function status {
     echo
@@ -591,7 +600,7 @@ function status {
             if [[ "$nordhost" == *"onion"* ]]; then
                 ping -c 3 -q "$ipaddr"
             else
-                ping -c 3 -q "$nordhost"
+                ping -c 3 -q "$nordhost" # | grep -A4 -i "statistics"
             fi
             echo
             server_load
@@ -612,11 +621,23 @@ function warning {
 }
 function openlink {
     # $1 = URL or link to open
+    # $2 = ask first
+    # $3 = exit after opening
     #
+    if [[ "$2" == "ask" ]]; then
+        read -n 1 -r -p "$(echo -e "Open ${EColor}$1${Color_Off} ? (y/n) ")"; echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            return
+        fi
+    fi
     if [[ "$1" == *"http"* ]] && [[ "$usefirefox" =~ ^[Yy]$ ]]; then
         nohup /usr/bin/firefox --new-window "$1" > /dev/null 2>&1 &
     else
         nohup xdg-open "$1" > /dev/null 2>&1 &
+    fi
+    if [[ "$3" == "exit" ]]; then
+        echo
+        exit
     fi
 }
 function fcountries {
@@ -1487,8 +1508,7 @@ function fwhitelist {
     elif [[ $REPLY =~ ^[Ee]$ ]]; then
         echo -e "Modify ${LColor}function whitelist_commands${Color_Off} starting on line ${FIColor}$(( startline + 1 ))${Color_Off}"
         echo
-        openlink "$0"
-        exit
+        openlink "$0" "noask" "exit"
     else
         echo "No changes made."
     fi
@@ -1573,17 +1593,12 @@ function faccount {
                 nordvpn --version
                 ;;
             "Changelog")
-                nordrelease="https://nordvpn.com/blog/nordvpn-linux-release-notes/"
-                echo
                 #zcat "$nordchangelog"
                 #zless +G "$nordchangelog"
                 # version numbers are not in order (latest release != last entry)
+                echo
                 zless -p"$( nordvpn --version | cut -f3 -d' ' )" "$nordchangelog"
-                #
-                read -n 1 -r -p "$(echo -e "Open ${EColor}$nordrelease${Color_Off} ? (y/n) ")"; echo
-                if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    openlink "$nordrelease"
-                fi
+                openlink "https://nordvpn.com/blog/nordvpn-linux-release-notes" "ask"
                 # https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
                 ;;
             "Nord Manual")
@@ -1976,8 +1991,9 @@ function allvpnservers {
                 echo
                 echo "SOCKS Servers: $( printf '%s\n' "${allnordservers[@]}" | grep -c -i "socks" )"
                 echo
-                echo "Proxy names and locations available here:"
-                echo -e "${EColor}https://support.nordvpn.com/Connectivity/Proxy/1087802472/Proxy-setup-on-qBittorrent.htm${Color_Off}"
+                echo "Proxy names and locations are available online:"
+                echo
+                openlink "https://support.nordvpn.com/Connectivity/Proxy/1087802472/Proxy-setup-on-qBittorrent.htm" "ask"
                 echo
                 ;;
             "Search")
@@ -2165,8 +2181,8 @@ function wireguard_gen {
         return
     elif [[ -e "$wgfull" ]]; then
         echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
-        echo -e "${WColor}$wgfull already exists${Color_Off}"
-        echo
+        echo; echo -e "${WColor}$wgfull already exists${Color_Off}"
+        echo; openlink "$wgfull" "ask"
         return
     fi
     echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
@@ -2210,8 +2226,8 @@ function wireguard_gen {
         else
             cat "$wgfull"
         fi
-        # open with default editor
-        # openlink "$wgfull"
+        echo
+        openlink "$wgfull" "ask"
     fi
     echo
 }
@@ -2399,11 +2415,7 @@ function fscriptinfo {
     echo
     echo "Need to edit the script to change these settings."
     echo
-    read -n 1 -r -p "Open $0 with the default editor? (y/n) "; echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        openlink "$0"
-        exit
-    fi
+    openlink "$0" "ask" "exit"
 }
 function fquickconnect {
     # This is an alternate method of connecting to the NordVPN recommended server.
