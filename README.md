@@ -28,11 +28,11 @@ Then:
 
 =================================
 
-NordVPN 3.12.4 & 3.12.5 currently have these issues:
+NordVPN versions 3.12.4, 3.12.5, and 3.13.0 currently have these issues:
 
  - Problems connecting to any specific location while the Kill Switch is enabled.  
  - Problems connecting to Groups when specifying a location. 
- - The Notify setting has been broken for the last 7 versions, since 3.11.0-1.
+ - The "Notify" setting has been broken for the last 8 (eight) versions, since 3.11.0-1.
 
 NordVPN v3.10.0-1 does not have these problems and nordlist.sh should also work fine using this downgraded version.  
 
