@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
 # Tested with NordVPN Version 3.12.5 on Linux Mint 20.3
-# May 20, 2022
+# May 23, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -87,7 +87,7 @@ default_host="ca1425.nordvpn.com"
 #
 # Specify any hostname to lookup when testing DNS response time.
 # Can also enter a different hostname later.
-dns_defhost="reddit.com"
+dns_defhost="slashdot.org"
 #
 # Confirm the location of the NordVPN changelog on your system.
 #nordchangelog="/var/lib/dpkg/info/nordvpn.changelog"
@@ -173,7 +173,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2489 (function main_menu). Configure the
+# The Main Menu starts on line 2506 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -646,6 +646,8 @@ function fcountries {
     readarray -t countrylist < <( nordvpn countries | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
     # Replaced "Bosnia_And_Herzegovina" with "Sarajevo" to help compact the list.
     countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Sarajevo}")
+    rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
+    countrylist+=( "Random" )
     countrylist+=( "Exit" )
     numcountries=${#countrylist[@]}
     if [[ "$obfuscate" == "enabled" ]]; then
@@ -657,10 +659,11 @@ function fcountries {
     do
         if [[ "$xcountry" == "Exit" ]]; then
             main_menu
-        elif (( 1 <= REPLY )) && (( REPLY <= numcountries )); then
-            #
+        elif [[ "$xcountry" == "Random" ]]; then
+            xcountry="$rcountry"
             cities
-            #
+        elif (( 1 <= REPLY )) && (( REPLY <= numcountries )); then
+            cities
         else
             echo
             echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
@@ -683,10 +686,14 @@ function cities {
         echo
     fi
     readarray -t citylist < <( nordvpn cities $xcountry | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
-    citylist+=( "Default" )
+    rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
+    if [[ "${#citylist[@]}" -gt "1" ]]; then
+        citylist+=( "Random" )
+        citylist+=( "$xcountry" )
+    fi
     citylist+=( "Exit" )
     numcities=${#citylist[@]}
-    if [[ "$numcities" == "3" ]] && [[ "$fast7" =~ ^[Yy]$ ]]; then
+    if [[ "$numcities" == "2" ]] && [[ "$fast7" =~ ^[Yy]$ ]]; then
         echo -e "${FColor}[F]ast7 is enabled.${Color_Off}"
         echo
         echo "Only one available city in $xcountry."
@@ -703,18 +710,28 @@ function cities {
     do
         if [[ "$xcity" == "Exit" ]]; then
             main_menu
-        elif [[ "$xcity" == "Default" ]]; then
-            echo
+        elif [[ "$xcity" == "$xcountry" ]]; then
+            heading "$xcountry"
+            discon2
             echo "Connecting to the best available city."
             echo
-            discon2
             nordvpn connect "$xcountry"
+            status
+            exit
+        elif [[ "$xcity" == "Random" ]]; then
+            heading "$rcity"
+            echo
+            echo "Random choice = $rcity"
+            discon2
+            echo "Connecting to $rcity $xcountry"
+            echo
+            nordvpn connect "$rcity"
             status
             exit
         elif (( 1 <= REPLY )) && (( REPLY <= numcities )); then
             heading "$xcity"
             discon2
-            echo "Connecting to $xcity $xcountry."
+            echo "Connecting to $xcity $xcountry"
             echo
             nordvpn connect "$xcity"
             status
