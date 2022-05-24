@@ -689,7 +689,7 @@ function cities {
     rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
     if [[ "${#citylist[@]}" -gt "1" ]]; then
         citylist+=( "Random" )
-        citylist+=( "$xcountry" )
+        citylist+=( "Best" )
     fi
     citylist+=( "Exit" )
     numcities=${#citylist[@]}
@@ -710,7 +710,7 @@ function cities {
     do
         if [[ "$xcity" == "Exit" ]]; then
             main_menu
-        elif [[ "$xcity" == "$xcountry" ]]; then
+        elif [[ "$xcity" == "Best" ]]; then
             heading "$xcountry"
             discon2
             echo "Connecting to the best available city."
