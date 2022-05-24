@@ -1,8 +1,8 @@
 #!/bin/bash
 # shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
-# Tested with NordVPN Version 3.12.5 on Linux Mint 20.3
-# May 23, 2022
+# Tested with NordVPN Version 3.13.0 on Linux Mint 20.3
+# May 24, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -112,7 +112,8 @@ exitlogo="y"
 # the server load.  Requires 'curl' and 'jq'.  "y" or "n"
 exitping="n"
 #
-# Show your external IP address when the script exits. "y" or "n"
+# Show your external IP address when the script exits.  "y" or "n"
+# Requires 'curl'.  Connects to ipinfo.io.
 exitip="n"
 #
 # Open http links in a new Firefox window.  "y" or "n"
@@ -173,7 +174,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2506 (function main_menu). Configure the
+# The Main Menu starts on line 2524 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -685,7 +686,7 @@ function cities {
         echo -e "$ob Cities in $xcountry with Obfuscation support"
         echo
     fi
-    readarray -t citylist < <( nordvpn cities $xcountry | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
+    readarray -t citylist < <( nordvpn cities "$xcountry" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
     rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
     if [[ "${#citylist[@]}" -gt "1" ]]; then
         citylist+=( "Random" )
@@ -775,6 +776,23 @@ function fhostname {
     if [[ ! "$exitlogo" =~ ^[Yy]$ ]]; then set_vars; fi
     # test commands
     # app commands
+}
+function ffullrandom {
+    # connect to a random city worldwide
+    #
+    readarray -t countrylist < <( nordvpn countries | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
+    rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
+    #
+    readarray -t citylist < <( nordvpn cities "$rcountry" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
+    rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
+    #
+    heading "Random"
+    discon2
+    echo "Connect to $rcity $rcountry"
+    echo
+    nordvpn connect "$rcity"
+    status
+    exit
 }
 function fallgroups {
     # all available groups
@@ -2592,7 +2610,13 @@ function main_menu {
                 ;;
             "Hostname")
                 # can add to mainmenu
+                # connect to specific server by name
                 fhostname
+                ;;
+            "Random")
+                # can add to mainmenu
+                # connect to a random city worldwide
+                ffullrandom
                 ;;
             "Countries")
                 fcountries
@@ -2758,7 +2782,11 @@ if ! systemctl is-active --quiet nordvpnd; then
 fi
 # Update notice
 numupdate=$( nordvpn status | grep -i "update" | tr -d '-' | wc -w )
-numtail=$(( numupdate + 3 ))
+if [[ $( nordvpn --version | cut -f3 -d' ' ) == "3.10.0" ]]; then
+    numtail=$(( numupdate + 3 ))
+else
+    numtail=$(( numupdate + 5 ))
+fi
 #
 if (( numupdate > 0 )); then
     clear -x
