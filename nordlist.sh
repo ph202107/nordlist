@@ -644,7 +644,7 @@ function openlink {
 function fcountries {
     # submenu for all available countries
     heading "Countries"
-    readarray -t countrylist < <( nordvpn countries | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
+    readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
     # Replaced "Bosnia_And_Herzegovina" with "Sarajevo" to help compact the list.
     countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Sarajevo}")
     rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
@@ -686,7 +686,7 @@ function cities {
         echo -e "$ob Cities in $xcountry with Obfuscation support"
         echo
     fi
-    readarray -t citylist < <( nordvpn cities "$xcountry" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
+    readarray -t citylist < <( nordvpn cities "$xcountry" | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
     rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
     if [[ "${#citylist[@]}" -gt "1" ]]; then
         citylist+=( "Random" )
@@ -780,10 +780,10 @@ function fhostname {
 function ffullrandom {
     # connect to a random city worldwide
     #
-    readarray -t countrylist < <( nordvpn countries | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
+    readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
     rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
     #
-    readarray -t citylist < <( nordvpn cities "$rcountry" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
+    readarray -t citylist < <( nordvpn cities "$rcountry" | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
     rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
     #
     heading "Random"
@@ -797,7 +797,7 @@ function ffullrandom {
 function fallgroups {
     # all available groups
     heading "All Groups"
-    readarray -t grouplist < <( nordvpn groups | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | tr -d '\r' | tail -n +"$numtail" | sort )
+    readarray -t grouplist < <( nordvpn groups | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
     grouplist+=( "Exit" )
     numgroups=${#grouplist[@]}
     echo "Groups that are available with"
@@ -2780,15 +2780,8 @@ if ! systemctl is-active --quiet nordvpnd; then
     sudo systemctl start nordvpnd.service; wait
     echo
 fi
-# Update notice
-numupdate=$( nordvpn status | grep -i "update" | tr -d '-' | wc -w )
-if [[ $( nordvpn --version | cut -f3 -d' ' ) == "3.10.0" ]]; then
-    numtail=$(( numupdate + 3 ))
-else
-    numtail=$(( numupdate + 5 ))
-fi
-#
-if (( numupdate > 0 )); then
+# Update notice "A new version of NordVPN is available! Please update the application."
+if nordvpn status | grep -i "update"; then
     clear -x
     echo
     echo -e "${WColor}** A NordVPN update is available **${Color_Off}"
