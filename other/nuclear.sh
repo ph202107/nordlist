@@ -20,7 +20,8 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.12.2"      # 16 Dec 2021
 #nord_version="nordvpn=3.12.3"      # 11 Jan 2022
 #nord_version="nordvpn=3.12.4"      # 10 Feb 2022
-#nord_version="nordvpn=3.12.5"      # 15 Mar 2022
+#nord_version="nordvpn=3.12.5"      # 14 Mar 2022
+#nord_version="nordvpn=3.13.0"      # 23 May 2022
 #
 #
 # list version numbers:
@@ -90,6 +91,7 @@ function loginnord {
         echo -e "${BRed}$USER does not belong to the 'nordvpn' group${Color_Off}"
         echo -e "${LGreen}sudo usermod -aG nordvpn $USER ${Color_Off}"
         sudo usermod -aG nordvpn "$USER"
+        echo "(May need to logout or reboot)"
         lbreak
     fi
     if ! systemctl is-active --quiet nordvpnd; then
@@ -98,6 +100,7 @@ function loginnord {
         sudo systemctl start nordvpnd.service; wait
         lbreak
     fi
+    nordvpn account
     nordvpn login
     # nordvpn login --legacy
     # nordvpn login --username <username> --password <password>
@@ -165,9 +168,9 @@ else
     echo -e "${BRed}** ABORT **${Color_Off}"
 fi
 lbreak
-nordvpn status
-lbreak
 nordvpn settings
+lbreak
+nordvpn status
 lbreak
 echo -e "${LGreen}Completed \u2705${Color_Off}" # unicode checkmark
 echo
