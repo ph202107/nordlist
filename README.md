@@ -34,6 +34,9 @@ NordVPN versions 3.12.4, 3.12.5, and 3.13.0 currently have these issues:
  - Problems connecting to Groups when specifying a location. 
  - The "Notify" setting has been broken for the last 8 (eight) versions, since 3.11.0-1.
 
-NordVPN v3.10.0-1 does not have these problems and nordlist.sh should also work fine using this downgraded version.  
+NordVPN v3.10.0-1 does not have any of these problems and nordlist.sh should also work fine using this downgraded version.  
 
-Can easily downgrade using /other/nuclear.sh if it's compatible with your distro.
+Can easily downgrade* using /other/nuclear.sh if it's compatible with your distro.
+
+(*) As of May 30 2022, v3.10.0-1 has been removed from the repository.  
+https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
