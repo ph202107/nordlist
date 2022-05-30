@@ -38,5 +38,5 @@ NordVPN v3.10.0-1 does not have any of these problems and nordlist.sh should als
 
 Can easily downgrade* using /other/nuclear.sh if it's compatible with your distro.
 
-(*) As of May 30 2022, v3.10.0-1 has been removed from the repository.  
+(*) As of May 25 2022, v3.10.0-1 has been removed from the repository.  
 https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
