@@ -24,9 +24,11 @@
 # existing server list.  A new list will be created.
 #
 # Known Issue
-#   Connection may fail if you have another computer already connected 
+#   Connection may fail if you have another computer already connected
 #   to the target server using the same technology and protocol.
 #   Can delete the in-use server from the list or use another city.
+#
+# =====================================================================
 #
 # Specify the full path and filename to use for the server list.
 # (Use the absolute path)
@@ -91,8 +93,7 @@ fi
 # check if the current hostname is in the list
 getcurrentinfo
 if grep "$currenthost" "$jdlist"; then
-    # remove the current hostname and save the list
-    # grep inverse
+    # remove the current hostname and save the list (grep inverse)
     grep -v "$currenthost" "$jdlist" > tmpfile && mv tmpfile "$jdlist"
 fi
 #
