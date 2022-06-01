@@ -4,10 +4,10 @@ Tested with Linux Mint only (Debian/Ubuntu base).
 Fully customizable. 
 
 It looks like this:   
-https://i.imgur.com/iz0505v.png   
-https://i.imgur.com/RFnQIib.png   
-https://i.imgur.com/To2BbUI.png   
-https://i.imgur.com/5nUCFN7.png   
+https://i.imgur.com/l64Xexq.png
+https://i.imgur.com/SWMhqr2.png
+https://i.imgur.com/c4bcAbM.png
+https://i.imgur.com/c64XSn8.png
 
 To download:    
 - Click on the green "Code" icon above
@@ -28,15 +28,14 @@ Then:
 
 =================================
 
-NordVPN versions 3.12.4, 3.12.5, and 3.13.0 currently have these issues:
+NordVPN versions 3.12.4, 3.12.5, 3.13.0, 3.14.0 currently have these issues:
 
  - Problems connecting to any specific location while the Kill Switch is enabled.  
  - Problems connecting to Groups when specifying a location. 
- - The "Notify" setting has been broken for the last 8 (eight) versions, since 3.11.0-1.
+ - The "Notify" setting has been broken for the last 9 (nine) versions, since 3.11.0 (Sept 2021).
 
-NordVPN v3.10.0-1 does not have any of these problems and nordlist.sh should also work fine using this downgraded version.  
+=================================
 
-Can easily downgrade* using /other/nuclear.sh if it's compatible with your distro.
-
-(*) As of May 25 2022, v3.10.0-1 has been removed from the repository.  
-https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
+v3.14 - "CyberSec" changed to "Threat Protection Lite"  
+To use this script with an older version (v3.13-) of the NordVPN Linux CLI:  
+- modify "cybersec=" in "function set_vars"
