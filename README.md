@@ -4,10 +4,10 @@ Tested with Linux Mint only (Debian/Ubuntu base).
 Fully customizable. 
 
 It looks like this:   
-https://i.imgur.com/l64Xexq.png
-https://i.imgur.com/SWMhqr2.png
-https://i.imgur.com/c4bcAbM.png
-https://i.imgur.com/c64XSn8.png
+https://i.imgur.com/l64Xexq.png  
+https://i.imgur.com/SWMhqr2.png  
+https://i.imgur.com/c4bcAbM.png  
+https://i.imgur.com/c64XSn8.png  
 
 To download:    
 - Click on the green "Code" icon above
