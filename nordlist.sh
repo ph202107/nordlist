@@ -1,8 +1,8 @@
 #!/bin/bash
 # shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
-# Tested with NordVPN Version 3.13.0 on Linux Mint 20.3
-# May 24, 2022
+# Tested with NordVPN Version 3.14.0 on Linux Mint 20.3
+# June 1, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -11,14 +11,14 @@
 # lot of comments to help fellow newbies customize the script.
 #
 # It looks like this:
-# https://i.imgur.com/iz0505v.png
-# https://i.imgur.com/RFnQIib.png
-# https://i.imgur.com/To2BbUI.png
-# https://i.imgur.com/5nUCFN7.png
+# https://i.imgur.com/l64Xexq.png
+# https://i.imgur.com/SWMhqr2.png
+# https://i.imgur.com/c4bcAbM.png
+# https://i.imgur.com/c64XSn8.png
 #
 # https://github.com/ph202107/nordlist
 # /u/pennyhoard20 on reddit
-# suggestions/feedback welcome
+# Suggestions/eedback welcome
 #
 # =====================================================================
 # Instructions
@@ -83,7 +83,7 @@ default_dns="103.86.96.100 103.86.99.100"; dnsdesc="Nord"
 #
 # Specify a VPN hostname to use for testing while the VPN is off.
 # Can still enter any hostname later, this is just a default choice.
-default_host="ca1425.nordvpn.com"
+default_host="ca1576.nordvpn.com"
 #
 # Specify any hostname to lookup when testing DNS response time.
 # Can also enter a different hostname later.
@@ -174,7 +174,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2524 (function main_menu). Configure the
+# The Main Menu starts on line 2536 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -437,7 +437,8 @@ function set_vars {
     protocol=$(nsetsbl "Protocol" | cut -f2 -d' ' | tr '[:lower:]' '[:upper:]')
     firewall=$(nsetsbl "Firewall" | cut -f2 -d' ')
     killswitch=$(nsetsbl "Kill" | cut -f3 -d' ')
-    cybersec=$(nsetsbl "CyberSec" | cut -f2 -d' ')
+    #cybersec=$(nsetsbl "CyberSec" | cut -f2 -d' ')         # (v3.13-)
+    cybersec=$(nsetsbl "Threat" | cut -f4 -d' ')            # Threat Protection Lite (v3.14+)
     obfuscate=$(nsetsbl "Obfuscate" | cut -f2 -d' ')
     notify=$(nsetsbl "Notify" | cut -f2 -d' ')
     autocon=$(nsetsbl "Auto" | cut -f2 -d' ')
@@ -598,7 +599,9 @@ function status {
         logo
         if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]]; then
             #sleep 1  # on rare occasions ping doesn't work if sent too soon
-            if [[ "$nordhost" == *"onion"* ]]; then
+            if [[ "$obfuscate" == "enabled" ]]; then
+                echo -e "$ob - Unable to ping Obfuscated Servers"
+            elif [[ "$nordhost" == *"onion"* ]]; then
                 ping -c 3 -q "$ipaddr"
             else
                 ping -c 3 -q "$nordhost" # | grep -A4 -i "statistics"
@@ -688,7 +691,7 @@ function cities {
     fi
     readarray -t citylist < <( nordvpn cities "$xcountry" | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
     rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
-    if [[ "${#citylist[@]}" -gt "1" ]]; then
+    if (( "${#citylist[@]}" > 1 )); then
         citylist+=( "Random" )
         citylist+=( "Best" )
     fi
@@ -776,6 +779,11 @@ function fhostname {
     if [[ ! "$exitlogo" =~ ^[Yy]$ ]]; then set_vars; fi
     # test commands
     # app commands
+    #
+    # https://streamtelly.com/check-netflix-region/
+    # echo "Netflix Region and Status"
+    # curl --silent "http://api-global.netflix.com/apps/applefuji/config" | grep -E 'geolocation.country|geolocation.status'
+    # echo
 }
 function ffullrandom {
     # connect to a random city worldwide
@@ -814,11 +822,10 @@ function fallgroups {
             main_menu
         elif (( 1 <= REPLY )) && (( REPLY <= numgroups )); then
             heading "$xgroup"
-            echo
             discon2
             echo "Connecting to $xgroup."
             echo
-            nordvpn connect "$xgroup"
+            nordvpn connect --group "$xgroup"
             status
             exit
         else
@@ -939,7 +946,7 @@ function fdoublevpn {
         killswitch_groups
         echo "Connect to the Double_VPN group."
         echo
-        nordvpn connect Double_VPN
+        nordvpn connect --group Double_VPN
         # nordvpn connect --group Double_VPN <country_code>
         status
         exit
@@ -985,7 +992,7 @@ function fonion {
         killswitch_groups
         echo "Connect to the Onion_Over_VPN group."
         echo
-        nordvpn connect Onion_Over_VPN
+        nordvpn connect --group Onion_Over_VPN
         status
         exit
     else
@@ -1293,10 +1300,14 @@ function fkillswitch {
     change_setting "killswitch"
 }
 function fcybersec {
+    # aka "Threat Protection Lite"
+    # (3.14.0+) alternate command = nordvpn set threatprotectionlite enabled/disabled
     heading "CyberSec"
     echo
     echo "CyberSec is a feature protecting you from ads,"
     echo "unsafe connections, and malicious sites."
+    echo
+    echo "aka: 'Threat Protection Lite'"
     echo
     echo -e "Enabling CyberSec disables Custom DNS $dns"
     if [[ "$dns_set" != "disabled" ]]; then
@@ -1328,6 +1339,7 @@ function fautoconnect {
     change_setting "autoconnect"
 }
 function fipversion6 {
+    # May 2022 - IPv6 capable servers:  us9591 us9592 uk1875 uk1876
     heading "IPv6"
     echo "Enable or disable NordVPN IPv6 support."
     echo
@@ -1782,7 +1794,7 @@ function fiptables_status {
 }
 function fiptables {
     # https://old.reddit.com/r/nordvpn/comments/qgakq9/linux_killswitch_problems_iptables/
-    # Only tested with Linux Mint
+    # * changes in version 3.13.0 - "We made changes in firewall handling. Now we filter packets by firewall marks instead of IP addresses of VPN servers."
     heading "IPTables"
     echo "Flushing the IPTables may help resolve problems enabling or"
     echo "disabling the KillSwitch or with other connection issues."
@@ -1972,7 +1984,7 @@ function allvpnservers {
     heading "All Servers"
     if (( ${#allnordservers[@]} == 0 )); then
         if [[ -e "$allvpnfile" ]]; then
-            echo -e "${EColor}Server List${Color_Off}"
+            echo -e "${EColor}Server List: ${LColor}$allvpnfile${Color_Off}"
             head -n 1 "$allvpnfile"
             readarray -t allnordservers < <( tail -n +4 "$allvpnfile" )
         else
@@ -2048,7 +2060,7 @@ function allvpnservers {
             "Update List")
                 echo
                 if [[ -e "$allvpnfile" ]]; then
-                    echo -e "${EColor}Server List${Color_Off}"
+                    echo -e "${EColor}Server List: ${LColor}$allvpnfile${Color_Off}"
                     head -n 2 "$allvpnfile"
                     echo
                     read -n 1 -r -p "Update the list? (y/n) "; echo
@@ -2349,7 +2361,7 @@ function ftools {
                 echo -e "${LColor}"
                 echo "Ping Google DNS 8.8.8.8, 8.8.4.4"
                 echo "Ping Cloudflare DNS 1.1.1.1, 1.0.0.1"
-                echo "Ping Telstra Australia 139.130.4.5"
+                echo "Ping Telstra Australia 139.130.4.4"
                 echo -e "${FColor}"
                 echo "(CTRL-C to quit)"
                 echo -e "${Color_Off}"
@@ -2360,7 +2372,7 @@ function ftools {
                 ping -c 5 1.1.1.1; echo
                 ping -c 5 1.0.0.1; echo
                 echo -e "${LColor}===== Telstra =====${Color_Off}"
-                ping -c 5 139.130.4.5; echo
+                ping -c 5 139.130.4.4; echo
                 ;;
             "my traceroute")
                 mtr "$nordhost"
