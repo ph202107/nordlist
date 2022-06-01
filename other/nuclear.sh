@@ -9,12 +9,6 @@
 #   (uncomment one of the following)
 #
 nord_version="nordvpn"              # install the latest version available
-#nord_version="nordvpn=3.7.4"       # 12 Jun 2020
-#nord_version="nordvpn=3.8.10"      # 05 Jan 2021
-#nord_version="nordvpn=3.9.5-1"     # 25 May 2021
-#nord_version="nordvpn=3.10.0-1"    # 26 May 2021
-#nord_version="nordvpn=3.11.0-1"    # 28 Sep 2021
-#
 #nord_version="nordvpn=3.12.0-1"    # 03 Nov 2021
 #nord_version="nordvpn=3.12.1-1"    # 18 Nov 2021
 #nord_version="nordvpn=3.12.2"      # 16 Dec 2021
@@ -22,18 +16,28 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.12.4"      # 10 Feb 2022
 #nord_version="nordvpn=3.12.5"      # 14 Mar 2022
 #nord_version="nordvpn=3.13.0"      # 23 May 2022
-#
+#nord_version="nordvpn=3.14.0"      # 01 Jun 2022 CyberSec changed to "Threat Protection Lite"
 #
 # list version numbers:
 #   apt list -a nordvpn
+#
+# repo: https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
 #
 function default_settings {
     lbreak
     # After installation is complete, these settings will be applied
     #
     nordvpn set technology nordlynx
+    #nordvpn set protocol UDP
+    nordvpn set firewall enabled
+    nordvpn set killswitch disabled
+    nordvpn set cybersec disabled
+    #nordvpn set obfuscate disabled
+    nordvpn set notify disabled
+    nordvpn set autoconnect disabled
+    nordvpn set ipv6 disabled
+    nordvpn set dns disabled
     nordvpn whitelist add subnet 192.168.1.0/24
-    #
     #
 }
 function lbreak {
@@ -102,8 +106,8 @@ function loginnord {
     fi
     nordvpn account
     nordvpn login
-    # nordvpn login --legacy
-    # nordvpn login --username <username> --password <password>
+    #nordvpn login --legacy
+    #nordvpn login --username <username> --password <password>
     echo
     read -n 1 -r -p "Press any key after login is complete... "; echo
 }
