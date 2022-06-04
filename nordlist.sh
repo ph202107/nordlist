@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
 # Tested with NordVPN Version 3.14.0 on Linux Mint 20.3
-# June 1, 2022
+# June 4, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -11,14 +11,14 @@
 # lot of comments to help fellow newbies customize the script.
 #
 # It looks like this:
-# https://i.imgur.com/l64Xexq.png
-# https://i.imgur.com/SWMhqr2.png
+# https://i.imgur.com/5cxFx2D.png
+# https://i.imgur.com/u0VZVIb.png
 # https://i.imgur.com/c4bcAbM.png
 # https://i.imgur.com/c64XSn8.png
 #
 # https://github.com/ph202107/nordlist
 # /u/pennyhoard20 on reddit
-# Suggestions/eedback welcome
+# Suggestions/feedback welcome
 #
 # =====================================================================
 # Instructions
@@ -136,7 +136,7 @@ menuwidth=""
 fast1="n"
 #
 # Automatically change these settings without prompting:
-# Firewall, KillSwitch, CyberSec, Notify, AutoConnect, IPv6
+# Firewall, KillSwitch, TPLite, Notify, AutoConnect, IPv6
 fast2="n"
 #
 # Automatically change these settings which also disconnect the VPN:
@@ -174,7 +174,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2536 (function main_menu). Configure the
+# The Main Menu starts on line 2522 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -206,7 +206,7 @@ function set_defaults {
     # - NordLynx is UDP only
     # - Obfuscate requires OpenVPN
     # - Kill Switch requires Firewall
-    # - Cybersec disables CustomDNS and vice versa
+    # - TPLite disables CustomDNS and vice versa
     #
     # For each setting uncomment one of the two choices (or neither).
     #
@@ -222,8 +222,8 @@ function set_defaults {
     #if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
     if [[ "$killswitch" == "enabled" ]]; then nordvpn set killswitch disabled; fi
     #
-    #if [[ "$cybersec" == "disabled" ]]; then nordvpn set cybersec enabled; fi
-    if [[ "$cybersec" == "enabled" ]]; then nordvpn set cybersec disabled; fi
+    #if [[ "$tplite" == "disabled" ]]; then nordvpn set threatprotectionlite enabled; fi
+    if [[ "$tplite" == "enabled" ]]; then nordvpn set threatprotectionlite disabled; fi
     #
     #if [[ "$obfuscate" == "disabled" ]]; then nordvpn set obfuscate enabled; fi
     if [[ "$obfuscate" == "enabled" ]]; then nordvpn set obfuscate disabled; fi
@@ -288,10 +288,10 @@ function logo {
         #
     fi
     echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr ${Color_Off}"
-    echo -e "$techpro$fw$ks$cs$ob$no$ac$ip6$dns$wl$fst"
+    echo -e "$techpro$fw$ks$tp$ob$no$ac$ip6$dns$wl$fst"
     echo -e "$transferc ${UPColor}$uptime ${Color_Off}"
     if [[ -n $transferc ]]; then echo; fi
-    # all indicators: $techpro$fw$ks$cs$ob$no$ac$ip6$dns$wl$fst
+    # all indicators: $techpro$fw$ks$tp$ob$no$ac$ip6$dns$wl$fst
 }
 function heading {
     clear -x
@@ -437,8 +437,9 @@ function set_vars {
     protocol=$(nsetsbl "Protocol" | cut -f2 -d' ' | tr '[:lower:]' '[:upper:]')
     firewall=$(nsetsbl "Firewall" | cut -f2 -d' ')
     killswitch=$(nsetsbl "Kill" | cut -f3 -d' ')
-    #cybersec=$(nsetsbl "CyberSec" | cut -f2 -d' ')         # (v3.13-)
-    cybersec=$(nsetsbl "Threat" | cut -f4 -d' ')            # Threat Protection Lite (v3.14+)
+    #tplite=$(printf '%s\n' "${nsets[@]}" | grep -i -E "CyberSec|Threat" | awk '{print $NF}')
+    #tplite=$(nsetsbl "CyberSec" | cut -f2 -d' ')           # CyberSec (v3.13-)
+    tplite=$(nsetsbl "Threat" | cut -f4 -d' ')              # Threat Protection Lite (v3.14+)
     obfuscate=$(nsetsbl "Obfuscate" | cut -f2 -d' ')
     notify=$(nsetsbl "Notify" | cut -f2 -d' ')
     autocon=$(nsetsbl "Auto" | cut -f2 -d' ')
@@ -488,10 +489,10 @@ function set_vars {
         killswitchc="${DColor}$killswitch${Color_Off}"
     fi
     #
-    if [[ "$cybersec" == "enabled" ]]; then
-        cs="${EIColor}[CS]${Color_Off}"
+    if [[ "$tplite" == "enabled" ]]; then
+        tp="${EIColor}[TP]${Color_Off}"
     else
-        cs="${DIColor}[CS]${Color_Off}"
+        tp="${DIColor}[TP]${Color_Off}"
     fi
     #
     if [[ "$obfuscate" == "enabled" ]]; then
@@ -1187,8 +1188,8 @@ function change_setting {
         "killswitch")
             chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks"
             ;;
-        "cybersec")
-            chgname="CyberSec"; chgvar="$cybersec"; chgind="$cs"
+        "threatprotectionlite")
+            chgname="Threat Protection Lite"; chgvar="$tplite"; chgind="$tp"
             ;;
         "notify")
             chgname="Notify"; chgvar="$notify"; chgind="$no"
@@ -1223,7 +1224,7 @@ function change_setting {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if [[ "$chgvar" == "disabled" ]]; then
-            if [[ "$1" == "cybersec" ]] && [[ "$dns_set" != "disabled" ]]; then
+            if [[ "$1" == "threatprotectionlite" ]] && [[ "$dns_set" != "disabled" ]]; then
                 nordvpn set dns disabled; wait
                 echo
             elif [[ "$1" == "autoconnect" ]] && [[ -n $acwhere ]]; then
@@ -1299,22 +1300,19 @@ function fkillswitch {
     fi
     change_setting "killswitch"
 }
-function fcybersec {
-    # aka "Threat Protection Lite"
-    # (3.14.0+) alternate command = nordvpn set threatprotectionlite enabled/disabled
-    heading "CyberSec"
+function ftplite {
+    heading "TPLite"
     echo
-    echo "CyberSec is a feature protecting you from ads,"
-    echo "unsafe connections, and malicious sites."
+    echo "Threat Protection Lite is a feature protecting you"
+    echo "from ads unsafe connections, and malicious sites."
+    echo "Previously known as 'CyberSec'."
     echo
-    echo "aka: 'Threat Protection Lite'"
-    echo
-    echo -e "Enabling CyberSec disables Custom DNS $dns"
+    echo -e "Enabling TPLite disables Custom DNS $dns"
     if [[ "$dns_set" != "disabled" ]]; then
         echo "Current $dns_srvrs"
     fi
     echo
-    change_setting "cybersec"
+    change_setting "threatprotectionlite"
 }
 function fnotify {
     heading "Notify"
@@ -1407,7 +1405,7 @@ function fcustomdns {
     echo "to prevent DNS leaks. (103.86.96.100 and 103.86.99.100)"
     echo "You can specify your own Custom DNS servers instead."
     echo
-    echo -e "Enabling Custom DNS disables CyberSec $cs"
+    echo -e "Enabling Custom DNS disables TPLite $tp"
     echo
     if [[ "$dns_set" == "disabled" ]]; then
         echo -e "$dns Custom DNS is ${DColor}disabled${Color_Off}."
@@ -1526,9 +1524,10 @@ function fwhitelist {
     echo
     echo -e "${EColor}Current Settings:${Color_Off}"
     if [[ -n "${whitelist[*]}" ]]; then
+        echo -ne "$wl "
         printf '%s\n' "${whitelist[@]}"
     else
-        echo "No whitelist entries."
+        echo -e "$wl No whitelist entries."
     fi
     echo
     echo -e "${LColor}whitelist_commands${Color_Off}"
@@ -1553,7 +1552,7 @@ function fwhitelist {
         nordvpn whitelist remove all
         set_vars
     elif [[ $REPLY =~ ^[Ee]$ ]]; then
-        echo -e "Modify ${LColor}function whitelist_commands${Color_Off} starting on line ${FIColor}$(( startline + 1 ))${Color_Off}"
+        echo -e "Modify ${LColor}function whitelist_commands${Color_Off} starting on ${FColor}line $(( startline + 1 ))${Color_Off}"
         echo
         openlink "$0" "noask" "exit"
     else
@@ -1561,6 +1560,7 @@ function fwhitelist {
     fi
     if [[ -n "${whitelist[*]}" ]]; then
         echo
+        echo -ne "$wl "
         printf '%s\n' "${whitelist[@]}"
     fi
     if [[ "$1" == "back" ]]; then echo; return; fi
@@ -1568,7 +1568,7 @@ function fwhitelist {
 }
 function login_nogui {
     echo
-    echo "For now, users without GUI can use "
+    echo "For now, users without a GUI can use "
     echo -e "${LColor}      nordvpn login --legacy${Color_Off}"
     echo -e "${LColor}      nordvpn login --username <username> --password <password>${Color_Off}"
     echo
@@ -1585,7 +1585,7 @@ function login_nogui {
     echo "      3. Complete the login procedure"
     echo "      4. Right click on the 'Continue' button and select 'Copy link'"
     echo -e "${EColor}  SSH${Color_Off}"
-    echo "      5. Run 'nordvpn login --callback <copied link>'"
+    echo "      5. Run 'nordvpn login --callback \"<copied link>\"'"
     echo "      6. Run 'nordvpn account' to verify that the login was successful"
     echo
 }
@@ -1785,7 +1785,10 @@ function fiptables_status {
     echo -e "$fw The Firewall is $firewallc."
     echo -e "$ks The Kill Switch is $killswitchc."
     if [[ -n "${whitelist[*]}" ]]; then
+        echo -ne "$wl "
         printf '%s\n' "${whitelist[@]}"
+    else
+        echo -e "$wl No whitelist entries."
     fi
     echo
     echo -e "${LColor}sudo iptables -S${Color_Off}"
@@ -1805,7 +1808,7 @@ function fiptables {
     echo "  - Commands require 'sudo'"
     echo -e "${Color_Off}"
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "Firewall" "KillSwitch" "Whitelist" "Flush IPTables" "Restart Services" "ping google.com" "Examples" "Exit")
+    submipt=("View IPTables" "Firewall" "KillSwitch" "Whitelist" "Flush IPTables" "Restart Services" "ping google.com" "Exit")
     numsubmipt=${#submipt[@]}
     select smipt in "${submipt[@]}"
     do
@@ -1902,23 +1905,6 @@ function fiptables {
                 fiptables_status
                 echo -e "${LColor}ping -c 3 google.com${Color_Off}"
                 ping -c 3 google.com
-                echo
-                ;;
-            "Examples")
-                echo
-                echo -e "${EColor}Examples${Color_Off}"
-                echo
-                echo -e "${LColor}KillSwitch Active - Interface eno1${Color_Off}"
-                echo "  -A INPUT -i eno1 -j DROP"
-                echo "  -A OUTPUT -o eno1 -j DROP"
-                echo
-                echo -e "${LColor}Whitelist Active - Subnet 192.168.1.0/24${Color_Off}"
-                echo "  -A INPUT -s 192.168.1.0/24 -i eno1 -j ACCEPT"
-                echo "  -A OUTPUT -d 192.168.1.0/24 -o eno1 -j ACCEPT"
-                echo
-                echo -e "${LColor}VPN Connected - Server IP: 66.115.146.233${Color_Off}"
-                echo "  -A INPUT -s 66.115.146.233/32 -i eno1 -j ACCEPT"
-                echo "  -A OUTPUT -d 66.115.146.233/32 -o eno1 -j ACCEPT"
                 echo
                 ;;
             "Exit")
@@ -2672,10 +2658,10 @@ function main_menu {
             "Settings")
                 heading "Settings"
                 echo
-                echo -e "$techpro$fw$ks$cs$ob$no$ac$ip6$dns$wl$fst"
+                echo -e "$techpro$fw$ks$tp$ob$no$ac$ip6$dns$wl$fst"
                 echo
                 PS3=$'\n''Choose a Setting: '
-                submsett=("Technology" "Protocol" "Firewall" "KillSwitch" "CyberSec" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
+                submsett=("Technology" "Protocol" "Firewall" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
                 numsubmsett=${#submsett[@]}
                 select sms in "${submsett[@]}"
                 do
@@ -2692,8 +2678,8 @@ function main_menu {
                         "KillSwitch")
                             fkillswitch
                             ;;
-                        "CyberSec")
-                            fcybersec
+                        "TPLite")
+                            ftplite
                             ;;
                         "Obfuscate")
                             fobfuscate
@@ -2781,7 +2767,7 @@ if ! command -v nordvpn &> /dev/null; then
     echo
     exit 1
 else
-    nordvpn --version
+    nordvpn -v
     echo
 fi
 #
