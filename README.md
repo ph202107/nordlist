@@ -4,8 +4,8 @@ Tested with Linux Mint only (Debian/Ubuntu base).
 Fully customizable. 
 
 It looks like this:   
-https://i.imgur.com/l64Xexq.png  
-https://i.imgur.com/SWMhqr2.png  
+https://i.imgur.com/5cxFx2D.png  
+https://i.imgur.com/u0VZVIb.png  
 https://i.imgur.com/c4bcAbM.png  
 https://i.imgur.com/c64XSn8.png  
 
@@ -37,5 +37,7 @@ NordVPN versions 3.12.4, 3.12.5, 3.13.0, 3.14.0 currently have these issues:
 =================================
 
 v3.14 - "CyberSec" changed to "Threat Protection Lite"  
-To use this script with an older version (v3.13-) of the NordVPN Linux CLI:  
-- modify "cybersec=" in "function set_vars"
+To use this script with an older version (v3.13-) of the NordVPN Linux CLI  
+- Modify "tplite=" in "function set_vars"
+- Find and replace the Nord command "threatprotectionlite" with "cybersec"  
+    (5 instances total)
