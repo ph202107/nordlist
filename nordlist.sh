@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
 # Tested with NordVPN Version 3.14.0 on Linux Mint 20.3
-# June 4, 2022
+# June 10, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -174,7 +174,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2522 (function main_menu). Configure the
+# The Main Menu starts on line 2796 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -237,6 +237,9 @@ function set_defaults {
     #if [[ "$ipversion6" == "disabled" ]]; then nordvpn set ipv6 enabled; fi
     if [[ "$ipversion6" == "enabled" ]]; then nordvpn set ipv6 disabled; fi
     #
+    #if [[ "$meshnet" == "disabled" ]]; then nordvpn set meshnet enabled; fi
+    #if [[ "$meshnet" != "disabled" ]]; then nordvpn set meshnet disabled; fi
+    #
     #if [[ "$dns_set" == "disabled" ]]; then nordvpn set dns $default_dns; fi
     if [[ "$dns_set" != "disabled" ]]; then nordvpn set dns disabled; fi
     #
@@ -288,10 +291,10 @@ function logo {
         #
     fi
     echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr ${Color_Off}"
-    echo -e "$techpro$fw$ks$tp$ob$no$ac$ip6$dns$wl$fst"
+    echo -e "$techpro$fw$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst"
     echo -e "$transferc ${UPColor}$uptime ${Color_Off}"
     if [[ -n $transferc ]]; then echo; fi
-    # all indicators: $techpro$fw$ks$tp$ob$no$ac$ip6$dns$wl$fst
+    # all indicators: $techpro$fw$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst
 }
 function heading {
     clear -x
@@ -444,8 +447,10 @@ function set_vars {
     notify=$(nsetsbl "Notify" | cut -f2 -d' ')
     autocon=$(nsetsbl "Auto" | cut -f2 -d' ')
     ipversion6=$(nsetsbl "IPv6" | cut -f2 -d' ')
-    dns_set=$(nsetsbl "DNS" | cut -f2 -d' ')                # disabled or not=disabled
-    dns_srvrs=$(nsetsbl "DNS" | tr '[:lower:]' '[:upper:]') # Server IPs, includes "DNS: "
+    meshnet=$(nsetsbl "Meshnet" | cut -f2 -d' ' | tr -d '\n')   # disabled or not=disabled
+    meshnetinfo="unknown"
+    dns_set=$(nsetsbl "DNS" | cut -f2 -d' ')                    # disabled or not=disabled
+    dns_srvrs=$(nsetsbl "DNS" | tr '[:lower:]' '[:upper:]')     # Server IPs, includes "DNS: "
     whitelist=$( printf '%s\n' "${nsets[@]}" | grep -A100 -i "whitelist" )
     #
     # Prefer common spelling.
@@ -519,6 +524,12 @@ function set_vars {
         ip6="${EIColor}[IP6]${Color_Off}"
     else
         ip6="${DIColor}[IP6]${Color_Off}"
+    fi
+    #
+    if [[ "$meshnet" == "disabled" ]]; then # reversed
+        mn="${DIColor}[MN]${Color_Off}"
+    else
+        mn="${EIColor}[MN]${Color_Off}"
     fi
     #
     if [[ "$dns_set" == "disabled" ]]; then # reversed
@@ -645,15 +656,39 @@ function openlink {
         exit
     fi
 }
+function create_list {
+    #
+    # remove notices by keyword
+    listexclude="update|feature"
+    #
+    case "$1" in
+        "country")
+            readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
+            rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
+            # Replaced "Bosnia_And_Herzegovina" with "Sarajevo" to help compact the list.
+            countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Sarajevo}")
+            countrylist+=( "Random" )
+            countrylist+=( "Exit" )
+            ;;
+        "city")
+            readarray -t citylist < <( nordvpn cities "$xcountry" | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
+            rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
+            if (( "${#citylist[@]}" > 1 )); then
+                citylist+=( "Random" )
+                citylist+=( "Best" )
+            fi
+            citylist+=( "Exit" )
+            ;;
+        "group")
+            readarray -t grouplist < <( nordvpn groups | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
+            grouplist+=( "Exit" )
+            ;;
+    esac
+}
 function fcountries {
     # submenu for all available countries
     heading "Countries"
-    readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
-    # Replaced "Bosnia_And_Herzegovina" with "Sarajevo" to help compact the list.
-    countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Sarajevo}")
-    rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
-    countrylist+=( "Random" )
-    countrylist+=( "Exit" )
+    create_list "country"
     numcountries=${#countrylist[@]}
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Countries with Obfuscation support"
@@ -690,13 +725,7 @@ function cities {
         echo -e "$ob Cities in $xcountry with Obfuscation support"
         echo
     fi
-    readarray -t citylist < <( nordvpn cities "$xcountry" | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
-    rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
-    if (( "${#citylist[@]}" > 1 )); then
-        citylist+=( "Random" )
-        citylist+=( "Best" )
-    fi
-    citylist+=( "Exit" )
+    create_list "city"
     numcities=${#citylist[@]}
     if [[ "$numcities" == "2" ]] && [[ "$fast7" =~ ^[Yy]$ ]]; then
         echo -e "${FColor}[F]ast7 is enabled.${Color_Off}"
@@ -789,11 +818,9 @@ function fhostname {
 function ffullrandom {
     # connect to a random city worldwide
     #
-    readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
-    rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
-    #
-    readarray -t citylist < <( nordvpn cities "$rcountry" | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
-    rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
+    create_list "country"
+    xcountry="$rcountry"
+    create_list "city"
     #
     heading "Random"
     discon2
@@ -802,40 +829,6 @@ function ffullrandom {
     nordvpn connect "$rcity"
     status
     exit
-}
-function fallgroups {
-    # all available groups
-    heading "All Groups"
-    readarray -t grouplist < <( nordvpn groups | tr -d '\r' | tr -d '-' | grep -v -i "update" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
-    grouplist+=( "Exit" )
-    numgroups=${#grouplist[@]}
-    echo "Groups that are available with"
-    echo
-    echo -e "Technology: $technologydc"
-    if [[ "$technology" == "openvpn" ]]; then
-        echo -e "Obfuscate: $obfuscatec"
-    fi
-    echo
-    PS3=$'\n''Connect to Group: '
-    select xgroup in "${grouplist[@]}"
-    do
-        if [[ "$xgroup" == "Exit" ]]; then
-            main_menu
-        elif (( 1 <= REPLY )) && (( REPLY <= numgroups )); then
-            heading "$xgroup"
-            discon2
-            echo "Connecting to $xgroup."
-            echo
-            nordvpn connect --group "$xgroup"
-            status
-            exit
-        else
-            echo
-            echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-            echo
-            echo "Select any number from 1-$numgroups ($numgroups to Exit)."
-        fi
-    done
 }
 function killswitch_groups {
     if [[ "$killswitch" == "disabled" ]]; then
@@ -1200,8 +1193,11 @@ function change_setting {
         "ipv6")
             chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6"
             ;;
+        "meshnet")
+            chgname="Meshnet"; chgvar="$meshnet"; chgind="$mn"
+            ;;
         *)
-            echo -e "${WColor}$1 not defined${Color_Off}"; echo
+            echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo
             return
             ;;
     esac
@@ -1302,9 +1298,8 @@ function fkillswitch {
 }
 function ftplite {
     heading "TPLite"
-    echo
     echo "Threat Protection Lite is a feature protecting you"
-    echo "from ads unsafe connections, and malicious sites."
+    echo "from ads, unsafe connections, and malicious sites."
     echo "Previously known as 'CyberSec'."
     echo
     echo -e "Enabling TPLite disables Custom DNS $dns"
@@ -1683,6 +1678,107 @@ function faccount {
                 echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
                 echo
                 echo "Select any number from 1-$numsubmacct ($numsubmacct to Exit)."
+                ;;
+        esac
+    done
+}
+function fmeshnet {
+    # https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm
+    # https://nordvpn.com/features/meshnet
+    heading "Meshnet"
+    echo "Using NordLynx, Meshnet lets you access devices over encrypted private"
+    echo "  tunnels directly, instead of connecting to a VPN server."
+    echo "With Meshnet enabled up to 10 devices using the NordVPN app with the"
+    echo "  same account are linked automatically."
+    echo "Connect up to 50 external devices by sending invitations."
+    echo "  Connections with an external device are isolated as a private pair."
+    echo
+    #
+    #
+    #
+    echo -e "${WColor}================${Color_Off}"
+    echo "Work in Progress"
+    echo -e "${WColor}================${Color_Off}"
+    echo
+    openlink "https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm" "ask" "exit"
+    echo
+    fsettings
+    #
+    #
+    #
+    if [[ "$meshnet" == "disabled" ]]; then
+        echo -e "$mn Meshnet is ${DColor}disabled${Color_Off}."
+    else
+        echo -e "$mn Meshnet is ${EColor}enabled${Color_Off}."
+        echo "$meshnetinfo"
+        nordvpn meshnet peer list
+    fi
+    echo
+    PS3=$'\n''Choose an Option: '
+    submesh=("Enable/Disable" "Peer List" "Peer Remove" "Peer Refresh" "Peer Routing" "Peer Incoming" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Exit")
+    numsubmesh=${#submesh[@]}
+    select mesh in "${submesh[@]}"
+    do
+        case $mesh in
+            "Enable/Disable")
+                echo
+                change_setting "meshnet" "override"
+                fmeshnet
+                ;;
+            "Peer List")
+                # Lists available peers in a meshnet
+                nordvpn meshnet peer list
+                ;;
+            "Peer Remove")
+                # Removes a peer from a meshnet
+                nordvpn meshnet peer remove
+                ;;
+            "Peer Refresh")
+                # Refreshes the meshnet in case it was not updated automatically
+                nordvpn meshnet peer refresh
+                ;;
+            "Peer Routing")
+                # Handles meshnet peer traffic routing through this device
+                nordvpn meshnet peer routing
+                ;;
+            "Peer Incoming")
+                # Handles the allowing/denying the meshnet peer incoming traffic to this device
+                nordvpn meshnet peer incoming
+                ;;
+            "Peer Connect")
+                # Treats a peer as a VPN server and connects to it if the peer has allowed traffic routing
+                nordvpn meshnet peer connect
+                ;;
+            "Invite List")
+                # Displays the list of all sent and received meshnet invitations
+                nordvpn meshnet invite list
+                ;;
+            "Invite Send")
+                echo
+                echo "Send an invitation to join the mesh network."
+                read -r -p "Enter the email address to invite: " meshemail
+                nordvpn meshnet invite "$meshemail"
+                ;;
+            "Invite Accept")
+                # Accepts an invitation to join inviter's mesh network
+                nordvpn meshnet invite accept
+                ;;
+            "Invite Deny")
+                # Denies an invitation to join inviter's mesh network
+                nordvpn meshnet invite deny
+                ;;
+            "Invite Revoke")
+                # Revokes a sent invitation
+                nordvpn meshnet invite revoke
+                ;;
+            "Exit")
+                main_menu
+                ;;
+            *)
+                echo
+                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
+                echo
+                echo "Select any number from 1-$numsubmesh ($numsubmesh to Exit)."
                 ;;
         esac
     done
@@ -2264,6 +2360,55 @@ function wireguard_gen {
     fi
     echo
 }
+function fspeedtest {
+    heading "SpeedTest"
+    echo
+    if ! command -v speedtest-cli &> /dev/null; then
+        echo -e "${WColor}speedtest-cli could not be found.${Color_Off}"
+        echo "Please install speedtest-cli"
+        echo "eg. 'sudo apt install speedtest-cli'"
+        echo
+        return
+    fi
+    PS3=$'\n''Select a test: '
+    speedtools=( "Download & Upload" "Download Only" "Upload Only" "Latency & Load" "Exit" )
+    select spd in "${speedtools[@]}"
+    do
+        case $spd in
+            "Download & Upload")
+                echo
+                speedtest-cli
+                ;;
+            "Download Only")
+                echo
+                speedtest-cli --no-upload
+                ;;
+            "Upload Only")
+                echo
+                speedtest-cli --no-download
+                ;;
+            "Latency & Load")
+                if [[ "$connected" != "connected" ]]; then
+                    echo; echo -e "(VPN $connectedc)"
+                fi
+                echo
+                ping -c3 "$nordhost"
+                echo
+                server_load
+                ;;
+            "Exit")
+                ftools
+                ;;
+
+            *)
+                echo
+                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
+                echo
+                echo "Select any number from 1-${#speedtools[@]} (${#speedtools[@]} to Exit)."
+                ;;
+        esac
+    done
+}
 function ftools {
     heading "Tools"
     if [[ "$connected" == "connected" ]]; then
@@ -2299,27 +2444,7 @@ function ftools {
                 rate_server
                 ;;
             "speedtest-cli")
-                heading "SpeedTest"
-                echo
-                echo "Test Options"
-                echo
-                echo -e "  - ${UPColor}(B)${Color_Off}oth download and upload"
-                echo -e "  - ${DLColor}(D)${Color_Off}ownload only"
-                echo -e "  - ${ULColor}(U)${Color_Off}pload only"
-                echo
-                speedprompt=$(echo -e "Select a test (${UPColor}B${Color_Off}/${DLColor}D${Color_Off}/${ULColor}U${Color_Off}): ")
-                read -n 1 -r -p "$speedprompt"; echo
-                echo
-                if [[ $REPLY =~ ^[Bb]$ ]]; then
-                    speedtest-cli
-                elif [[ $REPLY =~ ^[Dd]$ ]]; then
-                    speedtest-cli --no-upload
-                elif [[ $REPLY =~ ^[Uu]$ ]]; then
-                    speedtest-cli --no-download
-                else
-                    echo "No test"
-                fi
-                echo
+                fspeedtest
                 ;;
             "www.speedtest.net")
                 openlink "http://www.speedtest.net/"
@@ -2486,6 +2611,155 @@ function fquickconnect {
     status
     exit
 }
+function fgroups_all {
+    # all available groups
+    heading "All Groups"
+    create_list "group"
+    numgroups=${#grouplist[@]}
+    echo "Groups that are available with"
+    echo
+    echo -e "Technology: $technologydc"
+    if [[ "$technology" == "openvpn" ]]; then
+        echo -e "Obfuscate: $obfuscatec"
+    fi
+    echo
+    PS3=$'\n''Connect to Group: '
+    select xgroup in "${grouplist[@]}"
+    do
+        if [[ "$xgroup" == "Exit" ]]; then
+            main_menu
+        elif (( 1 <= REPLY )) && (( REPLY <= numgroups )); then
+            heading "$xgroup"
+            discon2
+            echo "Connecting to $xgroup."
+            echo
+            nordvpn connect --group "$xgroup"
+            status
+            exit
+        else
+            echo
+            echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
+            echo
+            echo "Select any number from 1-$numgroups ($numgroups to Exit)."
+        fi
+    done
+}
+function fgroups {
+    heading "Groups"
+    echo
+    PS3=$'\n''Choose a Group: '
+    submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Exit")
+    numsubmgroups=${#submgroups[@]}
+    select smg in "${submgroups[@]}"
+    do
+        case $smg in
+            "All_Groups")
+                fgroups_all
+                ;;
+            "Obfuscated")
+                fobservers
+                ;;
+            "Double-VPN")
+                fdoublevpn
+                ;;
+            "Onion+VPN")
+                fonion
+                ;;
+            "P2P")
+                fp2p
+                ;;
+            "Exit")
+                main_menu
+                ;;
+            *)
+                echo
+                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
+                echo
+                echo "Select any number from 1-$numsubmgroups ($numsubmgroups to Exit)."
+                ;;
+        esac
+    done
+}
+function fsettings {
+    heading "Settings"
+    echo
+    echo -e "$techpro$fw$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst"
+    echo
+    PS3=$'\n''Choose a Setting: '
+    submsett=("Technology" "Protocol" "Firewall" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
+    numsubmsett=${#submsett[@]}
+    select sms in "${submsett[@]}"
+    do
+        case $sms in
+            "Technology")
+                ftechnology
+                ;;
+            "Protocol")
+                fprotocol
+                ;;
+            "Firewall")
+                ffirewall
+                ;;
+            "KillSwitch")
+                fkillswitch
+                ;;
+            "TPLite")
+                ftplite
+                ;;
+            "Obfuscate")
+                fobfuscate
+                ;;
+            "Notify")
+                fnotify
+                ;;
+            "AutoConnect")
+                fautoconnect
+                ;;
+            "IPv6")
+                fipversion6
+                ;;
+            "Meshnet")
+                fmeshnet
+                ;;
+            "Custom-DNS")
+                fcustomdns
+                ;;
+            "Whitelist")
+                fwhitelist
+                ;;
+            "Account")
+                faccount
+                ;;
+            "Restart")
+                frestart
+                ;;
+            "Reset")
+                freset
+                ;;
+            "IPTables")
+                fiptables
+                ;;
+            "Tools")
+                ftools
+                ;;
+            "Script")
+                fscriptinfo
+                ;;
+            "Defaults")
+                fdefaults
+                ;;
+            "Exit")
+                main_menu
+                ;;
+            *)
+                echo
+                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
+                echo
+                echo "Select any number from 1-$numsubmsett ($numsubmsett to Exit)."
+                ;;
+        esac
+    done
+}
 function fdisconnect {
     heading "Disconnect"
     if [[ "$killswitch" == "enabled" ]]; then
@@ -2620,117 +2894,10 @@ function main_menu {
                 fcountries
                 ;;
             "Groups")
-                heading "Groups"
-                echo
-                PS3=$'\n''Choose a Group: '
-                submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Exit")
-                numsubmgroups=${#submgroups[@]}
-                select smg in "${submgroups[@]}"
-                do
-                    case $smg in
-                        "All_Groups")
-                            fallgroups
-                            ;;
-                        "Obfuscated")
-                            fobservers
-                            ;;
-                        "Double-VPN")
-                            fdoublevpn
-                            ;;
-                        "Onion+VPN")
-                            fonion
-                            ;;
-                        "P2P")
-                            fp2p
-                            ;;
-                        "Exit")
-                            main_menu
-                            ;;
-                        *)
-                            echo
-                            echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                            echo
-                            echo "Select any number from 1-$numsubmgroups ($numsubmgroups to Exit)."
-                            ;;
-                    esac
-                done
+                fgroups
                 ;;
             "Settings")
-                heading "Settings"
-                echo
-                echo -e "$techpro$fw$ks$tp$ob$no$ac$ip6$dns$wl$fst"
-                echo
-                PS3=$'\n''Choose a Setting: '
-                submsett=("Technology" "Protocol" "Firewall" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
-                numsubmsett=${#submsett[@]}
-                select sms in "${submsett[@]}"
-                do
-                    case $sms in
-                        "Technology")
-                            ftechnology
-                            ;;
-                        "Protocol")
-                            fprotocol
-                            ;;
-                        "Firewall")
-                            ffirewall
-                            ;;
-                        "KillSwitch")
-                            fkillswitch
-                            ;;
-                        "TPLite")
-                            ftplite
-                            ;;
-                        "Obfuscate")
-                            fobfuscate
-                            ;;
-                        "Notify")
-                            fnotify
-                            ;;
-                        "AutoConnect")
-                            fautoconnect
-                            ;;
-                        "IPv6")
-                            fipversion6
-                            ;;
-                        "Custom-DNS")
-                            fcustomdns
-                            ;;
-                        "Whitelist")
-                            fwhitelist
-                            ;;
-                        "Account")
-                            faccount
-                            ;;
-                        "Restart")
-                            frestart
-                            ;;
-                        "Reset")
-                            freset
-                            ;;
-                        "IPTables")
-                            fiptables
-                            ;;
-                        "Tools")
-                            ftools
-                            ;;
-                        "Script")
-                            fscriptinfo
-                            ;;
-                        "Defaults")
-                            fdefaults
-                            ;;
-                        "Exit")
-                            main_menu
-                            ;;
-                        *)
-                            echo
-                            echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                            echo
-                            echo "Select any number from 1-$numsubmsett ($numsubmsett to Exit)."
-                            ;;
-                    esac
-                done
+                fsettings
                 ;;
             "Disconnect")
                 fdisconnect
@@ -2767,7 +2934,7 @@ if ! command -v nordvpn &> /dev/null; then
     echo
     exit 1
 else
-    nordvpn -v
+    nordvpn version
     echo
 fi
 #
