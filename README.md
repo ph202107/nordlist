@@ -3,11 +3,12 @@ Requires bash version 4 or greater.
 Tested with Linux Mint only (Debian/Ubuntu base).   
 Fully customizable. 
 
-It looks like this:   
-https://i.imgur.com/5cxFx2D.png  
-https://i.imgur.com/u0VZVIb.png  
-https://i.imgur.com/c4bcAbM.png  
-https://i.imgur.com/c64XSn8.png  
+
+It looks like this:  
+https://i.imgur.com/dQhOPWH.png  
+https://i.imgur.com/tlbAxaf.png  
+https://i.imgur.com/EsaXIqY.png  
+https://i.imgur.com/c31ZwqJ.png  
 
 To download:    
 - Click on the green "Code" icon above
