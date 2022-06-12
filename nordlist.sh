@@ -11,10 +11,10 @@
 # lot of comments to help fellow newbies customize the script.
 #
 # It looks like this:
-# https://i.imgur.com/5cxFx2D.png
-# https://i.imgur.com/u0VZVIb.png
-# https://i.imgur.com/c4bcAbM.png
-# https://i.imgur.com/c64XSn8.png
+# https://i.imgur.com/dQhOPWH.png
+# https://i.imgur.com/tlbAxaf.png
+# https://i.imgur.com/EsaXIqY.png
+# https://i.imgur.com/c31ZwqJ.png
 #
 # https://github.com/ph202107/nordlist
 # /u/pennyhoard20 on reddit
