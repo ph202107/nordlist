@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
 # Tested with NordVPN Version 3.14.0 on Linux Mint 20.3
-# June 10, 2022
+# June 12, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -174,7 +174,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2796 (function main_menu). Configure the
+# The Main Menu starts on line 2941 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -238,7 +238,7 @@ function set_defaults {
     if [[ "$ipversion6" == "enabled" ]]; then nordvpn set ipv6 disabled; fi
     #
     #if [[ "$meshnet" == "disabled" ]]; then nordvpn set meshnet enabled; fi
-    #if [[ "$meshnet" != "disabled" ]]; then nordvpn set meshnet disabled; fi
+    #if [[ "$meshnet" == "enabled" ]]; then nordvpn set meshnet disabled; fi
     #
     #if [[ "$dns_set" == "disabled" ]]; then nordvpn set dns $default_dns; fi
     if [[ "$dns_set" != "disabled" ]]; then nordvpn set dns disabled; fi
@@ -447,8 +447,7 @@ function set_vars {
     notify=$(nsetsbl "Notify" | cut -f2 -d' ')
     autocon=$(nsetsbl "Auto" | cut -f2 -d' ')
     ipversion6=$(nsetsbl "IPv6" | cut -f2 -d' ')
-    meshnet=$(nsetsbl "Meshnet" | cut -f2 -d' ' | tr -d '\n')   # disabled or not=disabled
-    meshnetinfo="unknown"
+    meshnet=$(nsetsbl "Meshnet" | cut -f2 -d' ' | tr -d '\n')
     dns_set=$(nsetsbl "DNS" | cut -f2 -d' ')                    # disabled or not=disabled
     dns_srvrs=$(nsetsbl "DNS" | tr '[:lower:]' '[:upper:]')     # Server IPs, includes "DNS: "
     whitelist=$( printf '%s\n' "${nsets[@]}" | grep -A100 -i "whitelist" )
@@ -526,10 +525,12 @@ function set_vars {
         ip6="${DIColor}[IP6]${Color_Off}"
     fi
     #
-    if [[ "$meshnet" == "disabled" ]]; then # reversed
-        mn="${DIColor}[MN]${Color_Off}"
-    else
+    if [[ "$meshnet" == "enabled" ]]; then
         mn="${EIColor}[MN]${Color_Off}"
+        meshnetc="${EColor}$meshnet${Color_Off}"
+    else
+        mn="${DIColor}[MN]${Color_Off}"
+        meshnetc="${DColor}$meshnet${Color_Off}"
     fi
     #
     if [[ "$dns_set" == "disabled" ]]; then # reversed
@@ -1394,6 +1395,244 @@ function fobfuscate {
     fi
     main_menu
 }
+function fmeshnet {
+    # https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm
+    # https://nordvpn.com/features/meshnet
+    heading "Meshnet"
+    echo "Using NordLynx, Meshnet lets you access devices over encrypted private"
+    echo "  tunnels directly, instead of connecting to a VPN server."
+    echo "With Meshnet enabled up to 10 devices using the NordVPN app with the"
+    echo "  same account are linked automatically."
+    echo "Connect up to 50 external devices by sending invitations."
+    echo "  Connections with an external device are isolated as a private pair."
+    echo
+    echo -e "$mn Meshnet is $meshnetc."
+    echo
+    PS3=$'\n''Choose an Option: '
+    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Support" "Exit")
+    numsubmesh=${#submesh[@]}
+    select mesh in "${submesh[@]}"
+    do
+        case $mesh in
+            "Enable/Disable")
+                # disconnect before disable or VPN will disconnect anyway but iptables entries will remain
+                echo
+                if [[ "$meshnet" == "enabled" ]] && [[ "$connected" == "connected" ]]; then
+                    echo -e "${WColor}Must disconnect the VPN to disable Meshnet.${Color_Off}"
+                    echo
+                    read -n 1 -r -p "Proceed? (y/n) "; echo
+                    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                        echo
+                        break
+                    fi
+                    discon2
+                fi
+                change_setting "meshnet" "override"
+                set_vars
+                fmeshnet
+                ;;
+            "Peer List")
+                echo
+                echo -e "${EColor}== Peer List ==${Color_Off}"
+                echo "Lists available peers in a meshnet."
+                echo "'nordvpn meshnet peer list'"
+                echo
+                nordvpn meshnet peer list
+                ;;
+            "Peer Refresh")
+                echo
+                echo -e "${EColor}== Peer Refresh ==${Color_Off}"
+                echo "Refreshes the meshnet in case it was not updated automatically."
+                echo "'nordvpn meshnet peer refresh'"
+                echo
+                nordvpn meshnet peer refresh
+                ;;
+            "Peer Remove")
+                # Usage: nordvpn meshnet peer remove [command options] [public_key|hostname|ip]
+                echo
+                echo -e "${EColor}== Peer Remove ==${Color_Off}"
+                echo "Removes a peer from the meshnet."
+                echo
+                echo "Enter the public_key, hostname, or IP address."
+                echo "(Leave blank to quit)"
+                echo
+                read -r -p "nordvpn meshnet peer remove "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet peer remove "$REPLY"
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Peer Incoming")
+                # Usage: nordvpn meshnet peer incoming command [command options] [arguments...]
+                echo
+                echo -e "${EColor}== Peer Incoming ==${Color_Off}"
+                echo "Peers under the same account are automatically added to the meshnet."
+                echo "Allow or Deny a meshnet peer's incoming traffic to this device."
+                echo
+                echo "Usage: nordvpn meshnet peer incoming [command options] [public_key|hostname|ip]"
+                echo "Options:"
+                echo " allow - Allows a meshnet peer to send traffic to this device."
+                echo " deny  - Denies a meshnet peer to send traffic to this device."
+                echo
+                echo "Enter 'allow' or 'deny' and the public_key, hostname, or ip"
+                echo "(Leave blank to quit)"
+                echo
+                read -r -p "nordvpn meshnet peer incoming "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet peer incoming $REPLY
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Peer Routing")
+                # Usage: nordvpn meshnet peer routing command [command options] [arguments...]
+                echo
+                echo -e "${EColor}== Peer Routing ==${Color_Off}"
+                echo "Allow or Deny a meshnet peer routing traffic through this device."
+                echo
+                echo "Usage: nordvpn meshnet peer routing [command options] [public_key|hostname|ip]"
+                echo "Options:"
+                echo " allow - Allows a meshnet peer to route its' traffic through this device."
+                echo " deny  - Denies a meshnet peer to route its' traffic through this device."
+                echo
+                echo "Enter 'allow' or 'deny' and the public_key, hostname, or ip"
+                echo "(Leave blank to quit)"
+                echo
+                read -r -p "nordvpn meshnet peer routing "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet peer routing $REPLY
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Peer Connect")
+                # Usage: nordvpn meshnet peer connect [command options] [public_key|hostname|ip]
+                echo
+                echo -e "${EColor}== Peer Connect ==${Color_Off}"
+                echo "Treats a peer as a VPN server and connects to it if the"
+                echo " peer has allowed traffic routing."
+                echo
+                echo "Enter the public_key, hostname, or IP address."
+                echo "(Leave blank to quit)"
+                echo
+                read -r -p "nordvpn meshnet peer connect "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet peer connect "$REPLY"
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Invite List")
+                echo
+                echo -e "${LColor}== Invite List ==${Color_Off}"
+                echo "Displays the list of all sent and received meshnet invitations."
+                echo "'nordvpn meshnet invite list'"
+                echo
+                nordvpn meshnet invite list
+                ;;
+            "Invite Send")
+                echo
+                echo -e "${LColor}== Invite Send ==${Color_Off}"
+                echo "Sends an invitation to join the mesh network."
+                echo
+                echo "Usage: nordvpn meshnet invite send [command options] [email]"
+                echo "Options:"
+                echo " --allow-incoming-traffic  Allow incomming traffic from a peer. (default: false)"
+                echo " --allow-traffic-routing   Allow the peer to route traffic through this device. (default: false)"
+                echo
+                echo "(Leave blank to quit)"
+                echo
+                read -r -p "nordvpn meshnet invite send "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet invite send $REPLY
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Invite Accept")
+                echo
+                echo -e "${LColor}== Invite Accept ==${Color_Off}"
+                echo "Accepts an invitation to join the inviter's mesh network."
+                echo
+                echo "Usage: nordvpn meshnet invite accept [command options] [email]"
+                echo "Options:"
+                echo " --allow-incoming-traffic  Allow incomming traffic from the peer. (default: false)"
+                echo " --allow-traffic-routing   Allow the peer to route traffic through this device. (default: false)"
+                echo
+                echo "(Leave blank to quit)"
+                echo
+                read -r -p "nordvpn meshnet invite accept "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet invite accept $REPLY
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Invite Deny")
+                # Usage: nordvpn meshnet invite deny [command options] [email]
+                echo
+                echo -e "${LColor}== Invite Deny ==${Color_Off}"
+                echo "Denies an invitation to join the inviter's mesh network."
+                echo
+                echo "Enter the email address to deny."
+                echo "(Leave blank to quit)"
+                echo
+                read -r -p "nordvpn meshnet invite deny "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet invite deny "$REPLY"
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Invite Revoke")
+                # Usage: nordvpn meshnet invite revoke [command options] [email]
+                echo
+                echo -e "${LColor}== Invite Revoke ==${Color_Off}"
+                echo "Revokes a sent invitation."
+                echo
+                echo "Enter the email address to revoke."
+                echo "(Leave blank to quit)"
+                echo
+                read -r -p "nordvpn meshnet invite revoke "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet invite revoke "$REPLY"
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Support")
+                echo
+                openlink "https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm" "ask"
+                ;;
+            "Exit")
+                main_menu
+                ;;
+            *)
+                echo
+                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
+                echo
+                echo "Select any number from 1-$numsubmesh ($numsubmesh to Exit)."
+                ;;
+        esac
+    done
+}
 function fcustomdns {
     heading "CustomDNS"
     echo "The NordVPN app automatically uses NordVPN DNS servers"
@@ -1682,107 +1921,6 @@ function faccount {
         esac
     done
 }
-function fmeshnet {
-    # https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm
-    # https://nordvpn.com/features/meshnet
-    heading "Meshnet"
-    echo "Using NordLynx, Meshnet lets you access devices over encrypted private"
-    echo "  tunnels directly, instead of connecting to a VPN server."
-    echo "With Meshnet enabled up to 10 devices using the NordVPN app with the"
-    echo "  same account are linked automatically."
-    echo "Connect up to 50 external devices by sending invitations."
-    echo "  Connections with an external device are isolated as a private pair."
-    echo
-    #
-    #
-    #
-    echo -e "${WColor}================${Color_Off}"
-    echo "Work in Progress"
-    echo -e "${WColor}================${Color_Off}"
-    echo
-    openlink "https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm" "ask" "exit"
-    echo
-    fsettings
-    #
-    #
-    #
-    if [[ "$meshnet" == "disabled" ]]; then
-        echo -e "$mn Meshnet is ${DColor}disabled${Color_Off}."
-    else
-        echo -e "$mn Meshnet is ${EColor}enabled${Color_Off}."
-        echo "$meshnetinfo"
-        nordvpn meshnet peer list
-    fi
-    echo
-    PS3=$'\n''Choose an Option: '
-    submesh=("Enable/Disable" "Peer List" "Peer Remove" "Peer Refresh" "Peer Routing" "Peer Incoming" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Exit")
-    numsubmesh=${#submesh[@]}
-    select mesh in "${submesh[@]}"
-    do
-        case $mesh in
-            "Enable/Disable")
-                echo
-                change_setting "meshnet" "override"
-                fmeshnet
-                ;;
-            "Peer List")
-                # Lists available peers in a meshnet
-                nordvpn meshnet peer list
-                ;;
-            "Peer Remove")
-                # Removes a peer from a meshnet
-                nordvpn meshnet peer remove
-                ;;
-            "Peer Refresh")
-                # Refreshes the meshnet in case it was not updated automatically
-                nordvpn meshnet peer refresh
-                ;;
-            "Peer Routing")
-                # Handles meshnet peer traffic routing through this device
-                nordvpn meshnet peer routing
-                ;;
-            "Peer Incoming")
-                # Handles the allowing/denying the meshnet peer incoming traffic to this device
-                nordvpn meshnet peer incoming
-                ;;
-            "Peer Connect")
-                # Treats a peer as a VPN server and connects to it if the peer has allowed traffic routing
-                nordvpn meshnet peer connect
-                ;;
-            "Invite List")
-                # Displays the list of all sent and received meshnet invitations
-                nordvpn meshnet invite list
-                ;;
-            "Invite Send")
-                echo
-                echo "Send an invitation to join the mesh network."
-                read -r -p "Enter the email address to invite: " meshemail
-                nordvpn meshnet invite "$meshemail"
-                ;;
-            "Invite Accept")
-                # Accepts an invitation to join inviter's mesh network
-                nordvpn meshnet invite accept
-                ;;
-            "Invite Deny")
-                # Denies an invitation to join inviter's mesh network
-                nordvpn meshnet invite deny
-                ;;
-            "Invite Revoke")
-                # Revokes a sent invitation
-                nordvpn meshnet invite revoke
-                ;;
-            "Exit")
-                main_menu
-                ;;
-            *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$numsubmesh ($numsubmesh to Exit)."
-                ;;
-        esac
-    done
-}
 function frestart {
     heading "Restart"
     echo
@@ -1880,6 +2018,7 @@ function fiptables_status {
     echo -e "The VPN is $connectedc.  ${IPColor}$ip${Color_Off}"
     echo -e "$fw The Firewall is $firewallc."
     echo -e "$ks The Kill Switch is $killswitchc."
+    echo -e "$mn Meshnet is $meshnetc."
     if [[ -n "${whitelist[*]}" ]]; then
         echo -ne "$wl "
         printf '%s\n' "${whitelist[@]}"
@@ -1904,7 +2043,7 @@ function fiptables {
     echo "  - Commands require 'sudo'"
     echo -e "${Color_Off}"
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "Firewall" "KillSwitch" "Whitelist" "Flush IPTables" "Restart Services" "ping google.com" "Exit")
+    submipt=("View IPTables" "Firewall" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "ping google.com" "Exit")
     numsubmipt=${#submipt[@]}
     select smipt in "${submipt[@]}"
     do
@@ -1922,6 +2061,12 @@ function fiptables {
                 echo
                 set_vars
                 change_setting "killswitch" "override"
+                fiptables_status
+                ;;
+            "Meshnet")
+                echo
+                set_vars
+                change_setting "meshnet" "override"
                 fiptables_status
                 ;;
             "Whitelist")
@@ -2803,7 +2948,7 @@ function main_menu {
     # "nordvpn connect Melbourne". That's it.
     #
     # An almost unlimited number of menu items can be added.
-    # Submenu items can be copied to the main menu for easier access.
+    # Submenu functions can be added to the main menu for easier access.
     #
     PS3=$'\n''Choose an option: '
     #
@@ -3132,7 +3277,7 @@ main_menu start
 #       gnome-terminal -- bash -c "nordvpn status; exec bash"
 #       wmctrl -r "myusername" -t 1 && wmctrl -r "myusername" -T "NORD"
 #
-# NordVPN Indicator Cinnamon Applet - no status with Nord update notice
+# NordVPN Indicator Cinnamon Applet - no status with Nord update or feature notice
 #   ~/.local/share/cinnamon/applets/nordvpn-indicator@nickdurante/applet.js
 #   Line 111 - Change [0] to [1]
 #       let result = status.split("\n")[1].split(": ")[1];
