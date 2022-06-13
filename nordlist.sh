@@ -1,8 +1,8 @@
 #!/bin/bash
 # shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
 #
-# Tested with NordVPN Version 3.14.0 on Linux Mint 20.3
-# June 12, 2022
+# Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
+# June 13, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -45,7 +45,6 @@
 #
 # wireguard-tools  Settings-Tools-WireGuard     (function wireguard_gen)
 # speedtest-cli    Settings-Tools-speedtest-cli (function ftools)
-# yt-dlp           Settings-Tools-youtube-dlp   (function ftools)
 # highlight        Settings-Script              (function fscriptinfo)
 #
 # For VPN On/Off status in the system tray, I use the Linux Mint
@@ -174,7 +173,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2941 (function main_menu). Configure the
+# The Main Menu starts on line 2927 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1415,20 +1414,13 @@ function fmeshnet {
     do
         case $mesh in
             "Enable/Disable")
-                # disconnect before disable or VPN will disconnect anyway but iptables entries will remain
                 echo
-                if [[ "$meshnet" == "enabled" ]] && [[ "$connected" == "connected" ]]; then
-                    echo -e "${WColor}Must disconnect the VPN to disable Meshnet.${Color_Off}"
-                    echo
-                    read -n 1 -r -p "Proceed? (y/n) "; echo
-                    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                        echo
-                        break
-                    fi
-                    discon2
-                fi
                 change_setting "meshnet" "override"
                 set_vars
+                if [[ "$meshnet" == "enabled" ]]; then
+                    echo "Refreshing the peer list..."; echo
+                    nordvpn meshnet peer refresh
+                fi
                 fmeshnet
                 ;;
             "Peer List")
@@ -1448,7 +1440,6 @@ function fmeshnet {
                 nordvpn meshnet peer refresh
                 ;;
             "Peer Remove")
-                # Usage: nordvpn meshnet peer remove [command options] [public_key|hostname|ip]
                 echo
                 echo -e "${EColor}== Peer Remove ==${Color_Off}"
                 echo "Removes a peer from the meshnet."
@@ -1466,7 +1457,6 @@ function fmeshnet {
                 fi
                 ;;
             "Peer Incoming")
-                # Usage: nordvpn meshnet peer incoming command [command options] [arguments...]
                 echo
                 echo -e "${EColor}== Peer Incoming ==${Color_Off}"
                 echo "Peers under the same account are automatically added to the meshnet."
@@ -1490,7 +1480,6 @@ function fmeshnet {
                 fi
                 ;;
             "Peer Routing")
-                # Usage: nordvpn meshnet peer routing command [command options] [arguments...]
                 echo
                 echo -e "${EColor}== Peer Routing ==${Color_Off}"
                 echo "Allow or Deny a meshnet peer routing traffic through this device."
@@ -1513,7 +1502,6 @@ function fmeshnet {
                 fi
                 ;;
             "Peer Connect")
-                # Usage: nordvpn meshnet peer connect [command options] [public_key|hostname|ip]
                 echo
                 echo -e "${EColor}== Peer Connect ==${Color_Off}"
                 echo "Treats a peer as a VPN server and connects to it if the"
@@ -1582,7 +1570,6 @@ function fmeshnet {
                 fi
                 ;;
             "Invite Deny")
-                # Usage: nordvpn meshnet invite deny [command options] [email]
                 echo
                 echo -e "${LColor}== Invite Deny ==${Color_Off}"
                 echo "Denies an invitation to join the inviter's mesh network."
@@ -1600,7 +1587,6 @@ function fmeshnet {
                 fi
                 ;;
             "Invite Revoke")
-                # Usage: nordvpn meshnet invite revoke [command options] [email]
                 echo
                 echo -e "${LColor}== Invite Revoke ==${Color_Off}"
                 echo "Revokes a sent invitation."
@@ -2515,7 +2501,7 @@ function fspeedtest {
         echo
         return
     fi
-    PS3=$'\n''Select a test: '
+    # PS3=$'\n''Select a test: '
     speedtools=( "Download & Upload" "Download Only" "Upload Only" "Latency & Load" "Exit" )
     select spd in "${speedtools[@]}"
     do
@@ -2542,7 +2528,8 @@ function fspeedtest {
                 server_load
                 ;;
             "Exit")
-                ftools
+                echo; echo
+                break
                 ;;
 
             *)
@@ -2570,7 +2557,7 @@ function ftools {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=( "NordVPN API" "External IP" "WireGuard" "Rate VPN Server" "speedtest-cli" "www.speedtest.net" "youtube-dlp" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "ipinfo.io" "world map" "Change Host" "Exit" )
+    nettools=( "NordVPN API" "External IP" "WireGuard" "Rate VPN Server" "speedtest-cli" "www.speedtest.net" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "world map" "Change Host" "Exit" )
     numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
@@ -2597,13 +2584,6 @@ function ftools {
                 #openlink "https://fast.com"
                 #openlink "https://www.linode.com/speed-test/"
                 #openlink "http://speedtest-blr1.digitalocean.com/"
-                ;;
-            "youtube-dlp")
-                # test speed by downloading a youtube video to /dev/null
-                # this video is about 60MB, can use any video
-                echo
-                yt-dlp -f b --no-part --no-cache-dir -o /dev/null --newline https://www.youtube.com/watch?v=bkZac30P5DM
-                echo
                 ;;
             "ping vpn")
                 echo
@@ -2647,6 +2627,12 @@ function ftools {
                 ;;
             "ipinfo.io")
                 openlink "https://ipinfo.io/"
+                ;;
+            "locatejs.com")
+                openlink "https://locatejs.com/"
+                ;;
+            "browserleaks.com")
+                openlink "https://browserleaks.com/"
                 ;;
             "world map")
                 # may be possible to highlight location
