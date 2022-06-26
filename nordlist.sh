@@ -1,8 +1,9 @@
 #!/bin/bash
-# shellcheck disable=SC2034,SC2129    # unused color variables, individual redirects
+# shellcheck disable=SC2034,SC2129,SC2154
+# unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
-# June 13, 2022
+# June 25, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -27,8 +28,8 @@
 #       eg. /home/username/bin/nordlist.sh
 # 2) Make the script executable with
 #       "chmod +x nordlist.sh"
-# 3) For the customized menu ASCII, to generate ASCII headings, and to
-#       use NordVPN API functions these small programs are required *
+# 3) To generate ASCII images and to use NordVPN API functions
+#       these small programs are required *
 #       eg "sudo apt install figlet lolcat curl jq"
 # 4) At the terminal type "nordlist.sh"
 #
@@ -44,7 +45,7 @@
 # Other small programs used:
 #
 # wireguard-tools  Settings-Tools-WireGuard     (function wireguard_gen)
-# speedtest-cli    Settings-Tools-speedtest-cli (function ftools)
+# speedtest-cli    Settings-Tools-speedtest-cli (function fspeedtest)
 # highlight        Settings-Script              (function fscriptinfo)
 #
 # For VPN On/Off status in the system tray, I use the Linux Mint
@@ -173,7 +174,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2927 (function main_menu). Configure the
+# The Main Menu starts on line 2941 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -587,9 +588,14 @@ function getexternalip {
     extcity=$( ipinfobl "city" )
     extregion=$( ipinfobl "region" )
     extcountry=$( ipinfobl "country" )
-    if [[ -n "${ipinfo[*]}" ]]; then # not empty
+    extlimit=$( ipinfobl "rate limit" )
+    if [[ -n "$extip" ]]; then # not empty
         echo -e "${IPColor}$extip  $exthost${Color_Off}"
         echo -e "${SVColor}$extorg ${CIColor}$extcity $extregion ${COColor}$extcountry${Color_Off}"
+        echo
+    elif [[ -n "$extlimit" ]]; then
+        echo -e "${WColor}$extlimit${Color_Off}"
+        echo "You've hit the daily limit for the unauthenticated API."
         echo
     else
         set_vars
@@ -656,6 +662,12 @@ function openlink {
         exit
     fi
 }
+function invalid_option {
+    echo
+    echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
+    echo
+    echo "Select any number from 1-$1 ($1 to Exit)."
+}
 function create_list {
     #
     # remove notices by keyword
@@ -705,10 +717,7 @@ function fcountries {
         elif (( 1 <= REPLY )) && (( REPLY <= numcountries )); then
             cities
         else
-            echo
-            echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-            echo
-            echo "Select any number from 1-$numcountries ($numcountries to Exit)."
+            invalid_option "$numcountries"
         fi
     done
 }
@@ -771,10 +780,7 @@ function cities {
             status
             exit
         else
-            echo
-            echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-            echo
-            echo "Select any number from 1-$numcities ($numcities to Exit)."
+            invalid_option "$numcities"
         fi
     done
 }
@@ -1172,8 +1178,8 @@ function ask_protocol {
 function change_setting {
     # $1 = Nord command
     # $2 = override fast2 and main_menu
-    chgloc=""
     #
+    chgloc=""
     case "$1" in
         "firewall")
             chgname="the Firewall"; chgvar="$firewall"; chgind="$fw"
@@ -1211,7 +1217,7 @@ function change_setting {
     fi
     echo -e "$chgind $chgname is $chgvarc."
     echo
-    if [[ "$fast2" =~ ^[Yy]$ ]] && [[ "$2" != "override" ]]; then   # option: remove second condition
+    if [[ "$fast2" =~ ^[Yy]$ ]] && [[ "$2" != "override" ]]; then
         echo -e "${FColor}[F]ast2 is enabled.  Changing the setting.${Color_Off}"
         REPLY="y"
     else
@@ -1417,10 +1423,6 @@ function fmeshnet {
                 echo
                 change_setting "meshnet" "override"
                 set_vars
-                if [[ "$meshnet" == "enabled" ]]; then
-                    echo "Refreshing the peer list..."; echo
-                    nordvpn meshnet peer refresh
-                fi
                 fmeshnet
                 ;;
             "Peer List")
@@ -1611,10 +1613,7 @@ function fmeshnet {
                 main_menu
                 ;;
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$numsubmesh ($numsubmesh to Exit)."
+                invalid_option "$numsubmesh"
                 ;;
         esac
     done
@@ -1691,7 +1690,7 @@ function fcustomdns {
             "Flush DNS Cache")
                 # https://devconnected.com/how-to-flush-dns-cache-on-linux/
                 echo
-                if command -v systemd-resolve &> /dev/null; then
+                if (( "$systemdresolve_exists" )); then
                     sudo echo
                     sudo systemd-resolve --statistics | grep "Current Cache Size"
                     echo -e "${WColor}  == Flush ==${Color_Off}"
@@ -1729,10 +1728,7 @@ function fcustomdns {
                 main_menu
                 ;;
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$numsubmcnds ($numsubmcnds to Exit)."
+                invalid_option "$numsubmcnds"
                 ;;
         esac
     done
@@ -1754,7 +1750,7 @@ function fwhitelist {
     startline=$(grep -m1 -n "whitelist_start" "$0" | cut -f1 -d':')
     endline=$(( $(grep -m1 -n "whitelist_end" "$0" | cut -f1 -d':') - 1 ))
     numlines=$(( endline - startline ))
-    if command -v highlight &> /dev/null; then
+    if (( "$highlight_exists" )); then
         highlight -l -O xterm256 "$0" | head -n "$endline" | tail -n "$numlines"
     else
         cat -n "$0" | head -n "$endline" | tail -n "$numlines"
@@ -1899,10 +1895,7 @@ function faccount {
                 main_menu
                 ;;
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$numsubmacct ($numsubmacct to Exit)."
+                invalid_option "$numsubmacct"
                 ;;
         esac
     done
@@ -2029,7 +2022,7 @@ function fiptables {
     echo "  - Commands require 'sudo'"
     echo -e "${Color_Off}"
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "Firewall" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "ping google.com" "Exit")
+    submipt=("View IPTables" "Firewall" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "ping google" "Disconnect" "Exit")
     numsubmipt=${#submipt[@]}
     select smipt in "${submipt[@]}"
     do
@@ -2128,21 +2121,29 @@ function fiptables {
                     echo
                 fi
                 ;;
-            "ping google.com")
+            "ping google")
                 fiptables_status
                 echo -e "${LColor}ping -c 3 google.com${Color_Off}"
                 ping -c 3 google.com
                 echo
+                ;;
+            "Disconnect")
+                echo
+                if [[ "$connected" == "connected" ]]; then
+                    read -n 1 -r -p "$(echo -e "${WColor}Disconnect the VPN?${Color_Off} (y/n) ")"; echo
+                    echo
+                    if [[ $REPLY =~ ^[Yy]$ ]]; then
+                        discon2
+                    fi
+                fi
+                fiptables_status
                 ;;
             "Exit")
                 sudo -K     # timeout sudo
                 main_menu
                 ;;
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$numsubmipt ($numsubmipt to Exit)."
+                invalid_option "$numsubmipt"
                 ;;
         esac
     done
@@ -2154,17 +2155,17 @@ function rate_server {
         echo "How would you rate your connection quality?"
         echo -e "${DColor}Terrible${Color_Off} <_1__2__3__4__5_> ${EColor}Excellent${Color_Off}"
         echo
-        read -n 1 -r -p "$(echo -e Rating 1-5 [e"${LColor}x${Color_Off}"it]): " rating
-        echo
+        read -n 1 -r -p "$(echo -e "Rating 1-5 [e${LColor}x${Color_Off}it]: ")" rating
         if [[ $rating =~ ^[Xx]$ ]] || [[ -z $rating ]]; then
+            echo -e "${DColor}(Skipped)${Color_Off}"; echo
             break
         elif (( 1 <= rating )) && (( rating <= 5 )); then
-            echo
+            echo; echo
             nordvpn rate "$rating"
             echo
             break
         else
-            echo
+            echo; echo
             echo -e "${WColor}** Please choose a number from 1 to 5"
             echo -e "('Enter' or 'x' to exit)${Color_Off}"
             echo
@@ -2312,10 +2313,7 @@ function allvpnservers {
                 nordapi
                 ;;
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$numsubmallvpn ($numsubmallvpn to Exit)."
+                invalid_option "$numsubmallvpn"
                 ;;
         esac
     done
@@ -2389,10 +2387,7 @@ function nordapi {
                 main_menu
                 ;;
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$numsubmapi ($numsubmapi to Exit)."
+                invalid_option "$numsubmapi"
                 ;;
         esac
     done
@@ -2427,7 +2422,7 @@ function wireguard_gen {
     wgconfig="$wgcity"_"$server"_wg.conf    # Filename
     wgfull="$wgdir/$wgconfig"               # Full path and filename
     #
-    if ! command -v wg &> /dev/null; then
+    if ! (( "$wg_exists" )); then
         echo -e "${WColor}WireGuard-Tools could not be found.${Color_Off}"
         echo "Please install WireGuard and WireGuard-Tools."
         echo "eg. 'sudo apt install wireguard wireguard-tools'"
@@ -2481,7 +2476,7 @@ function wireguard_gen {
         echo
         echo -e "Saved as ${LColor}$wgfull${Color_Off}"
         echo
-        if command -v highlight &> /dev/null; then
+        if (( "$highlight_exists" )); then
             highlight -O xterm256 "$wgfull"
         else
             cat "$wgfull"
@@ -2494,7 +2489,7 @@ function wireguard_gen {
 function fspeedtest {
     heading "SpeedTest"
     echo
-    if ! command -v speedtest-cli &> /dev/null; then
+    if ! (( "$speedtestcli_exists" )); then
         echo -e "${WColor}speedtest-cli could not be found.${Color_Off}"
         echo "Please install speedtest-cli"
         echo "eg. 'sudo apt install speedtest-cli'"
@@ -2533,10 +2528,7 @@ function fspeedtest {
                 ;;
 
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-${#speedtools[@]} (${#speedtools[@]} to Exit)."
+                invalid_option "${#speedtools[@]}"
                 ;;
         esac
     done
@@ -2557,7 +2549,7 @@ function ftools {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=( "NordVPN API" "External IP" "WireGuard" "Rate VPN Server" "speedtest-cli" "www.speedtest.net" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "world map" "Change Host" "Exit" )
+    nettools=( "NordVPN API" "External IP" "WireGuard" "Rate VPN Server" "speedtest-cli" "speedtest.net" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "bash.ws" "world map" "Change Host" "Exit" )
     numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
@@ -2578,12 +2570,13 @@ function ftools {
             "speedtest-cli")
                 fspeedtest
                 ;;
-            "www.speedtest.net")
+            "speedtest.net")
                 openlink "http://www.speedtest.net/"
                 #openlink "https://speedof.me/"
                 #openlink "https://fast.com"
                 #openlink "https://www.linode.com/speed-test/"
                 #openlink "http://speedtest-blr1.digitalocean.com/"
+                #openlink "https://www.nperf.com/en/"
                 ;;
             "ping vpn")
                 echo
@@ -2634,6 +2627,9 @@ function ftools {
             "browserleaks.com")
                 openlink "https://browserleaks.com/"
                 ;;
+            "bash.ws")
+                openlink "https://bash.ws/"
+                ;;
             "world map")
                 # may be possible to highlight location
                 echo
@@ -2656,10 +2652,7 @@ function ftools {
                 main_menu
                 ;;
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$numnettools ($numnettools to Exit)."
+                invalid_option "$numnettools"
                 ;;
         esac
     done
@@ -2696,7 +2689,7 @@ function fscriptinfo {
     startline=$(grep -m1 -n "CUSTOM" "$0" | cut -f1 -d':')
     endline=$(grep -m1 -n "End" "$0" | cut -f1 -d':')
     numlines=$(( endline - startline + 2 ))
-    if command -v highlight &> /dev/null; then
+    if (( "$highlight_exists" )); then
         highlight -l -O xterm256 "$0" | head -n "$endline" | tail -n "$numlines"
     else
         cat -n "$0" | head -n "$endline" | tail -n "$numlines"
@@ -2768,10 +2761,7 @@ function fgroups_all {
             status
             exit
         else
-            echo
-            echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-            echo
-            echo "Select any number from 1-$numgroups ($numgroups to Exit)."
+            invalid_option "$numgroups"
         fi
     done
 }
@@ -2803,10 +2793,7 @@ function fgroups {
                 main_menu
                 ;;
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$numsubmgroups ($numsubmgroups to Exit)."
+                invalid_option "$numsubmgroups"
                 ;;
         esac
     done
@@ -2883,10 +2870,7 @@ function fsettings {
                 main_menu
                 ;;
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$numsubmsett ($numsubmsett to Exit)."
+                invalid_option "$numsubmsett"
                 ;;
         esac
     done
@@ -2903,6 +2887,36 @@ function fdisconnect {
     discon2
     status
     exit
+}
+function check_depends {
+    # https://stackoverflow.com/questions/16553089/dynamic-variable-names-in-bash
+    # creates variables with value 0 or 1, eg $nordvpn_exists = 1
+    #
+    # check silently
+    for program in nordvpn systemd-resolve #iptables systemctl firefox
+    do
+        name=$( echo "$program" | tr -d '-' )       # remove hyphens
+        if command -v "$program" &> /dev/null; then
+            printf -v "${name}_exists" '%s' '1'
+        else
+            printf -v "${name}_exists" '%s' '0'
+        fi
+    done
+    #
+    # echo results
+    echo -e "${LColor}Check${Color_Off}"
+    for program in wg jq curl figlet lolcat highlight speedtest-cli
+    do
+        name=$( echo "$program" | tr -d '-' )       # remove hyphens
+        if command -v "$program" &> /dev/null; then
+            echo -ne "${EIColor}Y${Color_Off}"
+            printf -v "${name}_exists" '%s' '1'
+        else
+            echo -ne "${DIColor}N${Color_Off}"
+            printf -v "${name}_exists" '%s' '0'
+        fi
+        echo "  $program"
+    done
 }
 function main_menu {
     if [[ "$1" == "start" ]]; then
@@ -3039,10 +3053,7 @@ function main_menu {
                 break
                 ;;
             *)
-                echo
-                echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
-                echo
-                echo "Select any number from 1-$nummainmenu ($nummainmenu to Exit)."
+                invalid_option "$nummainmenu"
                 main_menu
                 ;;
         esac
@@ -3052,6 +3063,8 @@ function main_menu {
 #
 colors
 echo
+check_depends
+echo
 if (( BASH_VERSINFO < 4 )); then
     echo "Bash Version $BASH_VERSION"
     echo -e "${WColor}Bash v4.0 or higher is required.${Color_Off}"
@@ -3059,14 +3072,14 @@ if (( BASH_VERSINFO < 4 )); then
     exit 1
 fi
 #
-if ! command -v nordvpn &> /dev/null; then
+if (( "$nordvpn_exists" )); then
+    nordvpn --version
+    echo
+else
     echo -e "${WColor}The NordVPN Linux client could not be found.${Color_Off}"
     echo "https://nordvpn.com/download/"
     echo
     exit 1
-else
-    nordvpn version
-    echo
 fi
 #
 if ! systemctl is-active --quiet nordvpnd; then
