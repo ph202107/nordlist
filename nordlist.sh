@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
-# June 25, 2022
+# June 30, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -34,12 +34,8 @@
 # 4) At the terminal type "nordlist.sh"
 #
 # =====================================================================
-# * The script will work without figlet and lolcat after making
-#   these modifications:
-# 1) In "function logo"
-#       - change "custom_ascii" to "std_ascii"
-# 2) In "function heading"
-#       - remove the hash mark (#) before "echo"
+# * The script will work without figlet and lolcat by specifying
+#   "std_ascii" in "function logo"
 #
 # =====================================================================
 # Other small programs used:
@@ -174,7 +170,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2941 (function main_menu). Configure the
+# The Main Menu starts on line 2957 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -248,9 +244,8 @@ function set_defaults {
     echo
 }
 function std_ascii {
-    # This ASCII can display above the main menu if you
-    # prefer to use other ASCII art.
-    # Place any ASCII art between cat << "EOF" and EOF
+    # This ASCII can display above the main menu if you prefer to use
+    # other ASCII art. Place any ASCII art between cat << "EOF" and EOF
     # and specify std_ascii in "function logo".
     echo -ne "${SColor}"
     #
@@ -298,12 +293,14 @@ function logo {
 }
 function heading {
     clear -x
-    # This is the ASCII that displays after a menu selection is made.
-    #
-    # Uncomment the line below if figlet is not installed
-    # echo; echo -e "${HColor}/// $1 ///${Color_Off}"; echo; return
-    #
-    # Display longer names with smaller font to prevent wrapping.
+    if ! (( "$figlet_exists" )) || ! (( "$lolcat_exists" )); then
+        echo
+        echo -e "${HColor}/// $1 ///${Color_Off}"
+        echo
+        return
+    fi
+    # This ASCII displays after a menu selection is made.
+    # Longer names use a smaller font to prevent wrapping.
     # Assumes 80 column terminal.
     # Wide terminals can use figlet with '-t' or '-w'.
     #
@@ -616,13 +613,12 @@ function status {
         clear -x
         logo
         if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]]; then
-            #sleep 1  # on rare occasions ping doesn't work if sent too soon
             if [[ "$obfuscate" == "enabled" ]]; then
                 echo -e "$ob - Unable to ping Obfuscated Servers"
             elif [[ "$nordhost" == *"onion"* ]]; then
                 ping -c 3 -q "$ipaddr"
             else
-                ping -c 3 -q "$nordhost" # | grep -A4 -i "statistics"
+                ping -c 3 -q "$nordhost"
             fi
             echo
             server_load
@@ -1403,6 +1399,8 @@ function fobfuscate {
 function fmeshnet {
     # https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm
     # https://nordvpn.com/features/meshnet
+    # https://support.nordvpn.com/General-info/Features/1845333902/What-is-Meshnet.htm
+    # https://nordvpn.com/blog/meshnet-feature-launch/
     heading "Meshnet"
     echo "Using NordLynx, Meshnet lets you access devices over encrypted private"
     echo "  tunnels directly, instead of connecting to a VPN server."
@@ -2487,17 +2485,19 @@ function wireguard_gen {
     echo
 }
 function fspeedtest {
-    heading "SpeedTest"
+    heading "SpeedTests"
+    echo
+    echo "Perform download and upload tests using the speedtest-cli,"
+    echo "or open links to run browser-based speed tests."
     echo
     if ! (( "$speedtestcli_exists" )); then
         echo -e "${WColor}speedtest-cli could not be found.${Color_Off}"
         echo "Please install speedtest-cli"
         echo "eg. 'sudo apt install speedtest-cli'"
         echo
-        return
     fi
-    # PS3=$'\n''Select a test: '
-    speedtools=( "Download & Upload" "Download Only" "Upload Only" "Latency & Load" "Exit" )
+    PS3=$'\n''Select a test: '
+    speedtools=( "Download & Upload" "Download Only" "Upload Only" "Latency & Load" "speedtest.net"  "speedof.me" "fast.com" "linode.com" "digitalocean.com" "nperf.com" "Exit" )
     select spd in "${speedtools[@]}"
     do
         case $spd in
@@ -2514,19 +2514,39 @@ function fspeedtest {
                 speedtest-cli --no-download
                 ;;
             "Latency & Load")
-                if [[ "$connected" != "connected" ]]; then
-                    echo; echo -e "(VPN $connectedc)"
+                echo
+                if [[ "$connected" == "connected" ]]; then
+                    echo -e "Connected to: ${EColor}$server.nordvpn.com${Color_Off}"
+                else
+                    echo -e "(VPN $connectedc)"
                 fi
+                echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
                 echo
                 ping -c3 "$nordhost"
                 echo
                 server_load
                 ;;
-            "Exit")
-                echo; echo
-                break
+            "speedtest.net")
+                openlink "http://www.speedtest.net/"
                 ;;
-
+            "speedof.me")
+                openlink "https://speedof.me/"
+                ;;
+            "fast.com")
+                openlink "https://fast.com"
+                ;;
+            "linode.com")
+                openlink "https://www.linode.com/speed-test/"
+                ;;
+            "digitalocean.com")
+                openlink "http://speedtest-blr1.digitalocean.com/"
+                ;;
+            "nperf.com")
+                openlink "https://www.nperf.com/en/"
+                ;;
+            "Exit")
+                ftools
+                ;;
             *)
                 invalid_option "${#speedtools[@]}"
                 ;;
@@ -2549,7 +2569,7 @@ function ftools {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=( "NordVPN API" "External IP" "WireGuard" "Rate VPN Server" "speedtest-cli" "speedtest.net" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "bash.ws" "world map" "Change Host" "Exit" )
+    nettools=( "NordVPN API" "External IP" "WireGuard" "Speed Tests" "Rate VPN Server" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "bash.ws" "world map" "Change Host" "Exit" )
     numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
@@ -2564,19 +2584,11 @@ function ftools {
             "WireGuard")
                 wireguard_gen
                 ;;
-            "Rate VPN Server")
-                rate_server
-                ;;
-            "speedtest-cli")
+            "Speed Tests")
                 fspeedtest
                 ;;
-            "speedtest.net")
-                openlink "http://www.speedtest.net/"
-                #openlink "https://speedof.me/"
-                #openlink "https://fast.com"
-                #openlink "https://www.linode.com/speed-test/"
-                #openlink "http://speedtest-blr1.digitalocean.com/"
-                #openlink "https://www.nperf.com/en/"
+            "Rate VPN Server")
+                rate_server
                 ;;
             "ping vpn")
                 echo
@@ -2604,7 +2616,11 @@ function ftools {
                 ping -c 5 139.130.4.4; echo
                 ;;
             "my traceroute")
-                mtr "$nordhost"
+                echo
+                read -r -p "Destination [Default: $nordhost]: " target
+                target=${target:-$nordhost}
+                echo
+                mtr "$target"
                 ;;
             "ipleak.net")
                 openlink "https://ipleak.net/"
@@ -2904,7 +2920,7 @@ function check_depends {
     done
     #
     # echo results
-    echo -e "${LColor}Check${Color_Off}"
+    echo -e "${LColor}App Check${Color_Off}"
     for program in wg jq curl figlet lolcat highlight speedtest-cli
     do
         name=$( echo "$program" | tr -d '-' )       # remove hyphens
