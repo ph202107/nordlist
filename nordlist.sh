@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
-# June 30, 2022
+# July 4, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -11,7 +11,7 @@
 # scripting is new to me and I'm learning as I go.  I added a
 # lot of comments to help fellow newbies customize the script.
 #
-# It looks like this:
+# Screenshots:
 # https://i.imgur.com/dQhOPWH.png
 # https://i.imgur.com/tlbAxaf.png
 # https://i.imgur.com/EsaXIqY.png
@@ -41,7 +41,7 @@
 # Other small programs used:
 #
 # wireguard-tools  Settings-Tools-WireGuard     (function wireguard_gen)
-# speedtest-cli    Settings-Tools-speedtest-cli (function fspeedtest)
+# speedtest-cli    Settings-Tools-Speed Tests   (function fspeedtest)
 # highlight        Settings-Script              (function fscriptinfo)
 #
 # For VPN On/Off status in the system tray, I use the Linux Mint
@@ -83,7 +83,7 @@ default_host="ca1576.nordvpn.com"
 #
 # Specify any hostname to lookup when testing DNS response time.
 # Can also enter a different hostname later.
-dns_defhost="slashdot.org"
+dns_defhost="reddit.com"
 #
 # Confirm the location of the NordVPN changelog on your system.
 #nordchangelog="/var/lib/dpkg/info/nordvpn.changelog"
@@ -170,7 +170,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2957 (function main_menu). Configure the
+# The Main Menu starts on line 2948 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -797,9 +797,6 @@ function fhostname {
     if [[ -z $specsrvr ]]; then return; fi
     if [[ "$specsrvr" == *"nord"* ]]; then specsrvr=$( echo "$specsrvr" | cut -f1 -d'.' ); fi
     if [[ "$specsrvr" == *"socks"* ]]; then echo -e "${WColor}Unable to connect to SOCKS servers${Color_Off}"; echo; return; fi
-    if [[ "$specsrvr" == *"-"* ]] && [[ "$specsrvr" != *"onion"* ]] && [[ "$technology" == "nordlynx" ]]; then
-        echo -e "${WColor}Double-VPN Servers require OpenVPN${Color_Off}"; echo; return
-    fi
     read -n 1 -r -p "Apply your default config? (y/n) " specdef
     echo
     discon2
@@ -915,8 +912,7 @@ function fdoublevpn {
     echo "following changes will be made (if necessary):"
     echo -e "${LColor}"
     echo "Disconnect the VPN."
-    echo "Set Technology to OpenVPN."
-    echo "Specify the Protocol."
+    echo "Choose the Technology & Protocol."
     echo "Set Obfuscate to disabled."
     echo "Enable the Kill Switch (choice)."
     echo "Connect to the Double_VPN group."
@@ -929,12 +925,7 @@ function fdoublevpn {
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
-        if [[ "$technology" == "nordlynx" ]]; then
-            nordvpn set technology openvpn; wait
-            echo
-            # ask_protocol will update $protocol and $obfuscate
-        fi
-        ask_protocol
+        ftechnology "back"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
             echo
@@ -965,7 +956,7 @@ function fonion {
     echo "following changes will be made (if necessary):"
     echo -e "${LColor}"
     echo "Disconnect the VPN."
-    echo "Specify the Protocol (for OpenVPN)."
+    echo "Choose the Technology & Protocol."
     echo "Set Obfuscate to disabled."
     echo "Enable the Kill Switch (choice)."
     echo "Connect to the Onion_Over_VPN group."
@@ -978,9 +969,7 @@ function fonion {
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
-        if [[ "$technology" == "openvpn" ]]; then
-            ask_protocol
-        fi
+        ftechnology "back"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
             echo
@@ -1009,7 +998,7 @@ function fp2p {
     echo "changes will be made (if necessary):"
     echo -e "${LColor}"
     echo "Disconnect the VPN."
-    echo "Change the Protocol to UDP (choice)."
+    echo "Choose the Technology & Protocol."
     echo "Set Obfuscate to disabled."
     echo "Enable the Kill Switch (choice)."
     echo "Connect to the P2P group $p2pwhere"
@@ -1022,9 +1011,7 @@ function fp2p {
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         discon2
-        if [[ "$protocol" == "TCP" ]]; then
-            ask_protocol
-        fi
+        ftechnology "back"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
             echo
@@ -1046,13 +1033,13 @@ function ftechnology {
     echo
     warning
     echo "OpenVPN is an open-source VPN protocol and is required to"
-    echo " use Obfuscated or Double-VPN servers and to use TCP."
+    echo " use Obfuscated servers and to use TCP."
     echo "NordLynx is built around the WireGuard VPN protocol"
     echo " and may be faster with less overhead."
     echo
     echo -e "Currently using $technologydc."
     echo
-    if [[ "$fast3" =~ ^[Yy]$ ]]; then
+    if [[ "$fast3" =~ ^[Yy]$ ]] && [[ "$1" != "back" ]]; then
         echo -e "${FColor}[F]ast3 is enabled.  Changing the Technology.${Color_Off}"
         REPLY="y"
     elif [[ "$technology" == "openvpn" ]]; then
@@ -1081,9 +1068,10 @@ function ftechnology {
         echo
         echo -e "Continue to use $technologydc."
     fi
-    if [[ "$1" == "obback" ]]; then
+    if [[ "$1" == "back" ]]; then
+        echo
         set_vars
-        fobfuscate
+        return
     fi
     main_menu
 }
@@ -1135,7 +1123,7 @@ function fprotocol {
 }
 function ask_protocol {
     # Ask to choose TCP/UDP if changing to OpenVPN, using Obfuscate,
-    # and when connecting to Obfuscated or Double-VPN Servers
+    # and when connecting to Obfuscated Servers
     #
     # set $protocol if technology just changed from NordLynx
     set_vars
@@ -1353,7 +1341,7 @@ function fobfuscate {
         read -n 1 -r -p "Go to the 'Technology' setting and return? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            ftechnology "obback"
+            ftechnology "back"
         fi
     else
         warning
@@ -1777,7 +1765,10 @@ function fwhitelist {
         echo -ne "$wl "
         printf '%s\n' "${whitelist[@]}"
     fi
-    if [[ "$1" == "back" ]]; then echo; return; fi
+    if [[ "$1" == "back" ]]; then
+        echo
+        return
+    fi
     main_menu
 }
 function login_nogui {
