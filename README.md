@@ -4,7 +4,7 @@ Tested with Linux Mint only (Debian/Ubuntu base).
 Fully customizable. 
 
 
-It looks like this:  
+Screenshots:  
 https://i.imgur.com/dQhOPWH.png  
 https://i.imgur.com/tlbAxaf.png  
 https://i.imgur.com/EsaXIqY.png  
