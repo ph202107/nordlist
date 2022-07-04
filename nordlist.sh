@@ -170,7 +170,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2948 (function main_menu). Configure the
+# The Main Menu starts on line 2949 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1342,6 +1342,7 @@ function fobfuscate {
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             ftechnology "back"
+            fobfuscate
         fi
     else
         warning
