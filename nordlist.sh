@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
-# July 4, 2022
+# July 16, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -30,19 +30,21 @@
 #       "chmod +x nordlist.sh"
 # 3) To generate ASCII images and to use NordVPN API functions
 #       these small programs are required *
-#       eg "sudo apt install figlet lolcat curl jq"
+#       eg. "sudo apt install figlet lolcat curl jq"
 # 4) At the terminal type "nordlist.sh"
 #
-# =====================================================================
-# * The script will work without figlet and lolcat by specifying
+# (*) The script will work without figlet and lolcat by specifying
 #   "std_ascii" in "function logo"
 #
 # =====================================================================
-# Other small programs used:
+# Other programs used:
 #
 # wireguard-tools  Settings-Tools-WireGuard     (function wireguard_gen)
 # speedtest-cli    Settings-Tools-Speed Tests   (function fspeedtest)
 # highlight        Settings-Script              (function fscriptinfo)
+#
+# eg.   "sudo apt install wireguard wireguard-tools"
+#       "sudo apt install speedtest-cli highlight"
 #
 # For VPN On/Off status in the system tray, I use the Linux Mint
 # Cinnamon applet "NordVPN Indicator".  Github may have similar apps.
@@ -170,7 +172,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2949 (function main_menu). Configure the
+# The Main Menu starts on line 2978 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -279,7 +281,7 @@ function custom_ascii {
 }
 function logo {
     set_vars
-    if [[ "$1" != "tools" ]]; then
+    if [[ "$1" != "stats" ]]; then
         #
         # Specify  std_ascii or custom_ascii on the line below.
         custom_ascii
@@ -578,7 +580,7 @@ function ipinfobl {
 }
 function getexternalip {
     echo -n "External IP: "
-    readarray -t ipinfo < <( timeout 5 curl --silent ipinfo.io )
+    readarray -t ipinfo < <( timeout 10 curl --silent ipinfo.io )
     extip=$( ipinfobl "ip" )
     exthost=$( ipinfobl "hostname" )
     extorg=$( ipinfobl "org" )
@@ -615,6 +617,13 @@ function status {
         if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]]; then
             if [[ "$obfuscate" == "enabled" ]]; then
                 echo -e "$ob - Unable to ping Obfuscated Servers"
+            elif [[ "$technology" == "openvpn" ]]; then
+                echo -e "$technologydc - Server IP will not respond to ping."
+                if [[ "$exitip" =~ ^[Yy]$ ]]; then
+                    echo "Will ping your external IP instead."
+                else
+                    echo "Enable 'exitip' to ping your external IP instead."
+                fi
             elif [[ "$nordhost" == *"onion"* ]]; then
                 ping -c 3 -q "$ipaddr"
             else
@@ -626,6 +635,10 @@ function status {
     fi
     if [[ "$exitip" =~ ^[Yy]$ ]]; then
         getexternalip
+        if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ "$technology" == "openvpn" ]] && [[ "$obfuscate" == "disabled" ]] && [[ -n "$extip" ]]; then
+            ping -c 3 -q "$extip" | grep -A4 -i "statistics"
+            echo
+        fi
     fi
     date
     echo
@@ -804,8 +817,8 @@ function fhostname {
     echo "Connect to $specsrvr"
     echo
     nordvpn connect "$specsrvr"
-    status
     if [[ ! "$exitlogo" =~ ^[Yy]$ ]]; then set_vars; fi
+    status
     # test commands
     # app commands
     #
@@ -900,7 +913,6 @@ function fobservers {
     fi
 }
 function fdoublevpn {
-    # Not available with NordLynx
     # Not available with obfuscate enabled
     heading "Double-VPN"
     echo "Double VPN is a privacy solution that sends your internet"
@@ -1123,7 +1135,7 @@ function fprotocol {
 }
 function ask_protocol {
     # Ask to choose TCP/UDP if changing to OpenVPN, using Obfuscate,
-    # and when connecting to Obfuscated Servers
+    # and when connecting to the Obfuscated Servers group
     #
     # set $protocol if technology just changed from NordLynx
     set_vars
@@ -2311,7 +2323,7 @@ function allvpnservers {
 function nordapi {
     # Commands copied from:
     # https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
-    heading "NordVPN API"
+    heading "Nord API"
     echo "Query the NordVPN Public API.  Requires 'curl' and 'jq'"
     echo "Commands may take a few seconds to complete."
     echo
@@ -2479,6 +2491,7 @@ function wireguard_gen {
 function fspeedtest {
     heading "SpeedTests"
     echo
+    logo "stats"
     echo "Perform download and upload tests using the speedtest-cli,"
     echo "or open links to run browser-based speed tests."
     echo
@@ -2511,10 +2524,27 @@ function fspeedtest {
                     echo -e "Connected to: ${EColor}$server.nordvpn.com${Color_Off}"
                 else
                     echo -e "(VPN $connectedc)"
+                    read -r -p "Enter a Hostname/IP [Default $default_host]: " nordhost
+                    nordhost=${nordhost:-$default_host}
+                    echo
                 fi
                 echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
                 echo
-                ping -c3 "$nordhost"
+                if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]]; then
+                    if [[ "$obfuscate" == "enabled" ]]; then
+                        echo -e "$ob - Unable to ping Obfuscated Servers"
+                    else
+                        echo -e "$technologydc - Server IP will not respond to ping."
+                        echo "Attempt to ping your external IP instead."
+                        echo
+                        getexternalip
+                        if [[ -n "$extip" ]]; then
+                            ping -c 3 "$extip"
+                        fi
+                    fi
+                else
+                    ping -c 3 "$nordhost"
+                fi
                 echo
                 server_load
                 ;;
@@ -2548,11 +2578,10 @@ function fspeedtest {
 function ftools {
     heading "Tools"
     if [[ "$connected" == "connected" ]]; then
-        logo "tools"
+        logo "stats"
         PS3=$'\n''Choose an option: '
     else
-        echo -e "${WColor}** VPN is Disconnected **${Color_Off}"
-        echo
+        echo -e "(VPN $connectedc)"
         read -r -p "Enter a Hostname/IP [Default $default_host]: " nordhost
         nordhost=${nordhost:-$default_host}
         echo
@@ -2968,7 +2997,7 @@ function main_menu {
         case $opt in
             "Vancouver")
                 discon
-                #set_defaults    # Apply default settings for this connection.
+                set_defaults    # Apply default settings for this connection.
                 nordvpn connect Vancouver
                 status
                 break
@@ -3221,17 +3250,21 @@ main_menu start
 #       https://support.nordvpn.com/Connectivity/macOS/1061815912/Manual-connection-setup-with-Tunnelblick-on-macOS.htm
 #       https://downloads.nordcdn.com/configs/archives/servers/ovpn_xor.zip
 #
-# Manage NordVPN OpenVPN connections
-#   https://github.com/jotyGill/openpyn-nordvpn
-#
-# OpenVPN Control Script
-#   https://gist.github.com/aivanise/58226db6491f3339cbfa645a9dc310c0
-#
 # NordLynx stability issues
 #   Install WireGuard + WireGuard-Tools
 #       sudo apt install wireguard wireguard-tools
 #   https://wiki.archlinux.org/title/NordVPN
 #       > (NordVPN) unmentioned dependency on wireguard-tools
+#
+# Disable IPv6
+#   https://support.nordvpn.com/Connectivity/Linux/1047409212/How-to-disable-IPv6-on-Linux.htm
+#   Blocked by default:  https://nordvpn.com/blog/nordvpn-implements-ipv6-leak-protection
+#
+# Manage NordVPN OpenVPN connections
+#   https://github.com/jotyGill/openpyn-nordvpn
+#
+# OpenVPN Control Script
+#   https://gist.github.com/aivanise/58226db6491f3339cbfa645a9dc310c0
 #
 # Reconnect Scripts
 #   https://github.com/mmnaseri/nordvpn-reconnect
@@ -3288,4 +3321,6 @@ main_menu start
 #   ~/.local/share/cinnamon/applets/nordvpn-indicator@nickdurante/applet.js
 #   Line 111 - Change [0] to [1]
 #       let result = status.split("\n")[1].split(": ")[1];
+#   Reload applet
+#       dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordvpn-indicator@nickdurante' string:'APPLET'
 #
