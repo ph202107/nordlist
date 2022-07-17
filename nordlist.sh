@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
-# July 16, 2022
+# July 17, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -47,7 +47,7 @@
 #       "sudo apt install speedtest-cli highlight"
 #
 # For VPN On/Off status in the system tray, I use the Linux Mint
-# Cinnamon applet "NordVPN Indicator".  Github may have similar apps.
+# Cinnamon applet "Bash Sensors".  The config is in the 'Notes" below.
 #
 # =====================================================================
 # Note: These functions require a sudo password:
@@ -3290,6 +3290,28 @@ main_menu start
 #       https://cinnamon-spices.linuxmint.com/applets/view/331
 #   VPN Look-Out Applet
 #       https://cinnamon-spices.linuxmint.com/applets/view/305
+#
+#   Bash Sensors
+#       https://cinnamon-spices.linuxmint.com/applets/view/231
+#       Show the NordVPN connection status in the system tray and load nordlist.sh on click.
+#       Green Checkmark = Connected, Red X = Disconnected
+#
+#       Title:  NordVPN
+#       Refresh Interval:  15 seconds or choose
+#       Shell:  bash
+#       Command 1:
+#           if [[ "$(nordvpn status | grep -i "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')" == "connected" ]]; then echo -e "\u2705"; else echo -e "\u274c"; fi
+#       Two Line Mode:  Off
+#       Icon:  Off
+#       Dynamic Tooltip:  On
+#       Tooltip Command:
+#           echo "NordVPN"; echo "$(nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City")"
+#       Command on Applet Click:
+#           gnome-terminal -- bash -c "echo -e '\033]2;'NORD'\007'; PATH_TO_SCRIPT/nordlist.sh; exec bash"
+#       Display Output:  Off
+#       Command on Startup:  Off
+#
+#       Alternate Symbols: https://unicode-table.com/en/sets/check/
 #
 # Other Troubleshooting
 #   systemctl status nordvpnd.service
