@@ -32,6 +32,7 @@ Then:
 NordVPN versions 3.12.4, 3.12.5, 3.13.0, 3.14.0, 3.14.1 currently have these issues:
 
  - Problems connecting to any specific location while the Kill Switch is enabled.  
+ - Problems connecting to any specific location while Obfuscate is enabled.
  - Problems connecting to Groups when specifying a location. 
  - The "Notify" setting has been broken for the last 10 (ten) versions, since 3.11.0 (Sept 2021).
 
