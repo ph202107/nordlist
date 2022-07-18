@@ -3310,7 +3310,10 @@ main_menu start
 #       Icon:  Off
 #       Dynamic Tooltip:  On
 #       Tooltip Command:
-#           echo "NordVPN"; echo "$(nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City")"
+#           Show the connection status and city:
+#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
+#           Show the entire output of "nordvpn status":
+#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
 #       Command on Applet Click:
 #           gnome-terminal -- bash -c "echo -e '\033]2;'NORD'\007'; PATH_TO_SCRIPT/nordlist.sh; exec bash"
 #       Display Output:  Off
