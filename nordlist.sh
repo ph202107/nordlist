@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
-# July 17, 2022
+# July 18, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -47,7 +47,7 @@
 #       "sudo apt install speedtest-cli highlight"
 #
 # For VPN On/Off status in the system tray, I use the Linux Mint
-# Cinnamon applet "Bash Sensors".  The config is in the 'Notes" below.
+# Cinnamon applet "Bash Sensors".  The config is in the "Notes" below.
 #
 # =====================================================================
 # Note: These functions require a sudo password:
@@ -172,7 +172,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2978 (function main_menu). Configure the
+# The Main Menu starts on line 2983 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -618,16 +618,14 @@ function status {
             if [[ "$obfuscate" == "enabled" ]]; then
                 echo -e "$ob - Unable to ping Obfuscated Servers"
             elif [[ "$technology" == "openvpn" ]]; then
-                echo -e "$technologydc - Server IP will not respond to ping."
-                if [[ "$exitip" =~ ^[Yy]$ ]]; then
-                    echo "Will ping your external IP instead."
-                else
-                    echo "Enable 'exitip' to ping your external IP instead."
+                echo -e "$technologydc - Ping the External IP instead of Server IP"
+                if [[ ! "$exitip" =~ ^[Yy]$ ]]; then
+                    echo "Set exitip=\"y\" to enable"
                 fi
             elif [[ "$nordhost" == *"onion"* ]]; then
-                ping -c 3 -q "$ipaddr"
+                ping -c 3 -q "$ipaddr" | grep -A4 -i "statistics"
             else
-                ping -c 3 -q "$nordhost"
+                ping -c 3 -q "$nordhost" | grep -A4 -i "statistics"
             fi
             echo
             server_load
@@ -635,9 +633,16 @@ function status {
     fi
     if [[ "$exitip" =~ ^[Yy]$ ]]; then
         getexternalip
-        if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ "$technology" == "openvpn" ]] && [[ "$obfuscate" == "disabled" ]] && [[ -n "$extip" ]]; then
-            ping -c 3 -q "$extip" | grep -A4 -i "statistics"
-            echo
+        if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ "$obfuscate" != "enabled" ]] && [[ -n "$extip" ]]; then
+            if [[ "$technology" == "openvpn" ]]; then
+                ping -c 3 -q "$extip" | grep -A4 -i "statistics"
+                echo
+            elif [[ "$server" == *"-"* ]] && [[ "$server" != *"onion"* ]]; then
+                # ping both hops of Double-VPN servers when using NordLynx
+                echo -ne "${LColor}(Double-VPN) ${Color_Off}"
+                ping -c 3 -q "$extip" | grep -A4 -i "statistics"
+                echo
+            fi
         fi
     fi
     date
@@ -3293,7 +3298,7 @@ main_menu start
 #
 #   Bash Sensors
 #       https://cinnamon-spices.linuxmint.com/applets/view/231
-#       Show the NordVPN connection status in the system tray and load nordlist.sh on click.
+#       Shows the NordVPN connection status in the system tray and runs nordlist.sh when clicked.
 #       Green Checkmark = Connected, Red X = Disconnected
 #
 #       Title:  NordVPN
