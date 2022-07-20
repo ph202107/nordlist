@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
-# July 18, 2022
+# July 19, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -106,9 +106,12 @@ alwaysrate="y"
 # Show the logo when the script exits.  "y" or "n"
 exitlogo="y"
 #
-# When exitlogo="y", also ping the connected server and query
-# the server load.  Requires 'curl' and 'jq'.  "y" or "n"
+# Ping the connected server when the script exits.  "y" or "n"
 exitping="n"
+#
+# Query the server load when the script exits.  "y" or "n"
+# Requires 'curl' and 'jq'.  
+exitload="n"
 #
 # Show your external IP address when the script exits.  "y" or "n"
 # Requires 'curl'.  Connects to ipinfo.io.
@@ -172,7 +175,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2983 (function main_menu). Configure the
+# The Main Menu starts on line 2993 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -594,7 +597,7 @@ function getexternalip {
         echo
     elif [[ -n "$extlimit" ]]; then
         echo -e "${WColor}$extlimit${Color_Off}"
-        echo "You've hit the daily limit for the unauthenticated API."
+        echo "This IP has hit the daily limit for the unauthenticated API."
         echo
     else
         set_vars
@@ -614,20 +617,26 @@ function status {
     if [[ "$exitlogo" =~ ^[Yy]$ ]]; then
         clear -x
         logo
-        if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]]; then
+    else
+        set_vars
+    fi
+    if [[ "$connected" == "connected" ]]; then
+        if [[ "$exitping" =~ ^[Yy]$ ]]; then
             if [[ "$obfuscate" == "enabled" ]]; then
                 echo -e "$ob - Unable to ping Obfuscated Servers"
             elif [[ "$technology" == "openvpn" ]]; then
-                echo -e "$technologydc - Ping the External IP instead of Server IP"
+                echo -ne "$technologydc - Ping the External IP"
                 if [[ ! "$exitip" =~ ^[Yy]$ ]]; then
-                    echo "Set exitip=\"y\" to enable"
+                    echo -ne " (Set ${FColor}exitip=\"y\"${Color_Off} to enable)"
                 fi
-            elif [[ "$nordhost" == *"onion"* ]]; then
-                ping -c 3 -q "$ipaddr" | grep -A4 -i "statistics"
+                echo
             else
-                ping -c 3 -q "$nordhost" | grep -A4 -i "statistics"
+                echo -ne "${LColor}($nordhost) ${Color_Off}"
+                ping -c 3 -q "$ipaddr" | grep -A4 -i "statistics"
             fi
             echo
+        fi
+        if [[ "$exitload" =~ ^[Yy]$ ]]; then
             server_load
         fi
     fi
@@ -635,6 +644,7 @@ function status {
         getexternalip
         if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ "$obfuscate" != "enabled" ]] && [[ -n "$extip" ]]; then
             if [[ "$technology" == "openvpn" ]]; then
+                echo -ne "${LColor}(External IP) ${Color_Off}"
                 ping -c 3 -q "$extip" | grep -A4 -i "statistics"
                 echo
             elif [[ "$server" == *"-"* ]] && [[ "$server" != *"onion"* ]]; then
@@ -3182,15 +3192,11 @@ main_menu start
 #   May need to re-add repo
 #   sudo apt update
 #   Show versions:
-#       apt-cache showpkg nordvpn
 #       apt list -a nordvpn
 #   Examples:
-#       sudo apt install nordvpn=3.7.4
-#       sudo apt install nordvpn=3.8.10
-#       sudo apt install nordvpn=3.9.5-1
-#       sudo apt install nordvpn=3.10.0-1
-#       sudo apt install nordvpn=3.11.0-1
-#       sudo apt install nordvpn=3.12.0-1
+#       sudo apt install nordvpn=3.12.5
+#       sudo apt install nordvpn=3.13.0
+#       sudo apt install nordvpn=3.14.0
 #
 # GPG error: https//repo.nordvpn.com: The following signatures couldn't be verified
 # because the public key is not available: NO_PUBKEY
@@ -3310,9 +3316,9 @@ main_menu start
 #       Icon:  Off
 #       Dynamic Tooltip:  On
 #       Tooltip Command:
-#           Show the connection status and city:
+#           To show the connection status and city:
 #               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
-#           Show the entire output of "nordvpn status":
+#           To show the entire output of "nordvpn status":
 #               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
 #       Command on Applet Click:
 #           gnome-terminal -- bash -c "echo -e '\033]2;'NORD'\007'; PATH_TO_SCRIPT/nordlist.sh; exec bash"
