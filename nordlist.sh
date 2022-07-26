@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
-# July 19, 2022
+# July 26, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -110,7 +110,7 @@ exitlogo="y"
 exitping="n"
 #
 # Query the server load when the script exits.  "y" or "n"
-# Requires 'curl' and 'jq'.  
+# Requires 'curl' and 'jq'.
 exitload="n"
 #
 # Show your external IP address when the script exits.  "y" or "n"
@@ -175,7 +175,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2993 (function main_menu). Configure the
+# The Main Menu starts on line 2997 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -822,20 +822,27 @@ function fhostname {
     echo "Leave blank to quit."
     read -r -p "Enter the server name (eg. us9364): " specsrvr
     echo
-    if [[ -z $specsrvr ]]; then return; fi
-    if [[ "$specsrvr" == *"nord"* ]]; then specsrvr=$( echo "$specsrvr" | cut -f1 -d'.' ); fi
-    if [[ "$specsrvr" == *"socks"* ]]; then echo -e "${WColor}Unable to connect to SOCKS servers${Color_Off}"; echo; return; fi
-    read -n 1 -r -p "Apply your default config? (y/n) " specdef
-    echo
+    if [[ -z $specsrvr ]]; then
+        echo -e "${DColor}(Skipped)${Color_Off}"
+        echo
+        return
+    elif [[ "$specsrvr" == *"nord"* ]]; then
+        specsrvr=$( echo "$specsrvr" | cut -f1 -d'.' )
+    elif [[ "$specsrvr" == *"socks"* ]]; then
+        echo -e "${WColor}Unable to connect to SOCKS servers${Color_Off}"
+        echo
+        return
+    fi
+    read -n 1 -r -p "Apply your default config? (y/n) "; echo
     discon2
-    if [[ $specdef =~ ^[Yy]$ ]]; then set_defaults; fi
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        set_defaults
+    fi
     echo "Connect to $specsrvr"
     echo
     nordvpn connect "$specsrvr"
-    if [[ ! "$exitlogo" =~ ^[Yy]$ ]]; then set_vars; fi
     status
-    # test commands
-    # app commands
+    # add testing commands here
     #
     # https://streamtelly.com/check-netflix-region/
     # echo "Netflix Region and Status"
@@ -1237,17 +1244,20 @@ function change_setting {
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if [[ "$chgvar" == "disabled" ]]; then
-            if [[ "$1" == "threatprotectionlite" ]] && [[ "$dns_set" != "disabled" ]]; then
+            if [[ "$1" == "killswitch" ]] && [[ "$firewall" == "disabled" ]]; then
+                # when connecting to Groups or changing the setting from IPTables
+                echo -e "${WColor}Enabling the Firewall.${Color_Off}"
+                echo
+                nordvpn set firewall enabled; wait
+                echo
+            elif [[ "$1" == "threatprotectionlite" ]] && [[ "$dns_set" != "disabled" ]]; then
                 nordvpn set dns disabled; wait
                 echo
             elif [[ "$1" == "autoconnect" ]] && [[ -n $acwhere ]]; then
                 echo -e "$chgname to ${LColor}$chgloc${Color_Off}"
                 echo
-            elif [[ "$1" == "killswitch" ]] && [[ "$firewall" == "disabled" ]]; then
-                # when connecting to Groups or changing the setting from IPTables
-                echo -e "${WColor}Enabling the Firewall.${Color_Off}"
-                echo
-                nordvpn set firewall enabled; wait
+            elif [[ "$1" == "meshnet" ]]; then
+                echo -e "${WColor}Wait 30s to refresh the peer list.${Color_Off}"
                 echo
             fi
             nordvpn set "$1" enabled $chgloc; wait
@@ -1264,7 +1274,10 @@ function change_setting {
     else
         echo -e "$chgind Keep $chgname $chgvarc."
     fi
-    if [[ "$2" == "override" ]]; then echo; return; fi
+    if [[ "$2" == "override" ]]; then
+        echo
+        return
+    fi
     main_menu
 }
 function ffirewall {
@@ -1429,7 +1442,6 @@ function fmeshnet {
     echo
     PS3=$'\n''Choose an Option: '
     submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Support" "Exit")
-    numsubmesh=${#submesh[@]}
     select mesh in "${submesh[@]}"
     do
         case $mesh in
@@ -1627,7 +1639,7 @@ function fmeshnet {
                 main_menu
                 ;;
             *)
-                invalid_option "$numsubmesh"
+                invalid_option "${#submesh[@]}"
                 ;;
         esac
     done
@@ -1651,7 +1663,6 @@ function fcustomdns {
     # Note submcdns[@] - new entries should keep the same format for the "Test Servers" option
     # eg Name<space>DNS1<space>DNS2
     submcdns=("Nord 103.86.96.100 103.86.99.100" "AdGuard 94.140.14.14 94.140.15.15" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
-    numsubmcnds=${#submcdns[@]}
     select cdns in "${submcdns[@]}"
     do
         case $cdns in
@@ -1742,7 +1753,7 @@ function fcustomdns {
                 main_menu
                 ;;
             *)
-                invalid_option "$numsubmcnds"
+                invalid_option "${#submcdns[@]}"
                 ;;
         esac
     done
@@ -1827,7 +1838,6 @@ function faccount {
     echo
     PS3=$'\n''Choose an Option: '
     submacct=("Login (legacy)" "Login (browser)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "Exit")
-    numsubmacct=${#submacct[@]}
     select acc in "${submacct[@]}"
     do
         case $acc in
@@ -1912,7 +1922,7 @@ function faccount {
                 main_menu
                 ;;
             *)
-                invalid_option "$numsubmacct"
+                invalid_option "${#submacct[@]}"
                 ;;
         esac
     done
@@ -2040,7 +2050,6 @@ function fiptables {
     echo -e "${Color_Off}"
     PS3=$'\n''Choose an option: '
     submipt=("View IPTables" "Firewall" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "ping google" "Disconnect" "Exit")
-    numsubmipt=${#submipt[@]}
     select smipt in "${submipt[@]}"
     do
         case $smipt in
@@ -2160,7 +2169,7 @@ function fiptables {
                 main_menu
                 ;;
             *)
-                invalid_option "$numsubmipt"
+                invalid_option "${#submipt[@]}"
                 ;;
         esac
     done
@@ -2229,7 +2238,6 @@ function allvpnservers {
     echo
     PS3=$'\n''Choose an option: '
     submallvpn=("List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Update List" "Exit")
-    numsubmallvpn=${#submallvpn[@]}
     select smavpn in "${submallvpn[@]}"
     do
         case $smavpn in
@@ -2330,7 +2338,7 @@ function allvpnservers {
                 nordapi
                 ;;
             *)
-                invalid_option "$numsubmallvpn"
+                invalid_option "${#submallvpn[@]}"
                 ;;
         esac
     done
@@ -2349,7 +2357,6 @@ function nordapi {
     echo
     PS3=$'\n''API Call: '
     submapi=("Host Server Load" "Host Server Info" "Top 15 Recommended" "Top 15 By Country" "#Servers per Country" "All VPN Servers" "Change Host" "Connect" "Exit")
-    numsubmapi=${#submapi[@]}
     select sma in "${submapi[@]}"
     do
         case $sma in
@@ -2404,7 +2411,7 @@ function nordapi {
                 main_menu
                 ;;
             *)
-                invalid_option "$numsubmapi"
+                invalid_option "${#submapi[@]}"
                 ;;
         esac
     done
@@ -2606,7 +2613,6 @@ function ftools {
         PS3=$'\n''Choose an option (VPN Off): '
     fi
     nettools=( "NordVPN API" "External IP" "WireGuard" "Speed Tests" "Rate VPN Server" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "bash.ws" "world map" "Change Host" "Exit" )
-    numnettools=${#nettools[@]}
     select tool in "${nettools[@]}"
     do
         case $tool in
@@ -2704,7 +2710,7 @@ function ftools {
                 main_menu
                 ;;
             *)
-                invalid_option "$numnettools"
+                invalid_option "${#nettools[@]}"
                 ;;
         esac
     done
@@ -2822,7 +2828,6 @@ function fgroups {
     echo
     PS3=$'\n''Choose a Group: '
     submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Exit")
-    numsubmgroups=${#submgroups[@]}
     select smg in "${submgroups[@]}"
     do
         case $smg in
@@ -2845,7 +2850,7 @@ function fgroups {
                 main_menu
                 ;;
             *)
-                invalid_option "$numsubmgroups"
+                invalid_option "${#submgroups[@]}"
                 ;;
         esac
     done
@@ -2857,7 +2862,6 @@ function fsettings {
     echo
     PS3=$'\n''Choose a Setting: '
     submsett=("Technology" "Protocol" "Firewall" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
-    numsubmsett=${#submsett[@]}
     select sms in "${submsett[@]}"
     do
         case $sms in
@@ -2922,7 +2926,7 @@ function fsettings {
                 main_menu
                 ;;
             *)
-                invalid_option "$numsubmsett"
+                invalid_option "${#submsett[@]}"
                 ;;
         esac
     done
@@ -3006,7 +3010,6 @@ function main_menu {
     #
     mainmenu=( "Vancouver" "Seattle" "Los_Angeles" "Denver" "Atlanta" "US_Cities" "CA_Cities" "P2P_Canada" "Discord" "QuickConnect" "Countries" "Groups" "Settings" "Disconnect" "Exit" )
     #
-    nummainmenu=${#mainmenu[@]}
     select opt in "${mainmenu[@]}"
     do
         case $opt in
@@ -3105,7 +3108,7 @@ function main_menu {
                 break
                 ;;
             *)
-                invalid_option "$nummainmenu"
+                invalid_option "${#mainmenu[@]}"
                 main_menu
                 ;;
         esac
@@ -3227,7 +3230,7 @@ main_menu start
 #       Computer
 #           2. Open the copied URL in your web browser
 #           3. Complete the login procedure
-#           4. Right click on the 'Return to App' button and select 'Copy link'
+#           4. Right click on the 'Continue' button and select 'Copy link'
 #       SSH
 #           5. Run 'nordvpn login --callback <copied link>'
 #           6. Run 'nordvpn account' to verify that the login was successful
@@ -3305,32 +3308,58 @@ main_menu start
 #   Bash Sensors
 #       https://cinnamon-spices.linuxmint.com/applets/view/231
 #       Shows the NordVPN connection status in the system tray and runs nordlist.sh when clicked.
+#
+#       To use the NordVPN icons from https://github.com/ph202107/nordlist/tree/main/icons
+#       Download the icons to your device and modify "PATH_TO_ICON" in the command below.
+#       Green = Connected, Red = Disconnected
+#           Title:  NordVPN
+#           Refresh Interval:  15 seconds or choose
+#           Shell:  bash
+#           Command 1: blank
+#           Two Line Mode:  Off
+#           Dynamic Icon:  On
+#           Static Icon or Command:
+#               if [[ "$(nordvpn status | grep -i "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')" == "connected" ]]; then echo "PATH_TO_ICON/nord.round.green.png"; else echo "PATH_TO_ICON/nord.round.red.png"; fi
+#           Dynamic Tooltip:  On
+#           Tooltip Command:
+#               To show the connection status and city:
+#                   echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
+#               To show the entire output of "nordvpn status":
+#                   echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
+#           Command on Applet Click:
+#               gnome-terminal -- bash -c "echo -e '\033]2;'NORD'\007'; PATH_TO_SCRIPT/nordlist.sh; exec bash"
+#           Display Output:  Off
+#           Command on Startup:  blank
+#
+#       To use unicode symbols
 #       Green Checkmark = Connected, Red X = Disconnected
-#
-#       Title:  NordVPN
-#       Refresh Interval:  15 seconds or choose
-#       Shell:  bash
-#       Command 1:
-#           if [[ "$(nordvpn status | grep -i "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')" == "connected" ]]; then echo -e "\u2705"; else echo -e "\u274c"; fi
-#       Two Line Mode:  Off
-#       Icon:  Off
-#       Dynamic Tooltip:  On
-#       Tooltip Command:
-#           To show the connection status and city:
-#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
-#           To show the entire output of "nordvpn status":
-#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
-#       Command on Applet Click:
-#           gnome-terminal -- bash -c "echo -e '\033]2;'NORD'\007'; PATH_TO_SCRIPT/nordlist.sh; exec bash"
-#       Display Output:  Off
-#       Command on Startup:  Off
-#
 #       Alternate Symbols: https://unicode-table.com/en/sets/check/
+#           Title:  NordVPN
+#           Refresh Interval:  15 seconds or choose
+#           Shell:  bash
+#           Command 1:
+#               if [[ "$(nordvpn status | grep -i "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')" == "connected" ]]; then echo -e "\u2705"; else echo -e "\u274c"; fi
+#           Two Line Mode:  Off
+#           Dynamic Icon:  Off
+#           Static Icon or Command: blank
+#           Dynamic Tooltip:  On
+#           Tooltip Command:
+#               To show the connection status and city:
+#                   echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
+#               To show the entire output of "nordvpn status":
+#                   echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
+#           Command on Applet Click:
+#               gnome-terminal -- bash -c "echo -e '\033]2;'NORD'\007'; PATH_TO_SCRIPT/nordlist.sh; exec bash"
+#           Display Output:  Off
+#           Command on Startup:  blank
+#
+#
 #
 # Other Troubleshooting
 #   systemctl status nordvpnd.service
 #   systemctl status nordvpn.service
 #   journalctl -u nordvpnd.service
+#   journalctl -u nordvpnd > ~/Downloads/nordlog.txt
 #   journalctl -xe
 #   sudo service network-manager restart
 #   sudo service nordvpnd restart
