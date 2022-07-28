@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
-# July 26, 2022
+# July 28, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -59,6 +59,10 @@
 # =====================================================================
 # CUSTOMIZATION
 # (all of these are optional)
+#
+# When changing servers disconnect the VPN first, then connect to the
+# new server.  "y" or "n"
+disconnect="n"
 #
 # Specify your P2P preferred location.  Choose a Country or a City.
 # eg  p2pwhere="Canada"  or  p2pwhere="Toronto"
@@ -554,10 +558,15 @@ function set_vars {
     fi
 }
 function discon {
+    # $1 = force a disconnect
+    #
     heading "$opt"
     echo
     echo "Option $REPLY - Connect to $opt"
     echo
+    if [[ "$disconnect" =~ ^[Nn]$ ]] && [[ "$1" != "force" ]]; then
+        return
+    fi
     set_vars
     if [[ "$connected" == "connected" ]]; then
         echo -e "${WColor}** Disconnect **${Color_Off}"
@@ -569,8 +578,13 @@ function discon {
     fi
 }
 function discon2 {
-    set_vars
+    # $1 = force a disconnect
+    #
     echo
+    if [[ "$disconnect" =~ ^[Nn]$ ]] && [[ "$1" != "force" ]]; then
+        return
+    fi
+    set_vars
     if [[ "$connected" == "connected" ]]; then
         echo -e "${WColor}** Disconnect **${Color_Off}"
         echo
@@ -821,23 +835,19 @@ function fhostname {
     echo
     echo "Leave blank to quit."
     read -r -p "Enter the server name (eg. us9364): " specsrvr
-    echo
     if [[ -z $specsrvr ]]; then
         echo -e "${DColor}(Skipped)${Color_Off}"
         echo
         return
-    elif [[ "$specsrvr" == *"nord"* ]]; then
-        specsrvr=$( echo "$specsrvr" | cut -f1 -d'.' )
     elif [[ "$specsrvr" == *"socks"* ]]; then
+        echo
         echo -e "${WColor}Unable to connect to SOCKS servers${Color_Off}"
         echo
         return
+    elif [[ "$specsrvr" == *"nord"* ]]; then
+        specsrvr=$( echo "$specsrvr" | cut -f1 -d'.' )
     fi
-    read -n 1 -r -p "Apply your default config? (y/n) "; echo
     discon2
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        set_defaults
-    fi
     echo "Connect to $specsrvr"
     echo
     nordvpn connect "$specsrvr"
@@ -911,7 +921,7 @@ function fobservers {
         read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2
+        discon2 "force"
         if [[ "$technology" == "nordlynx" ]]; then
             nordvpn set technology openvpn; wait
             echo
@@ -958,7 +968,7 @@ function fdoublevpn {
         read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2
+        discon2 "force"
         ftechnology "back"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
@@ -1002,7 +1012,7 @@ function fonion {
         read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2
+        discon2 "force"
         ftechnology "back"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
@@ -1044,7 +1054,7 @@ function fp2p {
         read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2
+        discon2 "force"
         ftechnology "back"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
@@ -1082,7 +1092,7 @@ function ftechnology {
         read -n 1 -r -p "Change the Technology to OpenVPN? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2
+        discon2 "force"
         if [[ "$technology" == "openvpn" ]]; then
             if [[ "$obfuscate" == "enabled" ]]; then
                 nordvpn set obfuscate disabled; wait
@@ -1142,7 +1152,7 @@ function fprotocol {
             read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
         fi
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            discon2
+            discon2 "force"
             if [[ "$protocol" == "UDP" ]]; then
                 nordvpn set protocol TCP; wait
             else
@@ -1180,7 +1190,7 @@ function ask_protocol {
         read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2
+        discon2 "force"
         if [[ "$protocol" == "UDP" ]]; then
             nordvpn set protocol TCP; wait
         else
@@ -1410,7 +1420,7 @@ function fobfuscate {
             read -n 1 -r -p "$obprompt"; echo
         fi
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            discon2
+            discon2 "force"
             if [[ "$obfuscate" == "enabled" ]]; then
                 nordvpn set obfuscate disabled; wait
             else
@@ -1855,7 +1865,7 @@ function faccount {
                 login_nogui
                 ;;
             "Logout")
-                discon2
+                discon2 "force"
                 nordvpn logout
                 echo
                 ;;
@@ -1874,7 +1884,7 @@ function faccount {
                 echo
                 read -n 1 -r -p "Proceed? (y/n) "; echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    discon2
+                    discon2 "force"
                     nordvpn register
                 fi
                 ;;
@@ -1998,7 +2008,7 @@ function freset {
         if [[ "$killswitch" == "enabled" ]]; then
             nordvpn set killswitch disabled; wait
         fi
-        discon2
+        discon2 "force"
         nordvpn logout; wait
         echo
         nordvpn whitelist remove all; wait
@@ -2128,7 +2138,7 @@ function fiptables {
                     if [[ "$autocon" == "enabled" ]]; then
                         change_setting "autoconnect" "override"
                     fi
-                    discon2
+                    discon2 "force"
                     echo -e "${LColor}Restart NordVPN services. Wait 10s${Color_Off}"
                     echo
                     sudo systemctl restart nordvpnd.service
@@ -2159,7 +2169,7 @@ function fiptables {
                     read -n 1 -r -p "$(echo -e "${WColor}Disconnect the VPN?${Color_Off} (y/n) ")"; echo
                     echo
                     if [[ $REPLY =~ ^[Yy]$ ]]; then
-                        discon2
+                        discon2 "force"
                     fi
                 fi
                 fiptables_status
@@ -2723,7 +2733,7 @@ function fdefaults {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2
+        discon2 "force"
         set_defaults
         read -n 1 -r -p "$(echo -e "$defaultsc  Go to the 'Whitelist' setting? (y/n) ")"
         echo
@@ -2940,7 +2950,7 @@ function fdisconnect {
     if [[ "$alwaysrate" =~ ^[Yy]$ ]]; then
         rate_server
     fi
-    discon2
+    discon2 "force"
     status
     exit
 }
@@ -3014,8 +3024,8 @@ function main_menu {
     do
         case $opt in
             "Vancouver")
-                discon
-                set_defaults    # Apply default settings for this connection.
+                discon "force"      # Force a disconnect
+                set_defaults        # Apply default settings
                 nordvpn connect Vancouver
                 status
                 break
@@ -3055,9 +3065,8 @@ function main_menu {
                 cities
                 ;;
             "P2P_Canada")
-                heading "P2P Canada"
-                discon2
-                set_defaults
+                discon "force"      # Force a disconnect
+                set_defaults        # Apply default settings
                 nordvpn connect --group p2p Canada
                 status
                 break
@@ -3306,8 +3315,9 @@ main_menu start
 #       https://cinnamon-spices.linuxmint.com/applets/view/305
 #
 #   Bash Sensors
-#       https://cinnamon-spices.linuxmint.com/applets/view/231
 #       Shows the NordVPN connection status in the system tray and runs nordlist.sh when clicked.
+#       Mint-Menu - "Applets" - Download tab - "Bash-Sensors" - Install - Manage tab - (+)Add to panel
+#       https://cinnamon-spices.linuxmint.com/applets/view/231
 #
 #       To use the NordVPN icons from https://github.com/ph202107/nordlist/tree/main/icons
 #       Download the icons to your device and modify "PATH_TO_ICON" in the command below.
@@ -3352,8 +3362,6 @@ main_menu start
 #               gnome-terminal -- bash -c "echo -e '\033]2;'NORD'\007'; PATH_TO_SCRIPT/nordlist.sh; exec bash"
 #           Display Output:  Off
 #           Command on Startup:  blank
-#
-#
 #
 # Other Troubleshooting
 #   systemctl status nordvpnd.service
