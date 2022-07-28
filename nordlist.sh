@@ -179,7 +179,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2997 (function main_menu). Configure the
+# The Main Menu starts on line 3006 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -212,6 +212,7 @@ function set_defaults {
     # - Obfuscate requires OpenVPN
     # - Kill Switch requires Firewall
     # - TPLite disables CustomDNS and vice versa
+    # - Changing the Technology, Protocol, or Obfuscate setting requires a disconnect
     #
     # For each setting uncomment one of the two choices (or neither).
     #
@@ -557,27 +558,7 @@ function set_vars {
         fst=""
     fi
 }
-function discon {
-    # $1 = force a disconnect
-    #
-    heading "$opt"
-    echo
-    echo "Option $REPLY - Connect to $opt"
-    echo
-    if [[ "$disconnect" =~ ^[Nn]$ ]] && [[ "$1" != "force" ]]; then
-        return
-    fi
-    set_vars
-    if [[ "$connected" == "connected" ]]; then
-        echo -e "${WColor}** Disconnect **${Color_Off}"
-        echo
-        nordvpn disconnect; wait
-        echo
-        echo "Connect to $opt"
-        echo
-    fi
-}
-function discon2 {
+function disconnectvpn {
     # $1 = force a disconnect
     #
     echo
@@ -781,7 +762,7 @@ function cities {
         echo
         echo -e "Connecting to ${LColor}${citylist[0]}${Color_Off}."
         echo
-        discon2
+        disconnectvpn
         nordvpn connect "$xcountry"
         status
         exit
@@ -793,7 +774,7 @@ function cities {
             main_menu
         elif [[ "$xcity" == "Best" ]]; then
             heading "$xcountry"
-            discon2
+            disconnectvpn
             echo "Connecting to the best available city."
             echo
             nordvpn connect "$xcountry"
@@ -803,7 +784,7 @@ function cities {
             heading "$rcity"
             echo
             echo "Random choice = $rcity"
-            discon2
+            disconnectvpn
             echo "Connecting to $rcity $xcountry"
             echo
             nordvpn connect "$rcity"
@@ -811,7 +792,7 @@ function cities {
             exit
         elif (( 1 <= REPLY )) && (( REPLY <= numcities )); then
             heading "$xcity"
-            discon2
+            disconnectvpn
             echo "Connecting to $xcity $xcountry"
             echo
             nordvpn connect "$xcity"
@@ -847,7 +828,7 @@ function fhostname {
     elif [[ "$specsrvr" == *"nord"* ]]; then
         specsrvr=$( echo "$specsrvr" | cut -f1 -d'.' )
     fi
-    discon2
+    disconnectvpn
     echo "Connect to $specsrvr"
     echo
     nordvpn connect "$specsrvr"
@@ -867,7 +848,7 @@ function ffullrandom {
     create_list "city"
     #
     heading "Random"
-    discon2
+    disconnectvpn
     echo "Connect to $rcity $rcountry"
     echo
     nordvpn connect "$rcity"
@@ -921,7 +902,7 @@ function fobservers {
         read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2 "force"
+        disconnectvpn "force"
         if [[ "$technology" == "nordlynx" ]]; then
             nordvpn set technology openvpn; wait
             echo
@@ -968,7 +949,7 @@ function fdoublevpn {
         read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2 "force"
+        disconnectvpn "force"
         ftechnology "back"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
@@ -1012,7 +993,7 @@ function fonion {
         read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2 "force"
+        disconnectvpn "force"
         ftechnology "back"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
@@ -1054,7 +1035,7 @@ function fp2p {
         read -n 1 -r -p "Proceed? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2 "force"
+        disconnectvpn "force"
         ftechnology "back"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
@@ -1092,7 +1073,7 @@ function ftechnology {
         read -n 1 -r -p "Change the Technology to OpenVPN? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2 "force"
+        disconnectvpn "force"
         if [[ "$technology" == "openvpn" ]]; then
             if [[ "$obfuscate" == "enabled" ]]; then
                 nordvpn set obfuscate disabled; wait
@@ -1152,7 +1133,7 @@ function fprotocol {
             read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
         fi
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            discon2 "force"
+            disconnectvpn "force"
             if [[ "$protocol" == "UDP" ]]; then
                 nordvpn set protocol TCP; wait
             else
@@ -1190,7 +1171,7 @@ function ask_protocol {
         read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2 "force"
+        disconnectvpn "force"
         if [[ "$protocol" == "UDP" ]]; then
             nordvpn set protocol TCP; wait
         else
@@ -1420,7 +1401,7 @@ function fobfuscate {
             read -n 1 -r -p "$obprompt"; echo
         fi
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            discon2 "force"
+            disconnectvpn "force"
             if [[ "$obfuscate" == "enabled" ]]; then
                 nordvpn set obfuscate disabled; wait
             else
@@ -1865,7 +1846,7 @@ function faccount {
                 login_nogui
                 ;;
             "Logout")
-                discon2 "force"
+                disconnectvpn "force"
                 nordvpn logout
                 echo
                 ;;
@@ -1884,7 +1865,7 @@ function faccount {
                 echo
                 read -n 1 -r -p "Proceed? (y/n) "; echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    discon2 "force"
+                    disconnectvpn "force"
                     nordvpn register
                 fi
                 ;;
@@ -2008,7 +1989,7 @@ function freset {
         if [[ "$killswitch" == "enabled" ]]; then
             nordvpn set killswitch disabled; wait
         fi
-        discon2 "force"
+        disconnectvpn "force"
         nordvpn logout; wait
         echo
         nordvpn whitelist remove all; wait
@@ -2138,7 +2119,7 @@ function fiptables {
                     if [[ "$autocon" == "enabled" ]]; then
                         change_setting "autoconnect" "override"
                     fi
-                    discon2 "force"
+                    disconnectvpn "force"
                     echo -e "${LColor}Restart NordVPN services. Wait 10s${Color_Off}"
                     echo
                     sudo systemctl restart nordvpnd.service
@@ -2169,7 +2150,7 @@ function fiptables {
                     read -n 1 -r -p "$(echo -e "${WColor}Disconnect the VPN?${Color_Off} (y/n) ")"; echo
                     echo
                     if [[ $REPLY =~ ^[Yy]$ ]]; then
-                        discon2 "force"
+                        disconnectvpn "force"
                     fi
                 fi
                 fiptables_status
@@ -2733,7 +2714,7 @@ function fdefaults {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        discon2 "force"
+        disconnectvpn "force"
         set_defaults
         read -n 1 -r -p "$(echo -e "$defaultsc  Go to the 'Whitelist' setting? (y/n) ")"
         echo
@@ -2770,12 +2751,13 @@ function fscriptinfo {
 function fquickconnect {
     # This is an alternate method of connecting to the NordVPN recommended server.
     # In some cases it may be faster than using "nordvpn connect"
-    # Will disconnect (if KillSwitch is disabled) to find the nearest best server.
+    # Can disconnect (if KillSwitch is disabled) to find the nearest best server.
     # Requires 'curl' and 'jq'
     # Auguss82 via github
     heading "QuickConnect"
     if [[ "$killswitch" == "disabled" ]]; then
-        discon2
+        # will disconnect if "disconnect=y"
+        disconnectvpn
     fi
     echo
     echo "Getting the recommended server... "
@@ -2822,7 +2804,7 @@ function fgroups_all {
             main_menu
         elif (( 1 <= REPLY )) && (( REPLY <= numgroups )); then
             heading "$xgroup"
-            discon2
+            disconnectvpn
             echo "Connecting to $xgroup."
             echo
             nordvpn connect --group "$xgroup"
@@ -2950,7 +2932,7 @@ function fdisconnect {
     if [[ "$alwaysrate" =~ ^[Yy]$ ]]; then
         rate_server
     fi
-    discon2 "force"
+    disconnectvpn "force"
     status
     exit
 }
@@ -2983,6 +2965,23 @@ function check_depends {
         fi
         echo "  $program"
     done
+}
+function mm_checkd {
+    # Disconnection options for typical main menu connection
+    # $1 = Force a disconnect regardless of setting "disconnect=y/n"
+    # $2 = Apply default settings after forced disconnection
+    #
+    heading "$opt"
+    if [[ "$1" == "force" ]]; then
+        disconnectvpn "force"
+        if [[ "$2" == "defaults" ]]; then
+            set_defaults
+        fi
+    else
+        disconnectvpn       # will only disconnect if "disconnect=y"
+    fi
+    echo "Connect to $opt"
+    echo
 }
 function main_menu {
     if [[ "$1" == "start" ]]; then
@@ -3024,32 +3023,31 @@ function main_menu {
     do
         case $opt in
             "Vancouver")
-                discon "force"      # Force a disconnect
-                set_defaults        # Apply default settings
+                mm_checkd
                 nordvpn connect Vancouver
                 status
                 break
                 ;;
             "Seattle")
-                discon
+                mm_checkd
                 nordvpn connect Seattle
                 status
                 break
                 ;;
             "Los_Angeles")
-                discon
+                mm_checkd
                 nordvpn connect Los_Angeles
                 status
                 break
                 ;;
             "Denver")
-                discon
+                mm_checkd
                 nordvpn connect Denver
                 status
                 break
                 ;;
             "Atlanta")
-                discon
+                mm_checkd
                 nordvpn connect Atlanta
                 status
                 break
@@ -3065,8 +3063,8 @@ function main_menu {
                 cities
                 ;;
             "P2P_Canada")
-                discon "force"      # Force a disconnect
-                set_defaults        # Apply default settings
+                # force a disconnect and apply default settings
+                mm_checkd "force" "defaults"
                 nordvpn connect --group p2p Canada
                 status
                 break
@@ -3076,10 +3074,7 @@ function main_menu {
                 # avoid repeat authentication requests. It then opens a URL.
                 # It may be useful for other sites or applications.
                 # Example: NordVPN discord  https://discord.gg/83jsvGqpGk
-                heading "Discord"
-                discon2
-                echo "Connect to us8247 for Discord"
-                echo
+                mm_checkd
                 nordvpn connect us8247
                 status
                 openlink "https://discord.gg/83jsvGqpGk"
