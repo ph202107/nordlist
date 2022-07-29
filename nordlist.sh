@@ -2966,7 +2966,7 @@ function check_depends {
         echo "  $program"
     done
 }
-function mm_checkd {
+function mm_header {
     # Disconnection options for typical main menu connection
     # $1 = Force a disconnect regardless of setting "disconnect=y/n"
     # $2 = Apply default settings after forced disconnection
@@ -3023,31 +3023,31 @@ function main_menu {
     do
         case $opt in
             "Vancouver")
-                mm_checkd
+                mm_header
                 nordvpn connect Vancouver
                 status
                 break
                 ;;
             "Seattle")
-                mm_checkd
+                mm_header
                 nordvpn connect Seattle
                 status
                 break
                 ;;
             "Los_Angeles")
-                mm_checkd
+                mm_header
                 nordvpn connect Los_Angeles
                 status
                 break
                 ;;
             "Denver")
-                mm_checkd
+                mm_header
                 nordvpn connect Denver
                 status
                 break
                 ;;
             "Atlanta")
-                mm_checkd
+                mm_header
                 nordvpn connect Atlanta
                 status
                 break
@@ -3064,7 +3064,7 @@ function main_menu {
                 ;;
             "P2P_Canada")
                 # force a disconnect and apply default settings
-                mm_checkd "force" "defaults"
+                mm_header "force" "defaults"
                 nordvpn connect --group p2p Canada
                 status
                 break
@@ -3074,7 +3074,7 @@ function main_menu {
                 # avoid repeat authentication requests. It then opens a URL.
                 # It may be useful for other sites or applications.
                 # Example: NordVPN discord  https://discord.gg/83jsvGqpGk
-                mm_checkd
+                mm_header
                 nordvpn connect us8247
                 status
                 openlink "https://discord.gg/83jsvGqpGk"
