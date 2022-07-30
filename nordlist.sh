@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.14.1 on Linux Mint 20.3
-# July 28, 2022
+# Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
+# July 30, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -60,10 +60,6 @@
 # CUSTOMIZATION
 # (all of these are optional)
 #
-# When changing servers disconnect the VPN first, then connect to the
-# new server.  "y" or "n"
-disconnect="n"
-#
 # Specify your P2P preferred location.  Choose a Country or a City.
 # eg  p2pwhere="Canada"  or  p2pwhere="Toronto"
 p2pwhere=""
@@ -104,6 +100,10 @@ wgdir="/home/$USER/Downloads"
 # Settings - Tools - NordVPN API - All VPN Servers - Update List
 allvpnfile="/home/$USER/Downloads/allnordservers.txt"
 #
+# When changing servers disconnect the VPN first, then connect to the
+# new server.  "y" or "n"
+disconnect="n"
+#
 # Always 'Rate Server' when disconnecting via the main menu. "y" or "n"
 alwaysrate="y"
 #
@@ -123,7 +123,7 @@ exitip="n"
 #
 # Open http links in a new Firefox window.  "y" or "n"
 # Choose "n" to use the default browser or method.
-usefirefox="n"
+newfirefox="n"
 #
 # Set 'menuwidth' to your terminal width or lower eg. menuwidth="70"
 # Lowering the value will compact the menus horizontally.
@@ -671,7 +671,7 @@ function openlink {
             return
         fi
     fi
-    if [[ "$1" == *"http"* ]] && [[ "$usefirefox" =~ ^[Yy]$ ]]; then
+    if [[ "$1" == *"http"* ]] && [[ "$newfirefox" =~ ^[Yy]$ ]]; then
         nohup /usr/bin/firefox --new-window "$1" > /dev/null 2>&1 &
     else
         nohup xdg-open "$1" > /dev/null 2>&1 &
@@ -893,7 +893,7 @@ function fobservers {
     echo "Specify the Protocol."
     echo "Set Obfuscate to enabled."
     echo "Enable the Kill Switch (choice)."
-    echo "Connect to the Obfuscated_Servers group $obwhere"
+    echo -e "Connect to the Obfuscated_Servers group ${EColor}$obwhere"
     echo -e "${Color_Off}"
     if [[ "$fast4" =~ ^[Yy]$ ]]; then
         echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
@@ -914,7 +914,7 @@ function fobservers {
             echo
         fi
         killswitch_groups
-        echo -e "Connect to the Obfuscated_Servers group ${LColor}$obwhere${Color_Off}"
+        echo -e "Connect to the Obfuscated_Servers group ${EColor}$obwhere${Color_Off}"
         echo
         nordvpn connect --group Obfuscated_Servers $obwhere
         status
@@ -1026,7 +1026,7 @@ function fp2p {
     echo "Choose the Technology & Protocol."
     echo "Set Obfuscate to disabled."
     echo "Enable the Kill Switch (choice)."
-    echo "Connect to the P2P group $p2pwhere"
+    echo -e "Connect to the P2P group ${EColor}$p2pwhere"
     echo -e "${Color_Off}"
     if [[ "$fast4" =~ ^[Yy]$ ]]; then
         echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
@@ -1042,7 +1042,7 @@ function fp2p {
             echo
         fi
         killswitch_groups
-        echo -e "Connect to the P2P group ${LColor}$p2pwhere${Color_Off}"
+        echo -e "Connect to the P2P group ${EColor}$p2pwhere${Color_Off}"
         echo
         nordvpn connect --group P2P $p2pwhere
         status
@@ -2156,7 +2156,7 @@ function fiptables {
                 fiptables_status
                 ;;
             "Exit")
-                sudo -K     # timeout sudo
+                #sudo -K     # timeout sudo
                 main_menu
                 ;;
             *)
@@ -2756,7 +2756,7 @@ function fquickconnect {
     # Auguss82 via github
     heading "QuickConnect"
     if [[ "$killswitch" == "disabled" ]]; then
-        # will disconnect if "disconnect=y"
+        # will disconnect if $disconnect="y" or use: disconnectvpn "force"
         disconnectvpn
     fi
     echo
@@ -2967,9 +2967,9 @@ function check_depends {
     done
 }
 function mm_header {
-    # Disconnection options for typical main menu connection
-    # $1 = Force a disconnect regardless of setting "disconnect=y/n"
-    # $2 = Apply default settings after forced disconnection
+    # Disconnect options for typical main menu connection
+    # $1 = Force a disconnect regardless if $disconnect="y/n"
+    # $2 = Apply default settings after forced disconnect
     #
     heading "$opt"
     if [[ "$1" == "force" ]]; then
@@ -2978,7 +2978,7 @@ function mm_header {
             set_defaults
         fi
     else
-        disconnectvpn       # will only disconnect if "disconnect=y"
+        disconnectvpn       # will only disconnect if $disconnect="y"
     fi
     echo "Connect to $opt"
     echo
