@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# July 30, 2022
+# August 2, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -46,8 +46,9 @@
 # eg.   "sudo apt install wireguard wireguard-tools"
 #       "sudo apt install speedtest-cli highlight"
 #
-# For VPN On/Off status in the system tray, I use the Linux Mint
-# Cinnamon applet "Bash Sensors".  The config is in the "Notes" below.
+# For VPN On/Off status on the desktop I use the Linux Mint Cinnamon
+# applet "Bash Sensors". Screenshot: https://i.imgur.com/fLOoyiJ.jpg
+# The config is in the "Notes" at the bottom of the script.
 #
 # =====================================================================
 # Note: These functions require a sudo password:
@@ -212,7 +213,8 @@ function set_defaults {
     # - Obfuscate requires OpenVPN
     # - Kill Switch requires Firewall
     # - TPLite disables CustomDNS and vice versa
-    # - Changing the Technology, Protocol, or Obfuscate setting requires a disconnect
+    # - Changing the Technology, Protocol, or Obfuscate setting requires a disconnect.
+    #       Can use (disconnectvpn "force") before calling this function.
     #
     # For each setting uncomment one of the two choices (or neither).
     #
@@ -562,15 +564,14 @@ function disconnectvpn {
     # $1 = force a disconnect
     #
     echo
-    if [[ "$disconnect" =~ ^[Nn]$ ]] && [[ "$1" != "force" ]]; then
-        return
-    fi
-    set_vars
-    if [[ "$connected" == "connected" ]]; then
-        echo -e "${WColor}** Disconnect **${Color_Off}"
-        echo
-        nordvpn disconnect; wait
-        echo
+    if [[ "$disconnect" =~ ^[Yy]$ ]] || [[ "$1" == "force" ]]; then
+        set_vars
+        if [[ "$connected" == "connected" ]]; then
+            echo -e "${WColor}** Disconnect **${Color_Off}"
+            echo
+            nordvpn disconnect; wait
+            echo
+        fi
     fi
 }
 function ipinfobl {
@@ -1893,9 +1894,6 @@ function faccount {
                 echo "https://support.nordvpn.com/"
                 echo "https://nordvpn.com/contact-us/"
                 echo
-                echo -e "${LColor}Direct link to online chat${Color_Off}"
-                echo "https://v2.zopim.com/widget/popout.html?key=oxKZnmXv4KZ1uFO78i56rMEovdYXH2jm"
-                echo
                 echo -e "${LColor}Terms of Service${Color_Off}"
                 echo "https://my.nordaccount.com/legal/terms-of-service/"
                 echo
@@ -1926,6 +1924,7 @@ function frestart {
     echo "Send commands:"
     echo "nordvpn set killswitch disabled (choice)"
     echo "nordvpn set autoconnect disabled (choice)"
+    echo "nordvpn disconnect"
     echo "sudo systemctl restart nordvpnd.service"
     echo "sudo systemctl restart nordvpn.service"
     echo -e "${Color_Off}"
@@ -1939,6 +1938,7 @@ function frestart {
         if [[ "$autocon" == "enabled" ]]; then
             change_setting "autoconnect" "override"
         fi
+        disconnectvpn "force"
         echo -e "${LColor}sudo systemctl restart nordvpnd.service${Color_Off}"
         echo -e "${LColor}sudo systemctl restart nordvpn.service${Color_Off}"
         sudo systemctl restart nordvpnd.service
@@ -3316,7 +3316,7 @@ main_menu start
 #
 #       To use the NordVPN icons from https://github.com/ph202107/nordlist/tree/main/icons
 #       Download the icons to your device and modify "PATH_TO_ICON" in the command below.
-#       Green = Connected, Red = Disconnected
+#       Green = Connected, Red = Disconnected.  Screenshot:  https://i.imgur.com/fLOoyiJ.jpg
 #           Title:  NordVPN
 #           Refresh Interval:  15 seconds or choose
 #           Shell:  bash
