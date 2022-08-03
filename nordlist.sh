@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# August 2, 2022
+# August 3, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -180,7 +180,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 3006 (function main_menu). Configure the
+# The Main Menu starts on line 3004 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -304,10 +304,18 @@ function logo {
     # all indicators: $techpro$fw$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst
 }
 function heading {
+    # $1 = heading
+    # $2 = use regular text
+    # $3 = use alternate color for regular text
+    #
     clear -x
-    if ! (( "$figlet_exists" )) || ! (( "$lolcat_exists" )); then
+    if ! (( "$figlet_exists" )) || ! (( "$lolcat_exists" )) || [[ "$2" == "txt" ]]; then
         echo
-        echo -e "${HColor}/// $1 ///${Color_Off}"
+        if [[ "$3" == "alt" ]]; then
+            echo -e "${H2Color}== $1 ==${Color_Off}"
+        else
+            echo -e "${H1Color}== $1 ==${Color_Off}"
+        fi
         echo
         return
     fi
@@ -322,7 +330,7 @@ function heading {
         figlet -f small "$1" | lolcat -p 1000
     else                            # more than 18 characters
         echo
-        echo -e "${HColor}/// $1 ///${Color_Off}"
+        echo -e "${H1Color}== $1 ==${Color_Off}"
         echo
     fi
     COLUMNS=$menuwidth
@@ -396,7 +404,8 @@ function colors {
     WColor=${BRed}          # Warnings, errors, disconnects
     LColor=${LCyan}         # 'Changes' lists and key info text
     SColor=${BBlue}         # Color for the std_ascii image
-    HColor=${BGreen}        # Non-figlet headings
+    H1Color=${LGreen}       # Non-figlet headings
+    H2Color=${LCyan}        # Non-figlet headings alternate
     # logo
     CNColor=${LGreen}       # Connected status
     DNColor=${LRed}         # Disconnected status
@@ -747,7 +756,7 @@ function cities {
     echo
     if [[ "$xcountry" == "Sarajevo" ]]; then  # special case
         xcountry="Bosnia_and_Herzegovina"
-        echo -e "${HColor}/// $xcountry ///${Color_Off}"
+        echo -e "${H1Color}== $xcountry ==${Color_Off}"
         echo
     fi
     if [[ "$obfuscate" == "enabled" ]]; then
@@ -761,7 +770,7 @@ function cities {
         echo
         echo "Only one available city in $xcountry."
         echo
-        echo -e "Connecting to ${LColor}${citylist[0]}${Color_Off}."
+        echo -e "Connect to ${LColor}${citylist[0]}${Color_Off}."
         echo
         disconnectvpn
         nordvpn connect "$xcountry"
@@ -776,17 +785,15 @@ function cities {
         elif [[ "$xcity" == "Best" ]]; then
             heading "$xcountry"
             disconnectvpn
-            echo "Connecting to the best available city."
+            echo "Connect to the best available city."
             echo
             nordvpn connect "$xcountry"
             status
             exit
         elif [[ "$xcity" == "Random" ]]; then
-            heading "$rcity"
-            echo
-            echo "Random choice = $rcity"
+            heading "Random"
             disconnectvpn
-            echo "Connecting to $rcity $xcountry"
+            echo "Connect to $rcity $xcountry"
             echo
             nordvpn connect "$rcity"
             status
@@ -794,7 +801,7 @@ function cities {
         elif (( 1 <= REPLY )) && (( REPLY <= numcities )); then
             heading "$xcity"
             disconnectvpn
-            echo "Connecting to $xcity $xcountry"
+            echo "Connect to $xcity $xcountry"
             echo
             nordvpn connect "$xcity"
             status
@@ -1172,7 +1179,6 @@ function ask_protocol {
         read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        disconnectvpn "force"
         if [[ "$protocol" == "UDP" ]]; then
             nordvpn set protocol TCP; wait
         else
@@ -1438,30 +1444,29 @@ function fmeshnet {
     do
         case $mesh in
             "Enable/Disable")
-                echo
+                clear -x; echo
                 change_setting "meshnet" "override"
                 set_vars
                 fmeshnet
                 ;;
             "Peer List")
-                echo
-                echo -e "${EColor}== Peer List ==${Color_Off}"
+                heading "Peer List" "txt"
                 echo "Lists available peers in a meshnet."
-                echo "'nordvpn meshnet peer list'"
+                echo
+                echo -e "${H1Color}nordvpn meshnet peer list${Color_Off}"
                 echo
                 nordvpn meshnet peer list
                 ;;
             "Peer Refresh")
-                echo
-                echo -e "${EColor}== Peer Refresh ==${Color_Off}"
+                heading "Peer Refresh" "txt"
                 echo "Refreshes the meshnet in case it was not updated automatically."
-                echo "'nordvpn meshnet peer refresh'"
+                echo
+                echo -e "${H1Color}nordvpn meshnet peer refresh${Color_Off}"
                 echo
                 nordvpn meshnet peer refresh
                 ;;
             "Peer Remove")
-                echo
-                echo -e "${EColor}== Peer Remove ==${Color_Off}"
+                heading "Peer Remove" "txt"
                 echo "Removes a peer from the meshnet."
                 echo
                 echo "Enter the public_key, hostname, or IP address."
@@ -1477,8 +1482,7 @@ function fmeshnet {
                 fi
                 ;;
             "Peer Incoming")
-                echo
-                echo -e "${EColor}== Peer Incoming ==${Color_Off}"
+                heading "Peer Incoming" "txt"
                 echo "Peers under the same account are automatically added to the meshnet."
                 echo "Allow or Deny a meshnet peer's incoming traffic to this device."
                 echo
@@ -1500,8 +1504,7 @@ function fmeshnet {
                 fi
                 ;;
             "Peer Routing")
-                echo
-                echo -e "${EColor}== Peer Routing ==${Color_Off}"
+                heading "Peer Routing" "txt"
                 echo "Allow or Deny a meshnet peer routing traffic through this device."
                 echo
                 echo "Usage: nordvpn meshnet peer routing [command options] [public_key|hostname|ip]"
@@ -1522,8 +1525,7 @@ function fmeshnet {
                 fi
                 ;;
             "Peer Connect")
-                echo
-                echo -e "${EColor}== Peer Connect ==${Color_Off}"
+                heading "Peer Connect" "txt"
                 echo "Treats a peer as a VPN server and connects to it if the"
                 echo " peer has allowed traffic routing."
                 echo
@@ -1540,16 +1542,15 @@ function fmeshnet {
                 fi
                 ;;
             "Invite List")
-                echo
-                echo -e "${LColor}== Invite List ==${Color_Off}"
+                heading "Invite List" "txt" "alt"
                 echo "Displays the list of all sent and received meshnet invitations."
-                echo "'nordvpn meshnet invite list'"
+                echo
+                echo -e "${H2Color}nordvpn meshnet invite list${Color_Off}"
                 echo
                 nordvpn meshnet invite list
                 ;;
             "Invite Send")
-                echo
-                echo -e "${LColor}== Invite Send ==${Color_Off}"
+                heading "Invite Send" "txt" "alt"
                 echo "Sends an invitation to join the mesh network."
                 echo
                 echo "Usage: nordvpn meshnet invite send [command options] [email]"
@@ -1569,8 +1570,7 @@ function fmeshnet {
                 fi
                 ;;
             "Invite Accept")
-                echo
-                echo -e "${LColor}== Invite Accept ==${Color_Off}"
+                heading "Invite Accept" "txt" "alt"
                 echo "Accepts an invitation to join the inviter's mesh network."
                 echo
                 echo "Usage: nordvpn meshnet invite accept [command options] [email]"
@@ -1590,8 +1590,7 @@ function fmeshnet {
                 fi
                 ;;
             "Invite Deny")
-                echo
-                echo -e "${LColor}== Invite Deny ==${Color_Off}"
+                heading "Invite Deny" "txt" "alt"
                 echo "Denies an invitation to join the inviter's mesh network."
                 echo
                 echo "Enter the email address to deny."
@@ -1607,8 +1606,7 @@ function fmeshnet {
                 fi
                 ;;
             "Invite Revoke")
-                echo
-                echo -e "${LColor}== Invite Revoke ==${Color_Off}"
+                heading "Invite Revoke" "txt" "alt"
                 echo "Revokes a sent invitation."
                 echo
                 echo "Enter the email address to revoke."
@@ -1624,7 +1622,7 @@ function fmeshnet {
                 fi
                 ;;
             "Support")
-                echo
+                heading "Support" "txt" "alt"
                 openlink "https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm" "ask"
                 ;;
             "Exit")
@@ -2778,7 +2776,7 @@ function fquickconnect {
         echo
         nordvpn connect
     else
-        echo -e "Connecting to ${LColor}$bestserver${Color_Off}"
+        echo -e "Connect to ${LColor}$bestserver${Color_Off}"
         echo
         nordvpn connect "$bestserver"
     fi
@@ -2805,7 +2803,7 @@ function fgroups_all {
         elif (( 1 <= REPLY )) && (( REPLY <= numgroups )); then
             heading "$xgroup"
             disconnectvpn
-            echo "Connecting to $xgroup."
+            echo "Connect to the $xgroup group."
             echo
             nordvpn connect --group "$xgroup"
             status
@@ -2985,7 +2983,7 @@ function mm_header {
 }
 function main_menu {
     if [[ "$1" == "start" ]]; then
-        echo -e "${HColor}Welcome to nordlist!${Color_Off}"
+        echo -e "${EIColor}Welcome to nordlist!${Color_Off}"
         echo
     elif [[ "$fast1" =~ ^[Yy]$ ]]; then
         echo
