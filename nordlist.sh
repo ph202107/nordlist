@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# August 3, 2022
+# August 10, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -59,19 +59,18 @@
 #
 # =====================================================================
 # CUSTOMIZATION
-# (all of these are optional)
 #
-# Specify your P2P preferred location.  Choose a Country or a City.
-# eg  p2pwhere="Canada"  or  p2pwhere="Toronto"
+# Specify your P2P preferred location.  (Optional)
+# eg. p2pwhere="Canada" or p2pwhere="Toronto"
 p2pwhere=""
 #
-# Specify your Obfuscated_Servers location. Choose a Country or a City.
+# Specify your Obfuscated_Servers location. (Optional)
 # The location must support obfuscation.
-# eg  obwhere="United_States"  or  obwhere="Los_Angeles"
+# eg. obwhere="United_States" or obwhere="Los_Angeles"
 obwhere=""
 #
-# Specify your Auto-Connect location. Choose a Country or a City.
-# eg  acwhere="Australia"  or  acwhere="Sydney"
+# Specify your Auto-Connect location. (Optional)
+# eg. acwhere="Australia" or acwhere="Sydney"
 # When obfuscate is enabled, the location must support obfuscation.
 acwhere=""
 #
@@ -180,7 +179,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 3004 (function main_menu). Configure the
+# The Main Menu starts on line 2998 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -209,20 +208,21 @@ function set_defaults {
     echo -e "${WColor}** 'function set_defaults' not configured **${Color_Off}"; echo; return
     #
     # Notes:
+    # - The VPN will be disconnected
     # - NordLynx is UDP only
     # - Obfuscate requires OpenVPN
     # - Kill Switch requires Firewall
     # - TPLite disables CustomDNS and vice versa
-    # - Changing the Technology, Protocol, or Obfuscate setting requires a disconnect.
-    #       Can use (disconnectvpn "force") before calling this function.
     #
     # For each setting uncomment one of the two choices (or neither).
+    #
+    disconnectvpn "force"
     #
     if [[ "$technology" == "openvpn" ]]; then nordvpn set technology nordlynx; set_vars; fi
     #if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; set_vars; fi
     #
-    if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi    # uppercase TCP
-    #if [[ "$protocol" == "UDP" ]]; then nordvpn set protocol TCP; fi   # uppercase UDP
+    if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi
+    #if [[ "$protocol" == "UDP" ]]; then nordvpn set protocol TCP; fi
     #
     if [[ "$firewall" == "disabled" ]]; then nordvpn set firewall enabled; fi
     #if [[ "$firewall" == "enabled" ]]; then nordvpn set firewall disabled; fi
@@ -2031,12 +2031,12 @@ function fiptables {
     heading "IPTables"
     echo "Flushing the IPTables may help resolve problems enabling or"
     echo "disabling the KillSwitch or with other connection issues."
-    echo -e "${WColor}"
-    echo "** WARNING **"
+    echo
+    echo -e "${WColor}** WARNING **${Color_Off}"
     echo "  - This will CLEAR all of your Firewall rules"
     echo "  - Review 'function fiptables' before use"
     echo "  - Commands require 'sudo'"
-    echo -e "${Color_Off}"
+    echo
     PS3=$'\n''Choose an option: '
     submipt=("View IPTables" "Firewall" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "ping google" "Disconnect" "Exit")
     select smipt in "${submipt[@]}"
@@ -2712,7 +2712,6 @@ function fdefaults {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        disconnectvpn "force"
         set_defaults
         read -n 1 -r -p "$(echo -e "$defaultsc  Go to the 'Whitelist' setting? (y/n) ")"
         echo
@@ -2965,16 +2964,11 @@ function check_depends {
     done
 }
 function mm_header {
-    # Disconnect options for typical main menu connection
-    # $1 = Force a disconnect regardless if $disconnect="y/n"
-    # $2 = Apply default settings after forced disconnect
+    # $1 = Force a disconnect and apply default settings
     #
     heading "$opt"
-    if [[ "$1" == "force" ]]; then
-        disconnectvpn "force"
-        if [[ "$2" == "defaults" ]]; then
-            set_defaults
-        fi
+    if [[ "$1" == "defaults" ]]; then
+        set_defaults
     else
         disconnectvpn       # will only disconnect if $disconnect="y"
     fi
@@ -3062,7 +3056,7 @@ function main_menu {
                 ;;
             "P2P_Canada")
                 # force a disconnect and apply default settings
-                mm_header "force" "defaults"
+                mm_header "defaults"
                 nordvpn connect --group p2p Canada
                 status
                 break
