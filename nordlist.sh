@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# August 10, 2022
+# August 14, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -128,7 +128,7 @@ newfirefox="n"
 # Set 'menuwidth' to your terminal width or lower eg. menuwidth="70"
 # Lowering the value will compact the menus horizontally.
 # Leave blank to have the menu width change with the window size.
-menuwidth=""
+menuwidth="70"
 #
 # =====================================================================
 # FAST options speed up the script by automatically answering 'yes'
@@ -179,7 +179,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2998 (function main_menu). Configure the
+# The Main Menu starts on line 2999 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1178,6 +1178,7 @@ function ask_protocol {
     else
         read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
     fi
+    echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if [[ "$protocol" == "UDP" ]]; then
             nordvpn set protocol TCP; wait
@@ -1186,7 +1187,6 @@ function ask_protocol {
         fi
         echo
     else
-        echo
         echo -e "Continue to use $protocoldc."
         echo
     fi
@@ -2578,7 +2578,7 @@ function fspeedtest {
                 openlink "https://www.nperf.com/en/"
                 ;;
             "Exit")
-                ftools
+                main_menu
                 ;;
             *)
                 invalid_option "${#speedtools[@]}"
@@ -2746,32 +2746,33 @@ function fscriptinfo {
     openlink "$0" "ask" "exit"
 }
 function fquickconnect {
-    # This is an alternate method of connecting to the NordVPN recommended server.
+    # This is an alternate method of connecting to the Nord recommended server.
     # In some cases it may be faster than using "nordvpn connect"
-    # Can disconnect (if KillSwitch is disabled) to find the nearest best server.
     # Requires 'curl' and 'jq'
     # Auguss82 via github
     heading "QuickConnect"
-    if [[ "$killswitch" == "disabled" ]]; then
-        # will disconnect if $disconnect="y" or use: disconnectvpn "force"
-        disconnectvpn
-    fi
     echo
-    echo "Getting the recommended server... "
-    echo
-    if [[ "$killswitch" == "enabled" ]] && [[ "$connected" != "connected" ]]; then
-        echo -e "The VPN is $connectedc with the Kill Switch $killswitchc."
+    if [[ "$connected" == "connected" ]] && [[ "$killswitch" == "disabled" ]]; then
+        read -n 1 -r -p "Disconnect the VPN to find a nearby server? (y/n) "; echo
         echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            disconnectvpn "force"
+        fi
+    fi
+    if [[ "$connected" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
+        echo -e "The VPN is $connectedc with the Kill Switch $killswitchc"
         bestserver=""
     elif [[ "$obfuscate" == "enabled" ]]; then
-        echo -e "$ob Obfuscate is $obfuscatec."
-        echo
+        echo -e "$ob Obfuscate is $obfuscatec"
         bestserver=""
     else
+        echo -n "Getting the recommended server... "
         bestserver="$(timeout 10 curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
+        echo
     fi
+    echo
     if [[ -z $bestserver ]]; then
-        echo "Request timed out. Using 'nordvpn connect'"
+        echo -e "Request timed out. Using ${EColor}nordvpn connect${Color_Off}"
         echo
         nordvpn connect
     else
