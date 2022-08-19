@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# August 14, 2022
+# August 19, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -179,7 +179,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2999 (function main_menu). Configure the
+# The Main Menu starts on line 2991 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -1123,34 +1123,35 @@ function fprotocol {
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             ftechnology
+        else
+            main_menu
+        fi
+    fi
+    warning
+    echo "UDP is mainly used for online streaming and downloading."
+    echo "TCP is more reliable but also slightly slower than UDP and"
+    echo " is mainly used for web browsing."
+    echo
+    echo -e "The Protocol is set to $protocoldc."
+    echo
+    if [[ "$fast3" =~ ^[Yy]$ ]]; then
+        echo -e "${FColor}[F]ast3 is enabled.  Changing the Protocol.${Color_Off}"
+        REPLY="y"
+    elif [[ "$protocol" == "UDP" ]]; then
+        read -n 1 -r -p "Change the Protocol to TCP? (y/n) "; echo
+    else
+        read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
+    fi
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        disconnectvpn "force"
+        if [[ "$protocol" == "UDP" ]]; then
+            nordvpn set protocol TCP; wait
+        else
+            nordvpn set protocol UDP; wait
         fi
     else
-        warning
-        echo "UDP is mainly used for online streaming and downloading."
-        echo "TCP is more reliable but also slightly slower than UDP and"
-        echo " is mainly used for web browsing."
         echo
-        echo -e "The Protocol is set to $protocoldc."
-        echo
-        if [[ "$fast3" =~ ^[Yy]$ ]]; then
-            echo -e "${FColor}[F]ast3 is enabled.  Changing the Protocol.${Color_Off}"
-            REPLY="y"
-        elif [[ "$protocol" == "UDP" ]]; then
-            read -n 1 -r -p "Change the Protocol to TCP? (y/n) "; echo
-        else
-            read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
-        fi
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            disconnectvpn "force"
-            if [[ "$protocol" == "UDP" ]]; then
-                nordvpn set protocol TCP; wait
-            else
-                nordvpn set protocol UDP; wait
-            fi
-        else
-            echo
-            echo -e "Continue to use $protocoldc."
-        fi
+        echo -e "Continue to use $protocoldc."
     fi
     main_menu
 }
@@ -1381,45 +1382,46 @@ function fobfuscate {
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             ftechnology "back"
             fobfuscate
+        else
+            main_menu
         fi
+    fi
+    warning
+    echo "Obfuscated servers can bypass internet restrictions such"
+    echo "as network firewalls.  They are recommended for countries"
+    echo "with restricted access. "
+    echo
+    echo "Only certain NordVPN locations support obfuscation."
+    echo
+    echo "Recommend connecting to the 'Obfuscated' group or through"
+    echo "'Countries' when Obfuscate is enabled.  Attempting to"
+    echo "connect to unsupported locations will cause an error."
+    echo
+    echo -e "$ob Obfuscate is $obfuscatec."
+    echo
+    if [[ "$obfuscate" == "enabled" ]]; then
+        obprompt=$(echo -e "${DColor}Disable${Color_Off} Obfuscate? (y/n) ")
     else
-        warning
-        echo "Obfuscated servers can bypass internet restrictions such"
-        echo "as network firewalls.  They are recommended for countries"
-        echo "with restricted access. "
-        echo
-        echo "Only certain NordVPN locations support obfuscation."
-        echo
-        echo "Recommend connecting to the 'Obfuscated' group or through"
-        echo "'Countries' when Obfuscate is enabled.  Attempting to"
-        echo "connect to unsupported locations will cause an error."
-        echo
-        echo -e "$ob Obfuscate is $obfuscatec."
-        echo
+        obprompt=$(echo -e "${EColor}Enable${Color_Off} Obfuscate? (y/n) ")
+    fi
+    if [[ "$fast3" =~ ^[Yy]$ ]]; then
+        echo -e "${FColor}[F]ast3 is enabled.  Changing the setting.${Color_Off}"
+        REPLY="y"
+    else
+        read -n 1 -r -p "$obprompt"; echo
+    fi
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        disconnectvpn "force"
         if [[ "$obfuscate" == "enabled" ]]; then
-            obprompt=$(echo -e "${DColor}Disable${Color_Off} Obfuscate? (y/n) ")
+            nordvpn set obfuscate disabled; wait
         else
-            obprompt=$(echo -e "${EColor}Enable${Color_Off} Obfuscate? (y/n) ")
+            nordvpn set obfuscate enabled; wait
         fi
-        if [[ "$fast3" =~ ^[Yy]$ ]]; then
-            echo -e "${FColor}[F]ast3 is enabled.  Changing the setting.${Color_Off}"
-            REPLY="y"
-        else
-            read -n 1 -r -p "$obprompt"; echo
-        fi
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            disconnectvpn "force"
-            if [[ "$obfuscate" == "enabled" ]]; then
-                nordvpn set obfuscate disabled; wait
-            else
-                nordvpn set obfuscate enabled; wait
-            fi
-            echo
-            ask_protocol
-        else
-            echo
-            echo -e "$ob Keep Obfuscate $obfuscatec."
-        fi
+        echo
+        ask_protocol
+    else
+        echo
+        echo -e "$ob Keep Obfuscate $obfuscatec."
     fi
     main_menu
 }
@@ -1761,7 +1763,7 @@ function fwhitelist {
         echo -e "$wl No whitelist entries."
     fi
     echo
-    echo -e "${LColor}whitelist_commands${Color_Off}"
+    echo -e "${LColor}function whitelist_commands${Color_Off}"
     startline=$(grep -m1 -n "whitelist_start" "$0" | cut -f1 -d':')
     endline=$(( $(grep -m1 -n "whitelist_end" "$0" | cut -f1 -d':') - 1 ))
     numlines=$(( endline - startline ))
@@ -1920,9 +1922,6 @@ function frestart {
     echo "Restart nordvpn services."
     echo -e "${WColor}"
     echo "Send commands:"
-    echo "nordvpn set killswitch disabled (choice)"
-    echo "nordvpn set autoconnect disabled (choice)"
-    echo "nordvpn disconnect"
     echo "sudo systemctl restart nordvpnd.service"
     echo "sudo systemctl restart nordvpn.service"
     echo -e "${Color_Off}"
@@ -1930,13 +1929,6 @@ function frestart {
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        if [[ "$killswitch" == "enabled" ]]; then
-            change_setting "killswitch" "override"
-        fi
-        if [[ "$autocon" == "enabled" ]]; then
-            change_setting "autoconnect" "override"
-        fi
-        disconnectvpn "force"
         echo -e "${LColor}sudo systemctl restart nordvpnd.service${Color_Off}"
         echo -e "${LColor}sudo systemctl restart nordvpn.service${Color_Off}"
         sudo systemctl restart nordvpnd.service
