@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# August 19, 2022
+# August 22, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -179,7 +179,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2991 (function main_menu). Configure the
+# The Main Menu starts on line 2993 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -958,7 +958,7 @@ function fdoublevpn {
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnectvpn "force"
-        ftechnology "back"
+        ftechnology "back" "groups"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
             echo
@@ -1002,7 +1002,7 @@ function fonion {
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnectvpn "force"
-        ftechnology "back"
+        ftechnology "back" "groups"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
             echo
@@ -1044,7 +1044,7 @@ function fp2p {
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnectvpn "force"
-        ftechnology "back"
+        ftechnology "back" "groups"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; wait
             echo
@@ -1062,14 +1062,19 @@ function fp2p {
     fi
 }
 function ftechnology {
-    heading "Technology"
-    echo
-    warning
-    echo "OpenVPN is an open-source VPN protocol and is required to"
-    echo " use Obfuscated servers and to use TCP."
-    echo "NordLynx is built around the WireGuard VPN protocol"
-    echo " and may be faster with less overhead."
-    echo
+    # $1 = ignore fast3, return
+    # $2 = skip heading
+    #
+    if [[ "$2" != "groups" ]]; then
+        heading "Technology"
+        echo
+        warning
+        echo "OpenVPN is an open-source VPN protocol and is required to"
+        echo " use Obfuscated servers and to use TCP."
+        echo "NordLynx is built around the WireGuard VPN protocol"
+        echo " and may be faster with less overhead."
+        echo
+    fi
     echo -e "Currently using $technologydc."
     echo
     if [[ "$fast3" =~ ^[Yy]$ ]] && [[ "$1" != "back" ]]; then
@@ -1399,16 +1404,13 @@ function fobfuscate {
     echo
     echo -e "$ob Obfuscate is $obfuscatec."
     echo
-    if [[ "$obfuscate" == "enabled" ]]; then
-        obprompt=$(echo -e "${DColor}Disable${Color_Off} Obfuscate? (y/n) ")
-    else
-        obprompt=$(echo -e "${EColor}Enable${Color_Off} Obfuscate? (y/n) ")
-    fi
     if [[ "$fast3" =~ ^[Yy]$ ]]; then
         echo -e "${FColor}[F]ast3 is enabled.  Changing the setting.${Color_Off}"
         REPLY="y"
+    elif [[ "$obfuscate" == "enabled" ]]; then
+        read -n 1 -r -p "$(echo -e "${DColor}Disable${Color_Off} Obfuscate? (y/n) ")"; echo
     else
-        read -n 1 -r -p "$obprompt"; echo
+        read -n 1 -r -p "$(echo -e "${EColor}Enable${Color_Off} Obfuscate? (y/n) ")"; echo
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnectvpn "force"
