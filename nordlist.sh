@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# August 22, 2022
+# August 23, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -68,6 +68,11 @@ p2pwhere=""
 # The location must support obfuscation.
 # eg. obwhere="United_States" or obwhere="Los_Angeles"
 obwhere=""
+#
+# Specify the first hop to use for Double_VPN. (Optional)
+# The location must have Double_VPN servers available.
+# eg. dblwhere="United_Kingdom" or dblwhere="Sweden"
+dblwhere=""
 #
 # Specify your Auto-Connect location. (Optional)
 # eg. acwhere="Australia" or acwhere="Sydney"
@@ -179,7 +184,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2993 (function main_menu). Configure the
+# The Main Menu starts on line 2953 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -863,7 +868,7 @@ function ffullrandom {
     status
     exit
 }
-function killswitch_groups {
+function group_killswitch {
     if [[ "$killswitch" == "disabled" ]]; then
         if [[ "$fast5" =~ ^[Yy]$ ]]; then
             echo -e "${FColor}[F]ast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
@@ -881,6 +886,89 @@ function killswitch_groups {
             fi
             change_setting "killswitch" "override"
         fi
+    fi
+}
+function group_connect {
+    # $1 = group name:  Double_VPN, P2P, Onion_Over_VPN
+    #
+    case "$1" in
+        "Double_VPN")
+            heading "Double-VPN"
+            echo "Double VPN is a privacy solution that sends your internet"
+            echo "traffic through two VPN servers, encrypting it twice."
+            ;;
+        "P2P")
+            heading "P 2 P"
+            echo "Peer to Peer - sharing information and resources directly"
+            echo "without relying on a dedicated central server."
+            ;;
+        "Onion_Over_VPN")
+            heading "Onion+VPN"
+            echo "Onion over VPN is a privacy solution that sends your "
+            echo "internet traffic through a VPN server and then"
+            echo "through the Onion network."
+            ;;
+    esac
+    echo
+    echo -e "Current settings: $techpro$fw$ks$ob"
+    echo
+    echo "To connect to the $1 group the following"
+    echo "changes will be made (if necessary):"
+    echo -e "${LColor}"
+    echo "Disconnect the VPN."
+    echo "Choose the Technology & Protocol."
+    echo "Set Obfuscate to disabled."
+    echo "Enable the Kill Switch (choice)."
+    echo -n "Connect to the $1 group"
+    case "$1" in
+        "Double_VPN")
+            echo -ne "${EColor} $dblwhere"; echo
+            ;;
+        "P2P")
+            echo -ne "${EColor} $p2pwhere"; echo
+            ;;
+         *)
+            echo
+            ;;
+    esac
+    echo -e "${Color_Off}"
+    if [[ "$fast4" =~ ^[Yy]$ ]]; then
+        echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
+        REPLY="y"
+    else
+        read -n 1 -r -p "Proceed? (y/n) "; echo
+    fi
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        disconnectvpn "force"
+        ftechnology "back" "groups"
+        if [[ "$obfuscate" == "enabled" ]]; then
+            nordvpn set obfuscate disabled; wait
+            echo
+        fi
+        group_killswitch
+        case "$1" in
+            "Double_VPN")
+                echo -e "Connect to the Double_VPN group ${EColor}$dblwhere${Color_Off}"
+                echo
+                nordvpn connect --group Double_VPN $dblwhere
+                ;;
+            "P2P")
+                echo -e "Connect to the P2P group ${EColor}$p2pwhere${Color_Off}"
+                echo
+                nordvpn connect --group P2P $p2pwhere
+                ;;
+            *)
+                echo "Connect to the $1 group"
+                echo
+                nordvpn connect --group "$1"
+                ;;
+        esac
+        status
+        exit
+    else
+        echo
+        echo "No changes made."
+        main_menu
     fi
 }
 function fobservers {
@@ -921,138 +1009,10 @@ function fobservers {
             nordvpn set obfuscate enabled; wait
             echo
         fi
-        killswitch_groups
+        group_killswitch
         echo -e "Connect to the Obfuscated_Servers group ${EColor}$obwhere${Color_Off}"
         echo
         nordvpn connect --group Obfuscated_Servers $obwhere
-        status
-        exit
-    else
-        echo
-        echo "No changes made."
-        main_menu
-    fi
-}
-function fdoublevpn {
-    # Not available with obfuscate enabled
-    heading "Double-VPN"
-    echo "Double VPN is a privacy solution that sends your internet"
-    echo "traffic through two VPN servers, encrypting it twice."
-    echo
-    echo -e "Current settings: $techpro$fw$ks$ob"
-    echo
-    echo "To connect to the Double_VPN group the"
-    echo "following changes will be made (if necessary):"
-    echo -e "${LColor}"
-    echo "Disconnect the VPN."
-    echo "Choose the Technology & Protocol."
-    echo "Set Obfuscate to disabled."
-    echo "Enable the Kill Switch (choice)."
-    echo "Connect to the Double_VPN group."
-    echo -e "${Color_Off}"
-    if [[ "$fast4" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
-        REPLY="y"
-    else
-        read -n 1 -r -p "Proceed? (y/n) "; echo
-    fi
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        disconnectvpn "force"
-        ftechnology "back" "groups"
-        if [[ "$obfuscate" == "enabled" ]]; then
-            nordvpn set obfuscate disabled; wait
-            echo
-        fi
-        killswitch_groups
-        echo "Connect to the Double_VPN group."
-        echo
-        nordvpn connect --group Double_VPN
-        # nordvpn connect --group Double_VPN <country_code>
-        status
-        exit
-    else
-        echo
-        echo "No changes made."
-        main_menu
-    fi
-}
-function fonion {
-    # Not available with obfuscate enabled
-    heading "Onion+VPN"
-    echo "Onion over VPN is a privacy solution that sends your "
-    echo "internet traffic through a VPN server and then"
-    echo "through the Onion network."
-    echo
-    echo -e "Current settings: $techpro$fw$ks$ob"
-    echo
-    echo "To connect to the Onion_Over_VPN group the"
-    echo "following changes will be made (if necessary):"
-    echo -e "${LColor}"
-    echo "Disconnect the VPN."
-    echo "Choose the Technology & Protocol."
-    echo "Set Obfuscate to disabled."
-    echo "Enable the Kill Switch (choice)."
-    echo "Connect to the Onion_Over_VPN group."
-    echo -e "${Color_Off}"
-    if [[ "$fast4" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
-        REPLY="y"
-    else
-        read -n 1 -r -p "Proceed? (y/n) "; echo
-    fi
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        disconnectvpn "force"
-        ftechnology "back" "groups"
-        if [[ "$obfuscate" == "enabled" ]]; then
-            nordvpn set obfuscate disabled; wait
-            echo
-        fi
-        killswitch_groups
-        echo "Connect to the Onion_Over_VPN group."
-        echo
-        nordvpn connect --group Onion_Over_VPN
-        status
-        exit
-    else
-        echo
-        echo "No changes made."
-        main_menu
-    fi
-}
-function fp2p {
-    # P2P not available with obfuscate enabled
-    heading "Peer to Peer"
-    echo "Peer to Peer - sharing information and resources directly"
-    echo "without relying on a dedicated central server."
-    echo
-    echo -e "Current settings: $techpro$fw$ks$ob"
-    echo
-    echo "To connect to the P2P group the following"
-    echo "changes will be made (if necessary):"
-    echo -e "${LColor}"
-    echo "Disconnect the VPN."
-    echo "Choose the Technology & Protocol."
-    echo "Set Obfuscate to disabled."
-    echo "Enable the Kill Switch (choice)."
-    echo -e "Connect to the P2P group ${EColor}$p2pwhere"
-    echo -e "${Color_Off}"
-    if [[ "$fast4" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
-        REPLY="y"
-    else
-        read -n 1 -r -p "Proceed? (y/n) "; echo
-    fi
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        disconnectvpn "force"
-        ftechnology "back" "groups"
-        if [[ "$obfuscate" == "enabled" ]]; then
-            nordvpn set obfuscate disabled; wait
-            echo
-        fi
-        killswitch_groups
-        echo -e "Connect to the P2P group ${EColor}$p2pwhere${Color_Off}"
-        echo
-        nordvpn connect --group P2P $p2pwhere
         status
         exit
     else
@@ -1373,7 +1333,7 @@ function fipversion6 {
     change_setting "ipv6"
 }
 function fobfuscate {
-    # Obfuscate not available when using NordLynx
+    # not available when using NordLynx
     # must disconnect/reconnect to change setting
     heading "Obfuscate"
     if [[ "$technology" == "nordlynx" ]]; then
@@ -2822,13 +2782,13 @@ function fgroups {
                 fobservers
                 ;;
             "Double-VPN")
-                fdoublevpn
+                group_connect "Double_VPN"
                 ;;
             "Onion+VPN")
-                fonion
+                group_connect "Onion_Over_VPN"
                 ;;
             "P2P")
-                fp2p
+                group_connect "P2P"
                 ;;
             "Exit")
                 main_menu
@@ -3371,11 +3331,4 @@ main_menu start
 #   Show nordvpn status, move terminal to workspace 2 and rename.
 #       gnome-terminal -- bash -c "nordvpn status; exec bash"
 #       wmctrl -r "myusername" -t 1 && wmctrl -r "myusername" -T "NORD"
-#
-# NordVPN Indicator Cinnamon Applet - no status with Nord update or feature notice
-#   ~/.local/share/cinnamon/applets/nordvpn-indicator@nickdurante/applet.js
-#   Line 111 - Change [0] to [1]
-#       let result = status.split("\n")[1].split(": ")[1];
-#   Reload applet
-#       dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordvpn-indicator@nickdurante' string:'APPLET'
 #
