@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# August 23, 2022
+# August 24, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -184,7 +184,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2953 (function main_menu). Configure the
+# The Main Menu starts on line 2936 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -889,18 +889,21 @@ function group_killswitch {
     fi
 }
 function group_connect {
-    # $1 = group name:  Double_VPN, P2P, Onion_Over_VPN
+    # $1 = group name
     #
+    location=""
     case "$1" in
         "Double_VPN")
             heading "Double-VPN"
             echo "Double VPN is a privacy solution that sends your internet"
             echo "traffic through two VPN servers, encrypting it twice."
+            location="$dblwhere"
             ;;
         "P2P")
             heading "P 2 P"
             echo "Peer to Peer - sharing information and resources directly"
             echo "without relying on a dedicated central server."
+            location="$p2pwhere"
             ;;
         "Onion_Over_VPN")
             heading "Onion+VPN"
@@ -919,18 +922,7 @@ function group_connect {
     echo "Choose the Technology & Protocol."
     echo "Set Obfuscate to disabled."
     echo "Enable the Kill Switch (choice)."
-    echo -n "Connect to the $1 group"
-    case "$1" in
-        "Double_VPN")
-            echo -ne "${EColor} $dblwhere"; echo
-            ;;
-        "P2P")
-            echo -ne "${EColor} $p2pwhere"; echo
-            ;;
-         *)
-            echo
-            ;;
-    esac
+    echo -e "Connect to the $1 group ${EColor}$location"
     echo -e "${Color_Off}"
     if [[ "$fast4" =~ ^[Yy]$ ]]; then
         echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
@@ -946,23 +938,9 @@ function group_connect {
             echo
         fi
         group_killswitch
-        case "$1" in
-            "Double_VPN")
-                echo -e "Connect to the Double_VPN group ${EColor}$dblwhere${Color_Off}"
-                echo
-                nordvpn connect --group Double_VPN $dblwhere
-                ;;
-            "P2P")
-                echo -e "Connect to the P2P group ${EColor}$p2pwhere${Color_Off}"
-                echo
-                nordvpn connect --group P2P $p2pwhere
-                ;;
-            *)
-                echo "Connect to the $1 group"
-                echo
-                nordvpn connect --group "$1"
-                ;;
-        esac
+        echo -e "Connect to the $1 group ${EColor}$location${Color_Off}"
+        echo
+        nordvpn connect --group "$1" $location
         status
         exit
     else
@@ -1065,6 +1043,11 @@ function ftechnology {
     else
         echo
         echo -e "Continue to use $technologydc."
+        set_vars
+        if [[ "$technology" == "openvpn" ]] && [[ "$connected" != "connected" ]]; then
+            echo
+            ask_protocol
+        fi
     fi
     if [[ "$1" == "back" ]]; then
         echo
