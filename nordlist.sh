@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# August 24, 2022
+# August 27, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -184,7 +184,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2936 (function main_menu). Configure the
+# The Main Menu starts on line 2935 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -893,23 +893,31 @@ function group_connect {
     #
     location=""
     case "$1" in
+        "Obfuscated_Servers")
+            heading "Obfuscated"
+            echo "Obfuscated servers are specialized VPN servers that"
+            echo "hide the fact that you’re using a VPN to reroute your"
+            echo "traffic. They allow users to connect to a VPN even in"
+            echo "heavily restrictive environments."
+            location="$obwhere"
+            ;;
         "Double_VPN")
             heading "Double-VPN"
             echo "Double VPN is a privacy solution that sends your internet"
             echo "traffic through two VPN servers, encrypting it twice."
             location="$dblwhere"
             ;;
-        "P2P")
-            heading "P 2 P"
-            echo "Peer to Peer - sharing information and resources directly"
-            echo "without relying on a dedicated central server."
-            location="$p2pwhere"
-            ;;
         "Onion_Over_VPN")
             heading "Onion+VPN"
             echo "Onion over VPN is a privacy solution that sends your "
             echo "internet traffic through a VPN server and then"
             echo "through the Onion network."
+            ;;
+        "P2P")
+            heading "P 2 P"
+            echo "Peer to Peer - sharing information and resources directly"
+            echo "without relying on a dedicated central server."
+            location="$p2pwhere"
             ;;
     esac
     echo
@@ -919,78 +927,67 @@ function group_connect {
     echo "changes will be made (if necessary):"
     echo -e "${LColor}"
     echo "Disconnect the VPN."
-    echo "Choose the Technology & Protocol."
-    echo "Set Obfuscate to disabled."
+    if [[ "$1" == "Obfuscated_Servers" ]]; then
+        echo "Set Technology to OpenVPN."
+        echo "Choose the Protocol."
+        echo "Set Obfuscate to enabled."
+    else
+        echo "Choose the Technology & Protocol."
+        echo "Set Obfuscate to disabled."
+    fi
     echo "Enable the Kill Switch (choice)."
-    echo -e "Connect to the $1 group ${EColor}$location"
-    echo -e "${Color_Off}"
+    echo -e "Connect to the $1 group ${EColor}$location${Color_Off}"
     if [[ "$fast4" =~ ^[Yy]$ ]]; then
+        echo
         echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
         REPLY="y"
-    else
+    elif [[ "$1" == "Onion_Over_VPN" ]]; then
+        echo
         read -n 1 -r -p "Proceed? (y/n) "; echo
+    else
+        echo -e "${LColor}(Type ${FIColor}S${LColor} to specify a location)${Color_Off}"
+        echo
+        read -n 1 -r -p "Proceed? (y/n/S) "; echo
+        if [[ $REPLY =~ ^[Ss]$ ]]; then
+            echo
+            if [[ -n $location ]]; then
+                echo -e "Default location ${EColor}$location${Color_Off} will be ignored."
+                echo
+            fi
+            echo "The location must support $1."
+            echo "Leave blank to have the app choose automatically."
+            echo
+            read -r -p "Enter the $1 location: " location
+            REPLY="y"
+        fi
     fi
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnectvpn "force"
-        ftechnology "back" "groups"
-        if [[ "$obfuscate" == "enabled" ]]; then
-            nordvpn set obfuscate disabled; wait
-            echo
+        if [[ "$1" == "Obfuscated_Servers" ]]; then
+            if [[ "$technology" == "nordlynx" ]]; then
+                nordvpn set technology openvpn; wait
+                echo
+            fi
+            ask_protocol
+            if [[ "$obfuscate" == "disabled" ]]; then
+                nordvpn set obfuscate enabled; wait
+                echo
+            fi
+        else
+            ftechnology "back" "groups"
+            if [[ "$obfuscate" == "enabled" ]]; then
+                nordvpn set obfuscate disabled; wait
+                echo
+            fi
         fi
         group_killswitch
         echo -e "Connect to the $1 group ${EColor}$location${Color_Off}"
         echo
-        nordvpn connect --group "$1" $location
-        status
-        exit
-    else
-        echo
-        echo "No changes made."
-        main_menu
-    fi
-}
-function fobservers {
-    # Not available with NordLynx
-    heading "Obfuscated"
-    echo "Obfuscated servers are specialized VPN servers that"
-    echo "hide the fact that you’re using a VPN to reroute your"
-    echo "traffic. They allow users to connect to a VPN even in"
-    echo "heavily restrictive environments."
-    echo
-    echo -e "Current settings: $techpro$fw$ks$ob"
-    echo
-    echo "To connect to the Obfuscated_Servers group the"
-    echo "following changes will be made (if necessary):"
-    echo -e "${LColor}"
-    echo "Disconnect the VPN."
-    echo "Set Technology to OpenVPN."
-    echo "Specify the Protocol."
-    echo "Set Obfuscate to enabled."
-    echo "Enable the Kill Switch (choice)."
-    echo -e "Connect to the Obfuscated_Servers group ${EColor}$obwhere"
-    echo -e "${Color_Off}"
-    if [[ "$fast4" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
-        REPLY="y"
-    else
-        read -n 1 -r -p "Proceed? (y/n) "; echo
-    fi
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        disconnectvpn "force"
-        if [[ "$technology" == "nordlynx" ]]; then
-            nordvpn set technology openvpn; wait
-            echo
-            # ask_protocol will update $protocol and $obfuscate
+        if [[ -n $location ]]; then
+            nordvpn connect --group "$1" "$location"
+        else
+            nordvpn connect --group "$1"
         fi
-        ask_protocol
-        if [[ "$obfuscate" == "disabled" ]]; then
-            nordvpn set obfuscate enabled; wait
-            echo
-        fi
-        group_killswitch
-        echo -e "Connect to the Obfuscated_Servers group ${EColor}$obwhere${Color_Off}"
-        echo
-        nordvpn connect --group Obfuscated_Servers $obwhere
         status
         exit
     else
@@ -1105,10 +1102,9 @@ function fprotocol {
 }
 function ask_protocol {
     # Ask to choose TCP/UDP if changing to OpenVPN, using Obfuscate,
-    # and when connecting to the Obfuscated Servers group
+    # and when connecting to groups using OpenVPN
     #
-    # set $protocol if technology just changed from NordLynx
-    set_vars
+    set_vars    # set $protocol if technology just changed from NordLynx
     echo -e "The Protocol is set to $protocoldc."
     echo
     if [[ "$fast6" =~ ^[Yy]$ ]]; then
@@ -1391,7 +1387,8 @@ function fmeshnet {
     do
         case $mesh in
             "Enable/Disable")
-                clear -x; echo
+                clear -x
+                echo
                 change_setting "meshnet" "override"
                 set_vars
                 fmeshnet
@@ -1671,7 +1668,8 @@ function fcustomdns {
                 echo "Specify a Hostname to lookup. "
                 read -r -p "Hit 'Enter' for [$dns_defhost]: " testhost
                 testhost=${testhost:-$dns_defhost}
-                echo; echo -e "${EColor}dig @<DNS> $testhost${Color_Off}"
+                echo
+                echo -e "${EColor}dig @<DNS> $testhost${Color_Off}"
                 for i in "${submcdns[@]}"
                 do
                     dnsheader=$( echo "$i" | cut -f1 -d' ' )
@@ -2109,19 +2107,18 @@ function rate_server {
         echo
         read -n 1 -r -p "$(echo -e "Rating 1-5 [e${LColor}x${Color_Off}it]: ")" rating
         if [[ $rating =~ ^[Xx]$ ]] || [[ -z $rating ]]; then
-            echo -e "${DColor}(Skipped)${Color_Off}"; echo
+            echo -e "${DColor}(Skipped)${Color_Off}"
             break
         elif (( 1 <= rating )) && (( rating <= 5 )); then
             echo; echo
             nordvpn rate "$rating"
-            echo
             break
         else
             echo; echo
             echo -e "${WColor}** Please choose a number from 1 to 5"
             echo -e "('Enter' or 'x' to exit)${Color_Off}"
-            echo
         fi
+        echo
     done
 }
 function server_load {
@@ -2386,8 +2383,10 @@ function wireguard_gen {
         return
     elif [[ -e "$wgfull" ]]; then
         echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
-        echo; echo -e "${WColor}$wgfull already exists${Color_Off}"
-        echo; openlink "$wgfull" "ask"
+        echo
+        echo -e "${WColor}$wgfull already exists${Color_Off}"
+        echo
+        openlink "$wgfull" "ask"
         return
     fi
     echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
@@ -2720,7 +2719,7 @@ function fquickconnect {
     status
     exit
 }
-function fgroups_all {
+function group_menu_all {
     # all available groups
     heading "All Groups"
     create_list "group"
@@ -2750,7 +2749,7 @@ function fgroups_all {
         fi
     done
 }
-function fgroups {
+function group_menu {
     heading "Groups"
     echo
     PS3=$'\n''Choose a Group: '
@@ -2759,10 +2758,10 @@ function fgroups {
     do
         case $smg in
             "All_Groups")
-                fgroups_all
+                group_menu_all
                 ;;
             "Obfuscated")
-                fobservers
+                group_connect "Obfuscated_Servers"
                 ;;
             "Double-VPN")
                 group_connect "Double_VPN"
@@ -3028,7 +3027,7 @@ function main_menu {
                 fcountries
                 ;;
             "Groups")
-                fgroups
+                group_menu
                 ;;
             "Settings")
                 fsettings
