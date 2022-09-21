@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# August 28, 2022
+# September 21, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -85,12 +85,13 @@ acwhere=""
 default_dns="103.86.96.100 103.86.99.100"; dnsdesc="Nord"
 #
 # Specify a VPN hostname to use for testing while the VPN is off.
+# For example the VPN server configured on a local router.
 # Can still enter any hostname later, this is just a default choice.
-default_host="ca1576.nordvpn.com"
+default_vpnhost="ca1576.nordvpn.com"
 #
 # Specify any hostname to lookup when testing DNS response time.
 # Can also enter a different hostname later.
-dns_defhost="reddit.com"
+default_dnshost="reddit.com"
 #
 # Confirm the location of the NordVPN changelog on your system.
 #nordchangelog="/var/lib/dpkg/info/nordvpn.changelog"
@@ -184,7 +185,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function set_colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2960 (function main_menu). Configure the
+# The Main Menu starts on line 3000 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -323,6 +324,7 @@ function heading {
             echo -e "${H1Color}== $1 ==${Color_Off}"
         fi
         echo
+        COLUMNS=$menuwidth
         return
     fi
     # This ASCII displays after a menu selection is made.
@@ -828,24 +830,25 @@ function host_connect {
     echo "A list of servers can be found in:"
     echo "Settings - Tools - NordVPN API"
     echo
-    echo "Leave blank to quit."
-    read -r -p "Enter the server name (eg. us9364): " specsrvr
-    if [[ -z $specsrvr ]]; then
+    echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+    echo
+    read -r -p "Enter the server name (eg. us9364): " servername
+    if [[ -z $servername ]]; then
         echo -e "${DColor}(Skipped)${Color_Off}"
         echo
         return
-    elif [[ "$specsrvr" == *"socks"* ]]; then
+    elif [[ "$servername" == *"socks"* ]]; then
         echo
         echo -e "${WColor}Unable to connect to SOCKS servers${Color_Off}"
         echo
         return
-    elif [[ "$specsrvr" == *"nord"* ]]; then
-        specsrvr=$( echo "$specsrvr" | cut -f1 -d'.' )
+    elif [[ "$servername" == *"nord"* ]]; then
+        servername=$( echo "$servername" | cut -f1 -d'.' )
     fi
     disconnect_vpn
-    echo "Connect to $specsrvr"
+    echo "Connect to $servername"
     echo
-    nordvpn connect "$specsrvr"
+    nordvpn connect "$servername"
     status
     # add testing commands here
     #
@@ -1048,8 +1051,8 @@ function technology_setting {
         fi
     fi
     if [[ "$1" == "back" ]]; then
-        echo
         set_vars
+        echo
         return
     fi
     main_menu
@@ -1238,6 +1241,7 @@ function change_setting {
         echo -e "$chgind Keep $chgname $chgvarc."
     fi
     if [[ "$2" == "back" ]]; then
+        set_vars
         echo
         return
     fi
@@ -1255,7 +1259,6 @@ function firewall_setting {
         echo -e "${WColor}The Kill Switch must be disabled before disabling the Firewall.${Color_Off}"
         echo
         change_setting "killswitch" "back"
-        set_vars
         if [[ "$killswitch" == "enabled" ]]; then
             echo -e "$fw Keep the Firewall $firewallc."
             main_menu
@@ -1281,7 +1284,6 @@ function killswitch_setting {
         echo -e "${WColor}The Firewall must be enabled to use the Kill Switch.${Color_Off}"
         echo
         change_setting "firewall" "back"
-        set_vars
         if [[ "$firewall" == "disabled" ]]; then
             echo -e "$ks Keep the Kill Switch $killswitchc."
             main_menu
@@ -1410,7 +1412,6 @@ function meshnet_menu {
                 clear -x
                 echo
                 change_setting "meshnet" "back"
-                set_vars
                 meshnet_menu
                 ;;
             "Peer List")
@@ -1434,7 +1435,8 @@ function meshnet_menu {
                 echo "Removes a peer from the meshnet."
                 echo
                 echo "Enter the public_key, hostname, or IP address."
-                echo "(Leave blank to quit)"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
                 read -r -p "nordvpn meshnet peer remove "
                 if [[ -n $REPLY ]]; then
@@ -1450,13 +1452,15 @@ function meshnet_menu {
                 echo "Peers under the same account are automatically added to the meshnet."
                 echo "Allow or Deny a meshnet peer's incoming traffic to this device."
                 echo
-                echo "Usage: nordvpn meshnet peer incoming [command options] [public_key|hostname|ip]"
-                echo "Options:"
-                echo " allow - Allows a meshnet peer to send traffic to this device."
-                echo " deny  - Denies a meshnet peer to send traffic to this device."
+                echo "Usage: nordvpn meshnet peer incoming [options] [public_key|hostname|ip]"
                 echo
-                echo "Enter 'allow' or 'deny' and the public_key, hostname, or ip"
-                echo "(Leave blank to quit)"
+                echo "Options:"
+                echo "  allow - Allows a meshnet peer to send traffic to this device."
+                echo "  deny  - Denies a meshnet peer to send traffic to this device."
+                echo
+                echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
                 read -r -p "nordvpn meshnet peer incoming "
                 if [[ -n $REPLY ]]; then
@@ -1471,13 +1475,15 @@ function meshnet_menu {
                 heading "Peer Routing" "txt"
                 echo "Allow or Deny a meshnet peer routing traffic through this device."
                 echo
-                echo "Usage: nordvpn meshnet peer routing [command options] [public_key|hostname|ip]"
-                echo "Options:"
-                echo " allow - Allows a meshnet peer to route its' traffic through this device."
-                echo " deny  - Denies a meshnet peer to route its' traffic through this device."
+                echo "Usage: nordvpn meshnet peer routing [options] [public_key|hostname|ip]"
                 echo
-                echo "Enter 'allow' or 'deny' and the public_key, hostname, or ip"
-                echo "(Leave blank to quit)"
+                echo "Options:"
+                echo "  allow - Allows a meshnet peer to route traffic through this device."
+                echo "  deny  - Denies a meshnet peer to route traffic through this device."
+                echo
+                echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
                 read -r -p "nordvpn meshnet peer routing "
                 if [[ -n $REPLY ]]; then
@@ -1494,7 +1500,8 @@ function meshnet_menu {
                 echo " peer has allowed traffic routing."
                 echo
                 echo "Enter the public_key, hostname, or IP address."
-                echo "(Leave blank to quit)"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
                 read -r -p "nordvpn meshnet peer connect "
                 if [[ -n $REPLY ]]; then
@@ -1517,12 +1524,15 @@ function meshnet_menu {
                 heading "Invite Send" "txt" "alt"
                 echo "Sends an invitation to join the mesh network."
                 echo
-                echo "Usage: nordvpn meshnet invite send [command options] [email]"
-                echo "Options:"
-                echo " --allow-incoming-traffic  Allow incomming traffic from a peer. (default: false)"
-                echo " --allow-traffic-routing   Allow the peer to route traffic through this device. (default: false)"
+                echo "Usage: nordvpn meshnet invite send [options] [email]"
                 echo
-                echo "(Leave blank to quit)"
+                echo "Options:"
+                echo "  --allow-incoming-traffic"
+                echo "      Allow incoming traffic from a peer. (default: false)"
+                echo "  --allow-traffic-routing"
+                echo "      Allow the peer to route traffic through this device. (default: false)"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
                 read -r -p "nordvpn meshnet invite send "
                 if [[ -n $REPLY ]]; then
@@ -1537,12 +1547,15 @@ function meshnet_menu {
                 heading "Invite Accept" "txt" "alt"
                 echo "Accepts an invitation to join the inviter's mesh network."
                 echo
-                echo "Usage: nordvpn meshnet invite accept [command options] [email]"
-                echo "Options:"
-                echo " --allow-incoming-traffic  Allow incomming traffic from the peer. (default: false)"
-                echo " --allow-traffic-routing   Allow the peer to route traffic through this device. (default: false)"
+                echo "Usage: nordvpn meshnet invite accept [options] [email]"
                 echo
-                echo "(Leave blank to quit)"
+                echo "Options:"
+                echo "  --allow-incoming-traffic"
+                echo "      Allow incomming traffic from the peer. (default: false)"
+                echo "  --allow-traffic-routing"
+                echo "      Allow the peer to route traffic through this device. (default: false)"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
                 read -r -p "nordvpn meshnet invite accept "
                 if [[ -n $REPLY ]]; then
@@ -1558,7 +1571,8 @@ function meshnet_menu {
                 echo "Denies an invitation to join the inviter's mesh network."
                 echo
                 echo "Enter the email address to deny."
-                echo "(Leave blank to quit)"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
                 read -r -p "nordvpn meshnet invite deny "
                 if [[ -n $REPLY ]]; then
@@ -1574,7 +1588,8 @@ function meshnet_menu {
                 echo "Revokes a sent invitation."
                 echo
                 echo "Enter the email address to revoke."
-                echo "(Leave blank to quit)"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
                 read -r -p "nordvpn meshnet invite revoke "
                 if [[ -n $REPLY ]]; then
@@ -1686,8 +1701,8 @@ function customdns_menu {
             "Test Servers")
                 echo
                 echo "Specify a Hostname to lookup. "
-                read -r -p "Hit 'Enter' for [$dns_defhost]: " testhost
-                testhost=${testhost:-$dns_defhost}
+                read -r -p "Hit 'Enter' for [$default_dnshost]: " testhost
+                testhost=${testhost:-$default_dnshost}
                 echo
                 echo -e "${EColor}dig @<DNS> $testhost${Color_Off}"
                 for i in "${submcdns[@]}"
@@ -1812,8 +1827,7 @@ function account_menu {
                 login_nogui
                 ;;
             "Logout")
-                disconnect_vpn "force"
-                nordvpn logout
+                main_disconnect "logout"
                 echo
                 ;;
             "Account Info")
@@ -1882,7 +1896,7 @@ function account_menu {
     done
 }
 function restart_service {
-    # $1 = "defaults" - prompt to apply default settings
+    # $1 = "after_reset" - login and prompt to apply default settings
     #
     heading "Restart"
     echo
@@ -1896,8 +1910,6 @@ function restart_service {
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${LColor}sudo systemctl restart nordvpnd.service${Color_Off}"
-        echo -e "${LColor}sudo systemctl restart nordvpn.service${Color_Off}"
         sudo systemctl restart nordvpnd.service
         sudo systemctl restart nordvpn.service
         echo
@@ -1909,7 +1921,7 @@ function restart_service {
         done
         echo
         sudo -K     # timeout sudo
-        if [[ "$1" == "defaults" ]]; then
+        if [[ "$1" == "after_reset" ]]; then
             echo
             nordvpn login
             wait
@@ -1962,13 +1974,12 @@ function reset_app {
         echo
         read -n 1 -s -r -p "Press any key to restart the service..."; echo
         set_vars
-        restart_service "defaults"
+        restart_service "after_reset"
     fi
     main_menu
 }
 function iptables_status {
     echo
-    set_vars
     echo -e "The VPN is $connectedc.  ${IPColor}$ip${Color_Off}"
     echo -e "$fw The Firewall is $firewallc."
     echo -e "$ks The Kill Switch is $killswitchc."
@@ -1998,27 +2009,25 @@ function iptables_menu {
     echo
     PS3=$'\n''Choose an option: '
     submipt=("View IPTables" "Firewall" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "ping google" "Disconnect" "Exit")
-    select smipt in "${submipt[@]}"
+    select ipt in "${submipt[@]}"
     do
-        case $smipt in
+        case $ipt in
             "View IPTables")
+                set_vars
                 iptables_status
                 ;;
             "Firewall")
                 echo
-                set_vars
                 change_setting "firewall" "back"
                 iptables_status
                 ;;
             "KillSwitch")
                 echo
-                set_vars
                 change_setting "killswitch" "back"
                 iptables_status
                 ;;
             "Meshnet")
                 echo
-                set_vars
                 change_setting "meshnet" "back"
                 iptables_status
                 ;;
@@ -2085,6 +2094,7 @@ function iptables_menu {
                         echo -n "$t "; sleep 1
                     done
                     echo
+                    set_vars
                     iptables_status
                     echo -e "${LColor}ping -c 3 google.com${Color_Off}"
                     ping -c 3 google.com
@@ -2110,6 +2120,7 @@ function iptables_menu {
                         disconnect_vpn "force"
                     fi
                 fi
+                set_vars
                 iptables_status
                 ;;
             "Exit")
@@ -2185,9 +2196,9 @@ function allservers_menu {
     echo
     PS3=$'\n''Choose an option: '
     submallvpn=("List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Update List" "Exit")
-    select smavpn in "${submallvpn[@]}"
+    select avpn in "${submallvpn[@]}"
     do
-        case $smavpn in
+        case $avpn in
             "List All Servers")
                 echo
                 echo -e "${LColor}All the VPN Servers${Color_Off}"
@@ -2304,9 +2315,9 @@ function nordapi_menu {
     echo
     PS3=$'\n''API Call: '
     submapi=("Host Server Load" "Host Server Info" "Top 15 Recommended" "Top 15 By Country" "#Servers per Country" "All VPN Servers" "Change Host" "Connect" "Exit")
-    select sma in "${submapi[@]}"
+    select napi in "${submapi[@]}"
     do
-        case $sma in
+        case $napi in
             "Host Server Load")
                 echo
                 echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
@@ -2373,8 +2384,8 @@ function change_host {
     echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
     echo
     echo "Choose a new Hostname/IP for testing"
-    read -r -p "'Enter' for default [$default_host]: " nordhost
-    nordhost=${nordhost:-$default_host}
+    read -r -p "'Enter' for default [$default_vpnhost]: " nordhost
+    nordhost=${nordhost:-$default_vpnhost}
     echo
     echo -e "Now using ${LColor}$nordhost${Color_Off} for testing."
     echo "(Does not affect 'Rate VPN Server')"
@@ -2473,8 +2484,8 @@ function speedtest_menu {
         echo
     fi
     PS3=$'\n''Select a test: '
-    speedtools=( "Download & Upload" "Download Only" "Upload Only" "Latency & Load" "speedtest.net"  "speedof.me" "fast.com" "linode.com" "digitalocean.com" "nperf.com" "Exit" )
-    select spd in "${speedtools[@]}"
+    submspeed=( "Download & Upload" "Download Only" "Upload Only" "Latency & Load" "speedtest.net"  "speedof.me" "fast.com" "linode.com" "digitalocean.com" "nperf.com" "Exit" )
+    select spd in "${submspeed[@]}"
     do
         case $spd in
             "Download & Upload")
@@ -2495,8 +2506,8 @@ function speedtest_menu {
                     echo -e "Connected to: ${EColor}$server.nordvpn.com${Color_Off}"
                 else
                     echo -e "(VPN $connectedc)"
-                    read -r -p "Enter a Hostname/IP [Default $default_host]: " nordhost
-                    nordhost=${nordhost:-$default_host}
+                    read -r -p "Enter a Hostname/IP [Default $default_vpnhost]: " nordhost
+                    nordhost=${nordhost:-$default_vpnhost}
                     echo
                 fi
                 echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
@@ -2541,7 +2552,7 @@ function speedtest_menu {
                 main_menu
                 ;;
             *)
-                invalid_option "${#speedtools[@]}"
+                invalid_option "${#submspeed[@]}"
                 ;;
         esac
     done
@@ -2553,16 +2564,16 @@ function tools_menu {
         PS3=$'\n''Choose an option: '
     else
         echo -e "(VPN $connectedc)"
-        read -r -p "Enter a Hostname/IP [Default $default_host]: " nordhost
-        nordhost=${nordhost:-$default_host}
+        read -r -p "Enter a Hostname/IP [Default $default_vpnhost]: " nordhost
+        nordhost=${nordhost:-$default_vpnhost}
         echo
         echo -e "Hostname: ${LColor}$nordhost${Color_Off}"
         echo "(Does not affect 'Rate VPN Server')"
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    nettools=( "NordVPN API" "External IP" "WireGuard" "Speed Tests" "Rate VPN Server" "ping vpn" "ping google" "my traceroute" "ipleak.net" "dnsleaktest.com" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "bash.ws" "world map" "Change Host" "Exit" )
-    select tool in "${nettools[@]}"
+    submtools=( "NordVPN API" "External IP" "WireGuard" "Speed Tests" "Rate VPN Server" "ping vpn" "ping google" "my traceroute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "bash.ws" "world map" "Change Host" "Exit" )
+    select tool in "${submtools[@]}"
     do
         case $tool in
             "NordVPN API")
@@ -2613,11 +2624,34 @@ function tools_menu {
                 echo
                 mtr "$target"
                 ;;
+            "ipleak cli")
+                # https://airvpn.org/forums/topic/14737-api/
+                # random 40-character string
+                ipleak_session=$( head -1 <(fold -w 40  <(tr -dc 'a-zA-Z0-9' < /dev/urandom)) )
+                echo
+                if [[ "$connected" == "connected" ]]; then
+                    echo -e "${LColor}VPN Server IP:${Color_Off} $ipaddr"
+                    echo
+                    if [[ "$customdns" != "disabled" ]]; then
+                        echo -e "$dns Current $dns_servers"
+                        echo
+                    fi
+                else
+                    echo -e "(VPN $connectedc)"
+                    echo
+                fi
+                echo -e "${EColor}ipleak.net DNS Detection: ${Color_Off}"
+                echo -e "${Color_Off}$( curl --silent https://"$ipleak_session"-"$RANDOM".ipleak.net/dnsdetection/ | jq .ip )"
+                echo
+                ;;
             "ipleak.net")
                 openlink "https://ipleak.net/"
                 ;;
             "dnsleaktest.com")
                 openlink "https://dnsleaktest.com/"
+                ;;
+            "dnscheck.tools")
+                openlink "https://dnscheck.tools/"
                 ;;
             "test-ipv6.com")
                 openlink "https://test-ipv6.com/"
@@ -2659,7 +2693,7 @@ function tools_menu {
                 main_menu
                 ;;
             *)
-                invalid_option "${#nettools[@]}"
+                invalid_option "${#submtools[@]}"
                 ;;
         esac
     done
@@ -2778,9 +2812,9 @@ function group_menu {
     echo
     PS3=$'\n''Choose a Group: '
     submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Exit")
-    select smg in "${submgroups[@]}"
+    select grp in "${submgroups[@]}"
     do
-        case $smg in
+        case $grp in
             "All_Groups")
                 group_all_menu
                 ;;
@@ -2812,9 +2846,9 @@ function settings_menu {
     echo
     PS3=$'\n''Choose a Setting: '
     submsett=("Technology" "Protocol" "Firewall" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
-    select sms in "${submsett[@]}"
+    select sett in "${submsett[@]}"
     do
-        case $sms in
+        case $sett in
             "Technology")
                 technology_setting
                 ;;
@@ -2882,17 +2916,23 @@ function settings_menu {
     done
 }
 function main_disconnect {
+    # $1 = "logout" - account logout
+    #
     heading "Disconnect"
     if [[ "$killswitch" == "enabled" ]]; then
         echo -e "${WColor}** Reminder **${Color_Off}"
         change_setting "killswitch" "back"
     fi
-    if [[ "$alwaysrate" =~ ^[Yy]$ ]]; then
+    if [[ "$alwaysrate" =~ ^[Yy]$ ]] && [[ "$1" != "logout" ]]; then
         rate_server
     fi
     disconnect_vpn "force"
-    status
-    exit
+    if [[ "$1" == "logout" ]]; then
+        nordvpn logout
+    else
+        status
+        exit
+    fi
 }
 function check_depends {
     # https://stackoverflow.com/questions/16553089/dynamic-variable-names-in-bash
