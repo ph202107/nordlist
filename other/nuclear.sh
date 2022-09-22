@@ -9,14 +9,16 @@
 #   (uncomment one of the following)
 #
 nord_version="nordvpn"              # install the latest version available
-#nord_version="nordvpn=3.12.0-1"    # 03 Nov 2021
+#nord_version="nordvpn=3.12.0-1"    # 03 Nov 2021 login via Nord Account
 #nord_version="nordvpn=3.12.1-1"    # 18 Nov 2021
 #nord_version="nordvpn=3.12.2"      # 16 Dec 2021
 #nord_version="nordvpn=3.12.3"      # 11 Jan 2022
 #nord_version="nordvpn=3.12.4"      # 10 Feb 2022
-#nord_version="nordvpn=3.12.5"      # 14 Mar 2022
-#nord_version="nordvpn=3.13.0"      # 23 May 2022
+#nord_version="nordvpn=3.12.5"      # 14 Mar 2022 switched to policy-based traffic routing
+#nord_version="nordvpn=3.13.0"      # 23 May 2022 firewall - filter packets by firewall marks
 #nord_version="nordvpn=3.14.0"      # 01 Jun 2022 CyberSec changed to "Threat Protection Lite"
+#nord_version="nordvpn=3.14.1"      # 13 Jun 2022
+#nord_version="nordvpn=3.14.2"      # 28 Jul 2022
 #
 # list version numbers:
 #   apt list -a nordvpn
@@ -27,18 +29,20 @@ function default_settings {
     lbreak
     # After installation is complete, these settings will be applied
     #
-    nordvpn set technology nordlynx
+    #nordvpn set technology nordlynx
     #nordvpn set protocol UDP
-    nordvpn set firewall enabled
-    nordvpn set killswitch disabled
-    nordvpn set cybersec disabled
+    #nordvpn set firewall enabled
+    #nordvpn set killswitch disabled
+    #nordvpn set threatprotectionlite disabled
     #nordvpn set obfuscate disabled
-    nordvpn set notify disabled
-    nordvpn set autoconnect disabled
-    nordvpn set ipv6 disabled
-    nordvpn set dns disabled
+    #nordvpn set notify disabled
+    #nordvpn set autoconnect disabled
+    #nordvpn set ipv6 disabled
+    #nordvpn set dns disabled
+    nordvpn set meshnet enabled
+    wait
     nordvpn whitelist add subnet 192.168.1.0/24
-    #
+    wait
 }
 function lbreak {
     # break up wall of text
@@ -52,6 +56,8 @@ function trashnord {
     lbreak
     nordvpn set killswitch disabled
     nordvpn disconnect
+    nordvpn logout
+    wait
     sudo systemctl stop nordvpnd.service
     sudo systemctl stop nordvpn.service
     wait
@@ -104,7 +110,6 @@ function loginnord {
         sudo systemctl start nordvpnd.service; wait
         lbreak
     fi
-    nordvpn account
     nordvpn login
     #nordvpn login --legacy
     #nordvpn login --username <username> --password <password>
