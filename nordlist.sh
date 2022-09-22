@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# September 21, 2022
+# September 22, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -185,7 +185,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function set_colors"
 #
 # =====================================================================
-# The Main Menu starts on line 3000 (function main_menu). Configure the
+# The Main Menu starts on line 2999 (function main_menu). Configure the
 # first nine main menu items to suit your needs.
 #
 # Add your Whitelist commands to "function whitelist_commands"
@@ -579,11 +579,16 @@ function set_vars {
 }
 function disconnect_vpn {
     # $1 = "force" - force a disconnect
+    # $2 = "check_ks" - prompt to disable the killswitch
     #
     echo
     if [[ "$disconnect" =~ ^[Yy]$ ]] || [[ "$1" == "force" ]]; then
         set_vars
         if [[ "$connected" == "connected" ]]; then
+            if [[ "$2" == "check_ks" ]] && [[ "$killswitch" == "enabled" ]]; then
+                echo -e "${WColor}** Reminder **${Color_Off}"
+                change_setting "killswitch" "back"
+            fi
             echo -e "${WColor}** Disconnect **${Color_Off}"
             echo
             nordvpn disconnect; wait
@@ -1551,7 +1556,7 @@ function meshnet_menu {
                 echo
                 echo "Options:"
                 echo "  --allow-incoming-traffic"
-                echo "      Allow incomming traffic from the peer. (default: false)"
+                echo "      Allow incoming traffic from the peer. (default: false)"
                 echo "  --allow-traffic-routing"
                 echo "      Allow the peer to route traffic through this device. (default: false)"
                 echo
@@ -1827,7 +1832,9 @@ function account_menu {
                 login_nogui
                 ;;
             "Logout")
-                main_disconnect "logout"
+                echo
+                disconnect_vpn "force" "check_ks"
+                nordvpn logout
                 echo
                 ;;
             "Account Info")
@@ -1845,7 +1852,7 @@ function account_menu {
                 echo
                 read -n 1 -r -p "Proceed? (y/n) "; echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    disconnect_vpn "force"
+                    disconnect_vpn "force" "check_ks"
                     nordvpn register
                 fi
                 ;;
@@ -1925,6 +1932,7 @@ function restart_service {
             echo
             nordvpn login
             wait
+            echo
             read -n 1 -r -p "Press any key after login is complete... "; echo
             echo
             set_defaults_ask
@@ -2134,7 +2142,6 @@ function iptables_menu {
     done
 }
 function rate_server {
-    echo
     while true
     do
         echo "How would you rate your connection quality?"
@@ -2590,6 +2597,7 @@ function tools_menu {
                 speedtest_menu
                 ;;
             "Rate VPN Server")
+                echo
                 rate_server
                 ;;
             "ping vpn")
@@ -2916,23 +2924,14 @@ function settings_menu {
     done
 }
 function main_disconnect {
-    # $1 = "logout" - account logout
-    #
     heading "Disconnect"
-    if [[ "$killswitch" == "enabled" ]]; then
-        echo -e "${WColor}** Reminder **${Color_Off}"
-        change_setting "killswitch" "back"
-    fi
-    if [[ "$alwaysrate" =~ ^[Yy]$ ]] && [[ "$1" != "logout" ]]; then
+    echo
+    if [[ "$alwaysrate" =~ ^[Yy]$ ]]; then
         rate_server
     fi
-    disconnect_vpn "force"
-    if [[ "$1" == "logout" ]]; then
-        nordvpn logout
-    else
-        status
-        exit
-    fi
+    disconnect_vpn "force" "check_ks"
+    status
+    exit
 }
 function check_depends {
     # https://stackoverflow.com/questions/16553089/dynamic-variable-names-in-bash
