@@ -4,9 +4,9 @@ Tested with Linux Mint only (Debian/Ubuntu base).
 Fully customizable. 
 
 Screenshots:  
-https://i.imgur.com/dQhOPWH.png  
+https://i.imgur.com/SqFoMnQ.png  
 https://i.imgur.com/tlbAxaf.png  
-https://i.imgur.com/EsaXIqY.png  
+https://i.imgur.com/S3djlU5.png  
 https://i.imgur.com/c31ZwqJ.png  
 
 To download:    
