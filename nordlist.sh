@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.14.2 on Linux Mint 20.3
-# September 22, 2022
+# Tested with NordVPN Version 3.15.0 on Linux Mint 20.3
+# October 18, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -12,9 +12,9 @@
 # lot of comments to help fellow newbies customize the script.
 #
 # Screenshots:
-# https://i.imgur.com/dQhOPWH.png
-# https://i.imgur.com/tlbAxaf.png
-# https://i.imgur.com/EsaXIqY.png
+# https://i.imgur.com/k9pb5U4.png
+# https://i.imgur.com/uPSgJUR.png
+# https://i.imgur.com/S3djlU5.png
 # https://i.imgur.com/c31ZwqJ.png
 #
 # https://github.com/ph202107/nordlist
@@ -23,6 +23,8 @@
 #
 # =====================================================================
 # Instructions
+# =============
+#
 # 1) Save as nordlist.sh
 #       For convenience I use a directory in my PATH (echo $PATH)
 #       eg. /home/username/bin/nordlist.sh
@@ -37,7 +39,8 @@
 #   "ascii_standard" in "function main_logo"
 #
 # =====================================================================
-# Other programs used:
+# Other Programs Used
+# ====================
 #
 # wireguard-tools  Settings-Tools-WireGuard    (function wireguard_gen)
 # speedtest-cli    Settings-Tools-Speed Tests  (function speedtest_menu)
@@ -51,14 +54,18 @@
 # The config is in the "Notes" at the bottom of the script.
 #
 # =====================================================================
-# Note: These functions require a sudo password:
+# Sudo Usage
+# ===========
+#
+#   These functions require a sudo password:
 #   - function restart_service
 #   - function iptables_status
 #   - function wireguard_gen
 #   - function customdns_menu "Flush DNS Cache"
 #
 # =====================================================================
-# CUSTOMIZATION
+# Customization
+# ==============
 #
 # Specify your P2P preferred location.  (Optional)
 # eg. p2pwhere="Canada" or p2pwhere="Toronto"
@@ -137,7 +144,10 @@ newfirefox="n"
 menuwidth="70"
 #
 # =====================================================================
-# FAST options speed up the script by automatically answering 'yes'
+# Fast Options
+# =============
+#
+# Fast options speed up the script by automatically answering 'yes'
 # to prompts.  Would recommend trying the script to see how it operates
 # before enabling these options.
 #
@@ -147,7 +157,7 @@ menuwidth="70"
 fast1="n"
 #
 # Automatically change these settings without prompting:
-# Firewall, KillSwitch, TPLite, Notify, AutoConnect, IPv6
+# Firewall, Analytics, KillSwitch, TPLite, Notify, AutoConnect, IPv6
 fast2="n"
 #
 # Automatically change these settings which also disconnect the VPN:
@@ -179,17 +189,26 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
-# Visual
+# Visual Options
+# ===============
+#
 # Change the main menu figlet ASCII style in "function ascii_custom"
 # Change the figlet ASCII style for headings in "function heading"
 # Change the text and indicator colors in "function set_colors"
 #
 # =====================================================================
-# The Main Menu starts on line 2999 (function main_menu). Configure the
-# first nine main menu items to suit your needs.
+# Whitelist & Default Settings
+# =============================
 #
-# Add your Whitelist commands to "function whitelist_commands"
+# Add your whitelist commands to "function whitelist_commands"
 # Set up a default NordVPN config in "function set_defaults"
+#
+# =====================================================================
+# Main Menu
+# ==========
+#
+# The Main Menu starts on line 3102 (function main_menu).
+# Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
 #
@@ -232,6 +251,12 @@ function set_defaults {
     #
     if [[ "$firewall" == "disabled" ]]; then nordvpn set firewall enabled; fi
     #if [[ "$firewall" == "enabled" ]]; then nordvpn set firewall disabled; fi
+    #
+    #if [[ "$routing" == "disabled" ]]; then nordvpn set routing enabled; fi
+    #if [[ "$routing" == "enabled" ]]; then nordvpn set routing disabled; fi
+    #
+    #if [[ "$analytics" == "disabled" ]]; then nordvpn set analytics enabled; fi
+    #if [[ "$analytics" == "enabled" ]]; then nordvpn set analytics disabled; fi
     #
     #if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
     if [[ "$killswitch" == "enabled" ]]; then nordvpn set killswitch disabled; fi
@@ -305,10 +330,10 @@ function main_logo {
         #
     fi
     echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr${Color_Off}"
-    echo -e "$techpro$fw$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst"
+    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst"
     echo -e "$transferc ${UPColor}$uptime${Color_Off}"
     if [[ -n $transferc ]]; then echo; fi
-    # all indicators: $techpro$fw$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst
+    # all indicators: $techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst
 }
 function heading {
     # $1 = heading
@@ -464,7 +489,10 @@ function set_vars {
     # $protocol and $obfuscate are not listed when using NordLynx
     technology=$(nsettings_search "Technology" | cut -f2 -d':' | cut -c 2-)
     protocol=$(nsettings_search "Protocol" | cut -f2 -d' ' | tr '[:lower:]' '[:upper:]')
-    firewall=$(nsettings_search "Firewall" | cut -f2 -d' ')
+    firewall=$(nsettings_search "Firewall:" | cut -f2 -d' ')
+    fwmark=$(nsettings_search "Firewall Mark" | cut -f3 -d' ')
+    routing=$(nsettings_search "Routing" | cut -f2 -d' ')
+    analytics=$(nsettings_search "Analytics" | cut -f2 -d' ')
     killswitch=$(nsettings_search "Kill" | cut -f3 -d' ')
     #tplite=$(printf '%s\n' "${nsettings[@]}" | grep -i -E "CyberSec|Threat" | awk '{print $NF}')
     #tplite=$(nsettings_search "CyberSec" | cut -f2 -d' ')           # CyberSec (v3.13-)
@@ -509,6 +537,18 @@ function set_vars {
     else
         fw="${DIColor}[FW]${Color_Off}"
         firewallc="${DColor}$firewall${Color_Off}"
+    fi
+    #
+    if [[ "$routing" == "enabled" ]]; then
+        rt="${EIColor}[RT]${Color_Off}"
+    else
+        rt="${DIColor}[RT]${Color_Off}"
+    fi
+    #
+    if [[ "$analytics" == "enabled" ]]; then
+        an="${EIColor}[AN]${Color_Off}"
+    else
+        an="${DIColor}[AN]${Color_Off}"
     fi
     #
     if [[ "$killswitch" == "enabled" ]]; then
@@ -675,6 +715,8 @@ function status {
     fi
     date
     echo
+    # reload the "bash sensors" linux mint cinnamon applet
+    #dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
 }
 function disconnect_warning {
     set_vars
@@ -904,10 +946,9 @@ function group_connect {
     case "$1" in
         "Obfuscated_Servers")
             heading "Obfuscated"
-            echo "Obfuscated servers are specialized VPN servers that"
-            echo "hide the fact that you’re using a VPN to reroute your"
-            echo "traffic. They allow users to connect to a VPN even in"
-            echo "heavily restrictive environments."
+            echo "Obfuscated servers are specialized VPN servers that hide the fact"
+            echo "that you’re using a VPN to reroute your traffic. They allow users"
+            echo "to connect to a VPN even in heavily restrictive environments."
             location="$obwhere"
             ;;
         "Double_VPN")
@@ -923,7 +964,7 @@ function group_connect {
             echo "through the Onion network."
             ;;
         "P2P")
-            heading "P 2 P"
+            heading "Peer to Peer"
             echo "Peer to Peer - sharing information and resources directly"
             echo "without relying on a dedicated central server."
             location="$p2pwhere"
@@ -958,7 +999,7 @@ function group_connect {
         echo
         read -n 1 -r -p "Proceed? (y/n/S) "; echo
         if [[ $REPLY =~ ^[Ss]$ ]]; then
-            echo
+            heading "Set Location" "txt" "alt"
             if [[ -n $location ]]; then
                 echo -e "Default location ${EColor}$location${Color_Off} will be ignored."
                 echo
@@ -1154,6 +1195,12 @@ function change_setting {
         "firewall")
             chgname="the Firewall"; chgvar="$firewall"; chgind="$fw"
             ;;
+        "routing")
+            chgname="Routing"; chgvar="$routing"; chgind="$rt"
+            ;;
+        "analytics")
+            chgname="Analytics"; chgvar="$analytics"; chgind="$an"
+            ;;
         "killswitch")
             chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks"
             ;;
@@ -1258,6 +1305,8 @@ function firewall_setting {
     echo "Enabling the Nord Firewall disables the Linux UFW."
     echo "The Firewall must be enabled to use the Kill Switch."
     echo
+    echo "Firewall Mark: $fwmark"
+    echo
     if [[ "$killswitch" == "enabled" ]]; then
         echo -e "$fw the Firewall is $firewallc."
         echo
@@ -1270,6 +1319,28 @@ function firewall_setting {
         fi
     fi
     change_setting "firewall"
+}
+function routing_setting {
+    heading "Routing"
+    echo
+    echo "Allows routing traffic through VPN servers (and peers in Meshnet)."
+    echo
+    echo -e "${FColor}This setting must be enabled${Color_Off}."
+    echo
+    echo "If this setting is disabled, the app will connect to"
+    echo "the VPN server or peer but won’t route any traffic."
+    echo
+    change_setting "routing" "back" # disable fast2
+    main_menu
+}
+function analytics_setting {
+    heading "Analytics"
+    echo
+    echo "Help NordVPN improve by sending anonymous aggregate data: "
+    echo "crash reports, OS version, marketing performance, and "
+    echo "feature usage data. (Nothing that could identify you.)"
+    echo
+    change_setting "analytics"
 }
 function killswitch_setting {
     heading "Kill Switch"
@@ -1332,7 +1403,6 @@ function autoconnect_setting {
     change_setting "autoconnect"
 }
 function ipv6_setting {
-    # May 2022 - IPv6 capable servers:  us9591 us9592 uk1875 uk1876
     heading "IPv6"
     echo "Enable or disable NordVPN IPv6 support."
     echo
@@ -1409,7 +1479,7 @@ function meshnet_menu {
     echo -e "$mn Meshnet is $meshnetc."
     echo
     PS3=$'\n''Choose an Option: '
-    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Support" "Exit")
+    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Support" "Exit")
     select mesh in "${submesh[@]}"
     do
         case $mesh in
@@ -1494,6 +1564,30 @@ function meshnet_menu {
                 if [[ -n $REPLY ]]; then
                     echo
                     nordvpn meshnet peer routing $REPLY
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Peer Local")
+                heading "Peer Local" "txt"
+                echo "Allow or Deny access to your local network when a peer is "
+                echo "routing traffic through this device."
+                echo
+                echo "Usage: nordvpn meshnet peer local [options] [public_key|hostname|ip]"
+                echo
+                echo "Options:"
+                echo "  allow - Allows the peer to access the local network when routing"
+                echo "  deny  - Denies the peer access to the local network when routing"
+                echo
+                echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn meshnet peer local "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet peer local $REPLY
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
                     echo
@@ -1788,13 +1882,12 @@ function whitelist_setting {
     main_menu
 }
 function login_nogui {
-    echo
+    heading "Login (no GUI)" "txt"
     echo "For now, users without a GUI can use "
     echo -e "${LColor}      nordvpn login --legacy${Color_Off}"
     echo -e "${LColor}      nordvpn login --username <username> --password <password>${Color_Off}"
     echo
-    echo -e "${WColor}If you don't have a web browser on the device:${Color_Off}"
-    echo -e "${LColor}Nord Account login without a GUI ('man nordvpn' Note 2)${Color_Off}"
+    echo -e "${EColor}Nord Account login without a GUI ('man nordvpn' Note 2)${Color_Off}"
     echo
     echo -e "${EColor}SSH${Color_Off} = in the SSH session connected to the device"
     echo -e "${FColor}Computer${Color_Off} = on the computer you're using to SSH into the device"
@@ -1814,18 +1907,23 @@ function account_menu {
     heading "Account"
     echo
     PS3=$'\n''Choose an Option: '
-    submacct=("Login (legacy)" "Login (browser)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "Exit")
+    submacct=("Login (browser)" "Login (legacy)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "Exit")
     select acc in "${submacct[@]}"
     do
         case $acc in
+            "Login (browser)")
+                echo
+                nordvpn login
+                echo
+                ;;
             "Login (legacy)")
                 echo
                 nordvpn login --legacy
                 echo
                 ;;
-            "Login (browser)")
+            "Login (token)")
                 echo
-                nordvpn login
+                nordvpn login --token
                 echo
                 ;;
             "Login (no GUI)")
@@ -1874,22 +1972,22 @@ function account_menu {
                 man nordvpn
                 ;;
             "Support")
-                echo
-                echo -e "${LColor}Support${Color_Off}"
+                heading "Support" "txt"
+                echo -e "${H2Color}Contact${Color_Off}"
                 echo "email: support@nordvpn.com"
                 echo "https://support.nordvpn.com/"
                 echo "https://nordvpn.com/contact-us/"
                 echo
-                echo -e "${LColor}Terms of Service${Color_Off}"
+                echo -e "${H2Color}Terms of Service${Color_Off}"
                 echo "https://my.nordaccount.com/legal/terms-of-service/"
                 echo
-                echo -e "${LColor}Privacy Policy${Color_Off}"
+                echo -e "${H2Color}Privacy Policy${Color_Off}"
                 echo "https://my.nordaccount.com/legal/privacy-policy/"
                 echo
-                echo -e "${LColor}Warrant Canary (bottom of page)${Color_Off}"
+                echo -e "${H2Color}Warrant Canary (bottom of page)${Color_Off}"
                 echo "https://nordvpn.com/security-efforts/"
                 echo
-                echo -e "${LColor}Bug Bounty${Color_Off}"
+                echo -e "${H2Color}Bug Bounty${Color_Off}"
                 echo "https://hackerone.com/nordsecurity?type=team"
                 echo
                 ;;
@@ -1990,6 +2088,7 @@ function iptables_status {
     echo
     echo -e "The VPN is $connectedc.  ${IPColor}$ip${Color_Off}"
     echo -e "$fw The Firewall is $firewallc."
+    echo -e "$rt Routing is $routing."
     echo -e "$ks The Kill Switch is $killswitchc."
     echo -e "$mn Meshnet is $meshnetc."
     if [[ -n "${whitelist[*]}" ]]; then
@@ -2016,7 +2115,7 @@ function iptables_menu {
     echo "  - Commands require 'sudo'"
     echo
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "Firewall" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "ping google" "Disconnect" "Exit")
+    submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "ping google" "Disconnect" "Exit")
     select ipt in "${submipt[@]}"
     do
         case $ipt in
@@ -2027,6 +2126,11 @@ function iptables_menu {
             "Firewall")
                 echo
                 change_setting "firewall" "back"
+                iptables_status
+                ;;
+            "Routing")
+                echo
+                change_setting "routing" "back"
                 iptables_status
                 ;;
             "KillSwitch")
@@ -2074,7 +2178,7 @@ function iptables_menu {
                     sudo iptables -t raw -F
                     sudo iptables -t raw -X
                     echo
-                    echo -e "${LColor}IPTables After:${Color_Off}"
+                    echo -e "${EColor}IPTables After:${Color_Off}"
                     sudo iptables -S
                     echo
                 else
@@ -2734,7 +2838,7 @@ function script_info {
     echo
     echo "$0"
     echo
-    startline=$(grep -m1 -n "CUSTOM" "$0" | cut -f1 -d':')
+    startline=$(grep -m1 -n "Customization" "$0" | cut -f1 -d':')
     endline=$(grep -m1 -n "End" "$0" | cut -f1 -d':')
     numlines=$(( endline - startline + 2 ))
     if (( "$highlight_exists" )); then
@@ -2850,10 +2954,10 @@ function group_menu {
 function settings_menu {
     heading "Settings"
     echo
-    echo -e "$techpro$fw$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst"
+    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst"
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
         case $sett in
@@ -2865,6 +2969,12 @@ function settings_menu {
                 ;;
             "Firewall")
                 firewall_setting
+                ;;
+            "Routing")
+                routing_setting
+                ;;
+            "Analytics")
+                analytics_setting
                 ;;
             "KillSwitch")
                 killswitch_setting
@@ -3270,6 +3380,7 @@ main_menu start
 # Disable IPv6
 #   https://support.nordvpn.com/Connectivity/Linux/1047409212/How-to-disable-IPv6-on-Linux.htm
 #   Blocked by default:  https://nordvpn.com/blog/nordvpn-implements-ipv6-leak-protection
+#   May 2022 - IPv6 capable servers:  us9591 us9592 uk1875 uk1876
 #
 # Manage NordVPN OpenVPN connections
 #   https://github.com/jotyGill/openpyn-nordvpn
@@ -3351,6 +3462,9 @@ main_menu start
 #           Display Output:  Off
 #           Command on Startup:  blank
 #
+#       Command to reload the Bash Sensors applet:
+#           dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+#
 # Other Troubleshooting
 #   systemctl status nordvpnd.service
 #   systemctl status nordvpn.service
@@ -3361,6 +3475,7 @@ main_menu start
 #   sudo service nordvpnd restart
 #   sudo systemctl restart nordvpnd.service
 #   sudo systemctl restart nordvpn.service
+#   sudo systemctl restart networking
 #
 # Change Window Title (gnome terminal)
 #   Add function to bashrc. Usage: $ set-title NORD
