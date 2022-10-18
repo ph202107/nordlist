@@ -4,8 +4,8 @@ Tested with Linux Mint only (Debian/Ubuntu base).
 Fully customizable. 
 
 Screenshots:  
-https://i.imgur.com/SqFoMnQ.png  
-https://i.imgur.com/tlbAxaf.png  
+https://i.imgur.com/k9pb5U4.png  
+https://i.imgur.com/uPSgJUR.png  
 https://i.imgur.com/S3djlU5.png  
 https://i.imgur.com/c31ZwqJ.png  
 
@@ -21,7 +21,7 @@ Then:
 
 =================================
 
-NordVPN version 3.14.2 currently has these issues:
+NordVPN versions 3.14.2, 3.15.0 currently have these issues:
 
 - When connecting to the Obfuscated_Servers Group:  
 "The specified group does not exist."
