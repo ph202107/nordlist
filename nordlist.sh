@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.0 on Linux Mint 20.3
-# October 18, 2022
+# November 4, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -36,7 +36,7 @@
 # 4) At the terminal type "nordlist.sh"
 #
 # (*) The script will work without figlet and lolcat by specifying
-#   "ascii_standard" in "function main_logo"
+#     "ascii_standard" in "function main_logo"
 #
 # =====================================================================
 # Other Programs Used
@@ -57,7 +57,7 @@
 # Sudo Usage
 # ===========
 #
-#   These functions require a sudo password:
+#   These functions will ask for a sudo password:
 #   - function restart_service
 #   - function iptables_status
 #   - function wireguard_gen
@@ -134,6 +134,10 @@ exitload="n"
 # Requires 'curl'.  Connects to ipinfo.io.
 exitip="n"
 #
+# Reload the "Bash-Sensors" applet when the script exits.  "y" or "n"
+# This setting only for the Cinnamon DE with "Bash Sensors" installed.
+exitapplet="n"
+#
 # Open http links in a new Firefox window.  "y" or "n"
 # Choose "n" to use the default browser or method.
 newfirefox="n"
@@ -207,7 +211,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3102 (function main_menu).
+# The Main Menu starts on line 3141 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -715,8 +719,10 @@ function status {
     fi
     date
     echo
-    # reload the "bash sensors" linux mint cinnamon applet
-    #dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+    if [[ "$exitapplet" =~ ^[Yy]$ ]]; then
+        # reload the "Bash Sensors" Linux Mint Cinnamon applet
+        dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+    fi
 }
 function disconnect_warning {
     set_vars
@@ -1278,13 +1284,21 @@ function change_setting {
             fi
             #
         else
-            if [[ "$1" == "firewall" ]] && [[ "$killswitch" == "enabled" ]]; then
-                # when changing the setting from IPTables
-                echo -e "${WColor}Disabling the Kill Switch.${Color_Off}"
-                echo
-                nordvpn set killswitch disabled; wait
-                echo
-            fi
+            case "$1" in
+                "firewall")
+                    if [[ "$killswitch" == "enabled" ]]; then
+                        # when changing the setting from IPTables
+                        echo -e "${WColor}Disabling the Kill Switch.${Color_Off}"
+                        echo
+                        nordvpn set killswitch disabled; wait
+                        echo
+                    fi
+                    ;;
+                "routing")
+                    echo -e "${WColor}Disabling all traffic routing.${Color_Off}"
+                    echo
+                    ;;
+            esac
             #
             nordvpn set "$1" disabled; wait
             #
@@ -1305,7 +1319,8 @@ function firewall_setting {
     echo "Enabling the Nord Firewall disables the Linux UFW."
     echo "The Firewall must be enabled to use the Kill Switch."
     echo
-    echo "Firewall Mark: $fwmark"
+    echo -e "Firewall Mark: ${LColor}$fwmark${Color_Off}"
+    echo "Change with: nordvpn set fwmark <mark>"
     echo
     if [[ "$killswitch" == "enabled" ]]; then
         echo -e "$fw the Firewall is $firewallc."
@@ -1325,10 +1340,10 @@ function routing_setting {
     echo
     echo "Allows routing traffic through VPN servers (and peers in Meshnet)."
     echo
-    echo -e "${FColor}This setting must be enabled${Color_Off}."
+    echo -e "${FColor}This setting must be enabled.${Color_Off}"
     echo
-    echo "If this setting is disabled, the app will connect to"
-    echo "the VPN server or peer but won’t route any traffic."
+    echo "If this setting is disabled, the app will connect to the"
+    echo "VPN server (or peer) but won’t route any traffic."
     echo
     change_setting "routing" "back" # disable fast2
     main_menu
@@ -1571,13 +1586,13 @@ function meshnet_menu {
                 ;;
             "Peer Local")
                 heading "Peer Local" "txt"
-                echo "Allow or Deny access to your local network when a peer is "
+                echo "Allow or Deny access to your local network when a peer is"
                 echo "routing traffic through this device."
                 echo
                 echo "Usage: nordvpn meshnet peer local [options] [public_key|hostname|ip]"
                 echo
                 echo "Options:"
-                echo "  allow - Allows the peer to access the local network when routing"
+                echo "  allow - Allows the peer access to the local network when routing"
                 echo "  deny  - Denies the peer access to the local network when routing"
                 echo
                 echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
@@ -1907,7 +1922,7 @@ function account_menu {
     heading "Account"
     echo
     PS3=$'\n''Choose an Option: '
-    submacct=("Login (browser)" "Login (legacy)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "Exit")
+    submacct=("Login (browser)" "Login (legacy)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "NordAccount" "Exit")
     select acc in "${submacct[@]}"
     do
         case $acc in
@@ -1922,8 +1937,19 @@ function account_menu {
                 echo
                 ;;
             "Login (token)")
+                heading "Login (token)" "txt"
+                echo "To create a token, login to your Nord Account and navigate to:"
+                echo "Services - NordVPN - Access Token - Generate New Token"
                 echo
-                nordvpn login --token
+                openlink "https://my.nordaccount.com/" "ask"
+                echo
+                read -r -p "Enter the login token: " logintoken
+                if [[ -z $logintoken ]]; then
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                else
+                    echo
+                    nordvpn login --token "logintoken"
+                fi
                 echo
                 ;;
             "Login (no GUI)")
@@ -1990,6 +2016,10 @@ function account_menu {
                 echo -e "${H2Color}Bug Bounty${Color_Off}"
                 echo "https://hackerone.com/nordsecurity?type=team"
                 echo
+                ;;
+            "NordAccount")
+                echo
+                openlink "https://my.nordaccount.com/" "ask"
                 ;;
             "Exit")
                 main_menu
@@ -2086,8 +2116,8 @@ function reset_app {
 }
 function iptables_status {
     echo
-    echo -e "The VPN is $connectedc.  ${IPColor}$ip${Color_Off}"
-    echo -e "$fw The Firewall is $firewallc."
+    echo -e "The VPN is $connectedc. ${IPColor}$ip${Color_Off}"
+    echo -e "$fw The Firewall is $firewallc. Firewall Mark: ${LColor}$fwmark${Color_Off}"
     echo -e "$rt Routing is $routing."
     echo -e "$ks The Kill Switch is $killswitchc."
     echo -e "$mn Meshnet is $meshnetc."
@@ -2115,7 +2145,7 @@ function iptables_menu {
     echo "  - Commands require 'sudo'"
     echo
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "ping google" "Disconnect" "Exit")
+    submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "Ping Google" "Disconnect" "Exit")
     select ipt in "${submipt[@]}"
     do
         case $ipt in
@@ -2217,7 +2247,7 @@ function iptables_menu {
                     echo
                 fi
                 ;;
-            "ping google")
+            "Ping Google")
                 iptables_status
                 echo -e "${LColor}ping -c 3 google.com${Color_Off}"
                 ping -c 3 google.com
@@ -2683,7 +2713,7 @@ function tools_menu {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    submtools=( "NordVPN API" "External IP" "WireGuard" "Speed Tests" "Rate VPN Server" "ping vpn" "ping google" "my traceroute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "bash.ws" "world map" "Change Host" "Exit" )
+    submtools=( "NordVPN API" "External IP" "WireGuard" "Speed Tests" "Rate VPN Server" "Ping VPN" "Ping Google" "My TraceRoute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Exit" )
     select tool in "${submtools[@]}"
     do
         case $tool in
@@ -2704,14 +2734,14 @@ function tools_menu {
                 echo
                 rate_server
                 ;;
-            "ping vpn")
+            "Ping VPN")
                 echo
                 echo -e "${LColor}ping -c 5 $nordhost${Color_Off}"
                 echo
                 ping -c 5 "$nordhost"
                 echo
                 ;;
-            "ping google")
+            "Ping Google")
                 clear -x
                 echo -e "${LColor}"
                 echo "Ping Google DNS 8.8.8.8, 8.8.4.4"
@@ -2729,7 +2759,7 @@ function tools_menu {
                 echo -e "${LColor}===== Telstra =====${Color_Off}"
                 ping -c 5 139.130.4.4; echo
                 ;;
-            "my traceroute")
+            "My TraceRoute")
                 echo
                 read -r -p "Destination [Default: $nordhost]: " target
                 target=${target:-$nordhost}
@@ -2783,23 +2813,25 @@ function tools_menu {
             "bash.ws")
                 openlink "https://bash.ws/"
                 ;;
-            "world map")
+            "Change Host")
+                change_host
+                ;;
+            "World Map")
                 # may be possible to highlight location
-                echo
-                echo -e "${LColor}OpenStreetMap ASCII World Map${Color_Off}"
+                heading "OpenStreetMap ASCII World Map" "txt"
                 echo "- arrow keys to navigate"
                 echo "- 'a' and 'z' to zoom"
                 echo "- 'q' to quit"
                 echo
-                read -n 1 -r -p "telnet mapscii.me? (y/n) "; echo
-                echo
+                read -n 1 -r -p "telnet mapscii.me ? (y/n) "; echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     telnet mapscii.me
                 fi
                 echo
                 ;;
-            "Change Host")
-                change_host
+            "Outage Map")
+                echo
+                openlink "https://www.thousandeyes.com/outages/" "ask"
                 ;;
             "Exit")
                 main_menu
@@ -3267,7 +3299,7 @@ if nordvpn status | grep -i "update"; then
     echo
 fi
 #
-main_menu start
+main_menu "start"
 #
 # =====================================================================
 # Notes
@@ -3414,7 +3446,7 @@ main_menu start
 #       https://cinnamon-spices.linuxmint.com/applets/view/305
 #
 #   Bash Sensors
-#       Shows the NordVPN connection status in the system tray and runs nordlist.sh when clicked.
+#       Shows the NordVPN connection status in the panel and runs nordlist.sh when clicked.
 #       Mint-Menu - "Applets" - Download tab - "Bash-Sensors" - Install - Manage tab - (+)Add to panel
 #       https://cinnamon-spices.linuxmint.com/applets/view/231
 #
