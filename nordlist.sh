@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.0 on Linux Mint 20.3
-# November 4, 2022
+# November 5, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -1948,7 +1948,7 @@ function account_menu {
                     echo -e "${DColor}(Skipped)${Color_Off}"
                 else
                     echo
-                    nordvpn login --token "logintoken"
+                    nordvpn login --token "$logintoken"
                 fi
                 echo
                 ;;
