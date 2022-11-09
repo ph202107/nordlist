@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.0 on Linux Mint 20.3
-# November 5, 2022
+# November 9, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -111,7 +111,12 @@ wgdir="/home/$USER/Downloads"
 # Specify the absolute path and filename to store a local list of all
 # the NordVPN servers.  Avoids API server timeouts.  Create the list at:
 # Settings - Tools - NordVPN API - All VPN Servers - Update List
-allvpnfile="/home/$USER/Downloads/allnordservers.txt"
+nordserversfile="/home/$USER/Downloads/nord_allservers.txt"
+#
+# Specify the absolute path and filename to store a local list of your
+# favorite NordVPN servers.  eg. Low ping servers or streaming servers.
+# Create the list at:  Groups - Favorites
+nordfavoritesfile="/home/$USER/Downloads/nord_favorites.txt"
 #
 # When changing servers disconnect the VPN first, then connect to the
 # new server.  "y" or "n"
@@ -211,7 +216,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3141 (function main_menu).
+# The Main Menu starts on line 3235 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -2322,10 +2327,10 @@ function allservers_menu {
     # If you get this error try again later.
     heading "All Servers"
     if (( ${#allnordservers[@]} == 0 )); then
-        if [[ -e "$allvpnfile" ]]; then
-            echo -e "${EColor}Server List: ${LColor}$allvpnfile${Color_Off}"
-            head -n 1 "$allvpnfile"
-            readarray -t allnordservers < <( tail -n +4 "$allvpnfile" )
+        if [[ -e "$nordserversfile" ]]; then
+            echo -e "${EColor}Server List: ${LColor}$nordserversfile${Color_Off}"
+            head -n 1 "$nordserversfile"
+            readarray -t allnordservers < <( tail -n +4 "$nordserversfile" )
         else
             echo "Retrieving the list of NordVPN servers..."
             echo "Choose 'Update List' to save a local copy of the server list."
@@ -2397,19 +2402,19 @@ function allservers_menu {
                 ;;
             "Update List")
                 echo
-                if [[ -e "$allvpnfile" ]]; then
-                    echo -e "${EColor}Server List: ${LColor}$allvpnfile${Color_Off}"
-                    head -n 2 "$allvpnfile"
+                if [[ -e "$nordserversfile" ]]; then
+                    echo -e "${EColor}Server List: ${LColor}$nordserversfile${Color_Off}"
+                    head -n 2 "$nordserversfile"
                     echo
                     read -n 1 -r -p "Update the list? (y/n) "; echo
                 else
-                    echo -e "${WColor}$allvpnfile does not exist.${Color_Off}"
+                    echo -e "${WColor}$nordserversfile does not exist.${Color_Off}"
                     echo
                     read -n 1 -r -p "Create the file? (y/n) "; echo
                 fi
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    if [[ -e "$allvpnfile" ]]; then
+                    if [[ -e "$nordserversfile" ]]; then
                         echo "Retrieving the list of NordVPN servers..."
                         echo
                         readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
@@ -2418,17 +2423,17 @@ function allservers_menu {
                         echo
                         echo -e "${WColor}Server list is empty. Parse Error? Try again later.${Color_Off}"
                         echo
-                        if [[ -e "$allvpnfile" ]]; then
+                        if [[ -e "$nordserversfile" ]]; then
                             # rebuild array if it was blanked out on retrieval attempt
-                            readarray -t allnordservers < <( tail -n +4 "$allvpnfile" )
+                            readarray -t allnordservers < <( tail -n +4 "$nordserversfile" )
                         fi
                     else
-                        echo "Retrieved on: $( date )" > "$allvpnfile"
-                        echo "Server Count: ${#allnordservers[@]}" >> "$allvpnfile"
-                        echo >> "$allvpnfile"
-                        printf '%s\n' "${allnordservers[@]}" >> "$allvpnfile"
-                        echo -e "Saved as ${LColor}$allvpnfile${Color_Off}"
-                        head -n 2 "$allvpnfile"
+                        echo "Retrieved on: $( date )" > "$nordserversfile"
+                        echo "Server Count: ${#allnordservers[@]}" >> "$nordserversfile"
+                        echo >> "$nordserversfile"
+                        printf '%s\n' "${allnordservers[@]}" >> "$nordserversfile"
+                        echo -e "Saved as ${LColor}$nordserversfile${Color_Off}"
+                        head -n 2 "$nordserversfile"
                         echo
                     fi
                 fi
@@ -2951,11 +2956,97 @@ function group_all_menu {
         fi
     done
 }
+function group_favorites {
+    heading "Favorites"
+    echo "Keep track of your favorite individual servers by adding them to"
+    echo "this list. For example low ping servers or streaming servers."
+    echo "Can add multiple servers by editing the file directly."
+    echo
+    echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr${Color_Off}"
+    favcity=$( echo "$city" | tr -d ' ' )
+    if [[ -e "$nordfavoritesfile" ]]; then
+        echo -e "Favorites List: ${LColor}$nordfavoritesfile${Color_Off}"
+    else
+        echo
+        echo -e "${WColor}$nordfavoritesfile does not exist.${Color_Off}"
+        echo
+        read -n 1 -r -p "Create the file? (y/n) "; echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            touch "$nordfavoritesfile"
+            group_favorites
+        else
+            group_menu
+        fi
+    fi
+    if grep -q "$server" "$nordfavoritesfile"; then
+        echo -e "Current Server is in the list:  ${FColor}$( grep "$server" "$nordfavoritesfile" )${Color_Off}"
+    fi
+    echo
+    readarray -t favoritelist < <( sort < "$nordfavoritesfile" )
+    if [[ "$connected" == "connected" ]] && ! grep -q "$server" "$nordfavoritesfile"; then
+        favoritelist+=( "Add Current Server" )
+    fi
+    favoritelist+=( "Add Server Name" "Edit File" "Exit" )
+    numfavorites=${#favoritelist[@]}
+    PS3=$'\n''Connect to Server: '
+    select xfavorite in "${favoritelist[@]}"
+    do
+        if [[ "$xfavorite" == "Exit" ]]; then
+            main_menu
+        elif [[ "$xfavorite" == "Edit File" ]]; then
+            echo
+            echo "Add one server per line with no empty lines."
+            echo
+            openlink "$nordfavoritesfile" "ask" "exit"
+        elif [[ "$xfavorite" == "Add Server Name" ]]; then
+            heading "Add Server Name" "txt"
+            echo "Please use this format with only one <dash> in total:"
+            echo
+            echo -e "    AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
+            echo
+            echo "Example: US_Streaming-us8247 or 20ping-ca1672"
+            echo
+            echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+            echo
+            read -r -p "Enter the server name: "
+            if [[ -n $REPLY ]]; then
+                echo "$REPLY" >> "$nordfavoritesfile"
+                echo
+                echo -e "Added $REPLY to ${LColor}$nordfavoritesfile${Color_Off}"
+                echo
+            else
+                echo -e "${DColor}(Skipped)${Color_Off}"
+                echo
+            fi
+            group_favorites
+        elif [[ "$xfavorite" == "Add Current Server" ]]; then
+            heading "Add Current Server" "txt"
+            read -n 1 -r -p "Add '$favcity-$server' to the list? (y/n) "; echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo "$favcity-$server" >> "$nordfavoritesfile"
+                echo
+                echo -e "Added $favcity-$server to ${LColor}$nordfavoritesfile${Color_Off}"
+                echo
+            fi
+            group_favorites
+        elif (( 1 <= REPLY )) && (( REPLY <= numfavorites )); then
+            heading "$(echo "$xfavorite" | cut -f1 -d'-')"
+            disconnect_vpn
+            echo "Connect to $xfavorite"
+            echo
+            nordvpn connect "$(echo "$xfavorite" | cut -f2 -d'-')"
+            status
+            exit
+        else
+            invalid_option "$numfavorites"
+        fi
+    done
+}
 function group_menu {
     heading "Groups"
     echo
     PS3=$'\n''Choose a Group: '
-    submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Exit")
+    submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Favorites" "Exit")
     select grp in "${submgroups[@]}"
     do
         case $grp in
@@ -2973,6 +3064,9 @@ function group_menu {
                 ;;
             "P2P")
                 group_connect "P2P"
+                ;;
+            "Favorites")
+                group_favorites
                 ;;
             "Exit")
                 main_menu
