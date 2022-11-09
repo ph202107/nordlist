@@ -6,24 +6,20 @@
 # deletes directories, review carefully before use.  Do not use.
 #
 # Choose the NordVPN app version to install
-#   (uncomment one of the following)
+# List available versions with: "apt list -a nordvpn"
 #
 nord_version="nordvpn"              # install the latest version available
-#nord_version="nordvpn=3.12.0-1"    # 03 Nov 2021 login via Nord Account
-#nord_version="nordvpn=3.12.1-1"    # 18 Nov 2021
-#nord_version="nordvpn=3.12.2"      # 16 Dec 2021
-#nord_version="nordvpn=3.12.3"      # 11 Jan 2022
-#nord_version="nordvpn=3.12.4"      # 10 Feb 2022
-#nord_version="nordvpn=3.12.5"      # 14 Mar 2022 switched to policy-based traffic routing
 #nord_version="nordvpn=3.13.0"      # 23 May 2022 firewall - filter packets by firewall marks
 #nord_version="nordvpn=3.14.0"      # 01 Jun 2022 CyberSec changed to "Threat Protection Lite"
 #nord_version="nordvpn=3.14.1"      # 13 Jun 2022
-#nord_version="nordvpn=3.14.2"      # 28 Jul 2022
+#nord_version="nordvpn=3.14.2"      # 28 Jul 2022 Works on Ubuntu 18.04, Mint 19.3
+#nord_version="nordvpn=3.15.0"      # 17 Oct 2022 Login token, routing, fwmark, analytics
 #
-# list version numbers:
-#   apt list -a nordvpn
+# v3.15.0+ can login using a token. Leave blank for earlier versions.
+# To create a token visit https://my.nordaccount.com/
+# Services - NordVPN - Access Token - Generate New Token
+logintoken=""
 #
-# repo: https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
 #
 function default_settings {
     lbreak
@@ -39,10 +35,8 @@ function default_settings {
     #nordvpn set autoconnect disabled
     #nordvpn set ipv6 disabled
     #nordvpn set dns disabled
-    nordvpn set meshnet enabled
-    wait
-    nordvpn whitelist add subnet 192.168.1.0/24
-    wait
+    #nordvpn set meshnet enabled; wait
+    #nordvpn whitelist add subnet 192.168.1.0/24
 }
 function lbreak {
     # break up wall of text
@@ -110,9 +104,13 @@ function loginnord {
         sudo systemctl start nordvpnd.service; wait
         lbreak
     fi
-    nordvpn login
-    #nordvpn login --legacy
-    #nordvpn login --username <username> --password <password>
+    if [[ -n $logintoken ]]; then
+        nordvpn login --token "$logintoken"
+    else
+        nordvpn login
+        #nordvpn login --legacy
+        #nordvpn login --username <username> --password <password>
+    fi
     echo
     read -n 1 -r -p "Press any key after login is complete... "; echo
 }
