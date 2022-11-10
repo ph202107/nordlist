@@ -2978,14 +2978,15 @@ function group_favorites {
             group_menu
         fi
     fi
-    if grep -q "$server" "$nordfavoritesfile"; then
-        echo -e "Current Server is in the list:  ${FColor}$( grep "$server" "$nordfavoritesfile" )${Color_Off}"
+    readarray -t favoritelist < <( sort < "$nordfavoritesfile" )
+    if [[ "$connected" == "connected" ]]; then
+        if grep -q "$server" "$nordfavoritesfile"; then
+            echo -e "Current Server is in the list:  ${FColor}$( grep "$server" "$nordfavoritesfile" )${Color_Off}"
+        else
+            favoritelist+=( "Add Current Server" )
+        fi
     fi
     echo
-    readarray -t favoritelist < <( sort < "$nordfavoritesfile" )
-    if [[ "$connected" == "connected" ]] && ! grep -q "$server" "$nordfavoritesfile"; then
-        favoritelist+=( "Add Current Server" )
-    fi
     favoritelist+=( "Add Server Name" "Edit File" "Exit" )
     numfavorites=${#favoritelist[@]}
     PS3=$'\n''Connect to Server: '
