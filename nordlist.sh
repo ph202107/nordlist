@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.0 on Linux Mint 20.3
-# November 9, 2022
+# November 10, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -216,7 +216,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3235 (function main_menu).
+# The Main Menu starts on line 3207 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -846,35 +846,42 @@ function city_menu {
     PS3=$'\n''Connect to City: '
     select xcity in "${citylist[@]}"
     do
-        if [[ "$xcity" == "Exit" ]]; then
-            main_menu
-        elif [[ "$xcity" == "Best" ]]; then
-            heading "$xcountry"
-            disconnect_vpn
-            echo "Connect to the best available city."
-            echo
-            nordvpn connect "$xcountry"
-            status
-            exit
-        elif [[ "$xcity" == "Random" ]]; then
-            heading "Random"
-            disconnect_vpn
-            echo "Connect to $rcity $xcountry"
-            echo
-            nordvpn connect "$rcity"
-            status
-            exit
-        elif (( 1 <= REPLY )) && (( REPLY <= numcities )); then
-            heading "$xcity"
-            disconnect_vpn
-            echo "Connect to $xcity $xcountry"
-            echo
-            nordvpn connect "$xcity"
-            status
-            exit
-        else
-            invalid_option "$numcities"
-        fi
+        case $xcity in
+            "Exit")
+                main_menu
+                ;;
+            "Best")
+                heading "$xcountry"
+                disconnect_vpn
+                echo "Connect to the best available city."
+                echo
+                nordvpn connect "$xcountry"
+                status
+                exit
+                ;;
+            "Random")
+                heading "Random"
+                disconnect_vpn
+                echo "Connect to $rcity $xcountry"
+                echo
+                nordvpn connect "$rcity"
+                status
+                exit
+                ;;
+            *)
+                if (( 1 <= REPLY )) && (( REPLY <= numcities )); then
+                    heading "$xcity"
+                    disconnect_vpn
+                    echo "Connect to $xcity $xcountry"
+                    echo
+                    nordvpn connect "$xcity"
+                    status
+                    exit
+                else
+                    invalid_option "$numcities"
+                fi
+                ;;
+        esac
     done
 }
 function host_connect {
@@ -2346,18 +2353,14 @@ function allservers_menu {
     do
         case $avpn in
             "List All Servers")
-                echo
-                echo -e "${LColor}All the VPN Servers${Color_Off}"
-                echo
+                heading "All the VPN Servers" "txt"
                 printf '%s\n' "${allnordservers[@]}"
                 echo
                 echo "All Servers: ${#allnordservers[@]}"
                 echo
                 ;;
             "Double-VPN Servers")
-                echo
-                echo -e "${LColor}Double-VPN Servers${Color_Off}"
-                echo
+                heading "Double-VPN Servers" "txt"
                 printf '%s\n' "${allnordservers[@]}" | grep "-" | grep -i -v -e "socks" -e "onion"
                 echo
                 # work in progress
@@ -2365,18 +2368,14 @@ function allservers_menu {
                 echo
                 ;;
             "Onion Servers")
-                echo
-                echo -e "${LColor}Onion Servers${Color_Off}"
-                echo
+                heading "Onion Servers" "txt"
                 printf '%s\n' "${allnordservers[@]}" | grep -i "onion"
                 echo
                 echo "Onion Servers: $( printf '%s\n' "${allnordservers[@]}" | grep -c -i "onion" )"
                 echo
                 ;;
             "SOCKS Servers")
-                echo
-                echo -e "${LColor}SOCKS Servers${Color_Off}"
-                echo
+                heading "SOCKS Servers" "txt"
                 printf '%s\n' "${allnordservers[@]}" | grep -i "socks"
                 echo
                 echo "SOCKS Servers: $( printf '%s\n' "${allnordservers[@]}" | grep -c -i "socks" )"
@@ -2390,8 +2389,7 @@ function allservers_menu {
                 echo
                 read -r -p "Enter search term: " allvpnsearch
                 echo
-                echo -e "${LColor}Search for '$allvpnsearch'${Color_Off}"
-                echo
+                heading "Search for '$allvpnsearch'" "txt"
                 printf '%s\n' "${allnordservers[@]}" | grep -i "$allvpnsearch"
                 echo
                 echo "'$allvpnsearch' Count: $( printf '%s\n' "${allnordservers[@]}" | grep -c -i "$allvpnsearch" )"
@@ -2963,7 +2961,6 @@ function group_favorites {
     echo "Can add multiple servers by editing the file directly."
     echo
     echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr${Color_Off}"
-    favcity=$( echo "$city" | tr -d ' ' )
     if [[ -e "$nordfavoritesfile" ]]; then
         echo -e "Favorites List: ${LColor}$nordfavoritesfile${Color_Off}"
     else
@@ -2992,55 +2989,69 @@ function group_favorites {
     PS3=$'\n''Connect to Server: '
     select xfavorite in "${favoritelist[@]}"
     do
-        if [[ "$xfavorite" == "Exit" ]]; then
-            main_menu
-        elif [[ "$xfavorite" == "Edit File" ]]; then
-            echo
-            echo "Add one server per line with no empty lines."
-            echo
-            openlink "$nordfavoritesfile" "ask" "exit"
-        elif [[ "$xfavorite" == "Add Server Name" ]]; then
-            heading "Add Server Name" "txt"
-            echo "Please use this format with only one <dash> in total:"
-            echo
-            echo -e "    AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
-            echo
-            echo "Example: US_Streaming-us8247 or 20ping-ca1672"
-            echo
-            echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-            echo
-            read -r -p "Enter the server name: "
-            if [[ -n $REPLY ]]; then
-                echo "$REPLY" >> "$nordfavoritesfile"
+        case $xfavorite in
+            "Exit")
+                main_menu
+                ;;
+            "Edit File")
                 echo
-                echo -e "Added $REPLY to ${LColor}$nordfavoritesfile${Color_Off}"
+                echo "Add one server per line with no empty lines or trailing spaces."
+                echo -e "Format:  AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
+                echo "Examples:  Netflix-us8247  Gaming-ca1672"
                 echo
-            else
-                echo -e "${DColor}(Skipped)${Color_Off}"
+                openlink "$nordfavoritesfile" "ask" "exit"
+                ;;
+            "Add Server Name")
+                heading "Add Server Name" "txt"
+                echo "Must use this format with one <dash> total, no trailing spaces:"
+                echo -e "  AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
                 echo
-            fi
-            group_favorites
-        elif [[ "$xfavorite" == "Add Current Server" ]]; then
-            heading "Add Current Server" "txt"
-            read -n 1 -r -p "Add '$favcity-$server' to the list? (y/n) "; echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                echo "$favcity-$server" >> "$nordfavoritesfile"
+                echo "Examples:  Netflix-us8247  Gaming-ca1672"
                 echo
-                echo -e "Added $favcity-$server to ${LColor}$nordfavoritesfile${Color_Off}"
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
-            fi
-            group_favorites
-        elif (( 1 <= REPLY )) && (( REPLY <= numfavorites )); then
-            heading "$(echo "$xfavorite" | cut -f1 -d'-')"
-            disconnect_vpn
-            echo "Connect to $xfavorite"
-            echo
-            nordvpn connect "$(echo "$xfavorite" | cut -f2 -d'-')"
-            status
-            exit
-        else
-            invalid_option "$numfavorites"
-        fi
+                read -r -p "Enter the server name: "
+                if [[ -n $REPLY ]]; then
+                    echo "$REPLY" >> "$nordfavoritesfile"
+                    echo
+                    echo -e "Added $REPLY to ${LColor}$nordfavoritesfile${Color_Off}"
+                    echo
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                group_favorites
+                ;;
+            "Add Current Server")
+                favname="$(echo "$city" | tr -d ' ')"-"$server"
+                heading "Add $server to Favorites" "txt"
+                echo "Change the server name?"
+                echo
+                echo -e "Format:  AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
+                echo "Examples: Netflix-$server Gaming-$server"
+                echo
+                read -r -p "Hit 'Enter' for default [$favname]: " favadd
+                favadd=${favadd:-$favname}
+                echo "$favadd" >> "$nordfavoritesfile"
+                echo
+                echo -e "Added $favadd to ${LColor}$nordfavoritesfile${Color_Off}"
+                echo
+                group_favorites
+                ;;
+            *)
+                if (( 1 <= REPLY )) && (( REPLY <= numfavorites )); then
+                    heading "$(echo "$xfavorite" | cut -f1 -d'-')"
+                    disconnect_vpn
+                    echo "Connect to $xfavorite"
+                    echo
+                    nordvpn connect "$(echo "$xfavorite" | cut -f2 -d'-')"
+                    status
+                    exit
+                else
+                    invalid_option "$numfavorites"
+                fi
+                ;;
+        esac
     done
 }
 function group_menu {
@@ -3158,46 +3169,6 @@ function settings_menu {
                 invalid_option "${#submsett[@]}"
                 ;;
         esac
-    done
-}
-function main_disconnect {
-    heading "Disconnect"
-    echo
-    if [[ "$alwaysrate" =~ ^[Yy]$ ]]; then
-        rate_server
-    fi
-    disconnect_vpn "force" "check_ks"
-    status
-    exit
-}
-function check_depends {
-    # https://stackoverflow.com/questions/16553089/dynamic-variable-names-in-bash
-    # creates variables with value 0 or 1, eg $nordvpn_exists = 1
-    #
-    # check silently
-    for program in nordvpn systemd-resolve #iptables systemctl firefox
-    do
-        name=$( echo "$program" | tr -d '-' )       # remove hyphens
-        if command -v "$program" &> /dev/null; then
-            printf -v "${name}_exists" '%s' '1'
-        else
-            printf -v "${name}_exists" '%s' '0'
-        fi
-    done
-    #
-    # echo results
-    echo -e "${LColor}App Check${Color_Off}"
-    for program in wg jq curl figlet lolcat highlight speedtest-cli
-    do
-        name=$( echo "$program" | tr -d '-' )       # remove hyphens
-        if command -v "$program" &> /dev/null; then
-            echo -ne "${EIColor}Y${Color_Off}"
-            printf -v "${name}_exists" '%s' '1'
-        else
-            echo -ne "${DIColor}N${Color_Off}"
-            printf -v "${name}_exists" '%s' '0'
-        fi
-        echo "  $program"
     done
 }
 function main_header {
@@ -3324,6 +3295,11 @@ function main_menu {
                 # connect to a random city worldwide
                 random_worldwide
                 ;;
+            "Favorites")
+                # can add to mainmenu
+                # connect from a list of individual server names
+                group_favorites
+                ;;
             "Countries")
                 country_menu
                 ;;
@@ -3334,7 +3310,14 @@ function main_menu {
                 settings_menu
                 ;;
             "Disconnect")
-                main_disconnect
+                heading "Disconnect"
+                echo
+                if [[ "$alwaysrate" =~ ^[Yy]$ ]]; then
+                    rate_server
+                fi
+                disconnect_vpn "force" "check_ks"
+                status
+                break
                 ;;
             "Exit")
                 heading "Goodbye!"
@@ -3348,6 +3331,36 @@ function main_menu {
         esac
     done
     exit
+}
+function check_depends {
+    # https://stackoverflow.com/questions/16553089/dynamic-variable-names-in-bash
+    # creates variables with value 0 or 1, eg $nordvpn_exists = 1
+    #
+    # check silently
+    for program in nordvpn systemd-resolve #iptables systemctl firefox
+    do
+        name=$( echo "$program" | tr -d '-' )       # remove hyphens
+        if command -v "$program" &> /dev/null; then
+            printf -v "${name}_exists" '%s' '1'
+        else
+            printf -v "${name}_exists" '%s' '0'
+        fi
+    done
+    #
+    # echo results
+    echo -e "${LColor}App Check${Color_Off}"
+    for program in wg jq curl figlet lolcat highlight speedtest-cli
+    do
+        name=$( echo "$program" | tr -d '-' )       # remove hyphens
+        if command -v "$program" &> /dev/null; then
+            echo -ne "${EIColor}Y${Color_Off}"
+            printf -v "${name}_exists" '%s' '1'
+        else
+            echo -ne "${DIColor}N${Color_Off}"
+            printf -v "${name}_exists" '%s' '0'
+        fi
+        echo "  $program"
+    done
 }
 #
 set_colors
