@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.0 on Linux Mint 20.3
-# November 10, 2022
+# November 17, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -128,6 +128,10 @@ alwaysrate="y"
 # Show the logo when the script exits.  "y" or "n"
 exitlogo="y"
 #
+# Always enable the Kill Switch (and Firewall) when the script exits
+# and the VPN is connected.  "y" or "n"
+exitks="n"
+#
 # Ping the connected server when the script exits.  "y" or "n"
 exitping="n"
 #
@@ -177,13 +181,12 @@ fast3="n"
 # groups: Obfuscated, Double-VPN, Onion+VPN, P2P
 fast4="n"
 #
-# Always enable the Kill Switch (and Firewall) when connecting
-# to these groups:  Obfuscated, Double-VPN, Onion+VPN, P2P
-# (Unless connecting through "All_Groups")
+# Always enable the Kill Switch (and Firewall) when connecting to groups.
+# (Does not apply when connecting through the "All_Groups" menu.)
 fast5="n"
 #
 # Always choose the same protocol when asked to choose TCP or UDP.
-# (Unless changing the setting through Settings-Protocol.)
+# (Unless changing the setting through Settings - Protocol.)
 fast6="n"       # "y" or "n"
 fast6p="UDP"    # specify the protocol.  fast6p="UDP" or fast6p="TCP"
 #
@@ -216,7 +219,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3207 (function main_menu).
+# The Main Menu starts on line 3230 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -243,12 +246,18 @@ function set_defaults {
     #
     # Notes:
     # - The VPN will be disconnected
+    # - Kill Switch requires Firewall
     # - NordLynx is UDP only
     # - Obfuscate requires OpenVPN
-    # - Kill Switch requires Firewall
     # - TPLite disables CustomDNS and vice versa
     #
     # For each setting uncomment one of the two choices (or neither).
+    #
+    if [[ "$firewall" == "disabled" ]]; then nordvpn set firewall enabled; fi
+    #if [[ "$firewall" == "enabled" ]]; then nordvpn set firewall disabled; fi
+    #
+    #if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
+    if [[ "$killswitch" == "enabled" ]]; then nordvpn set killswitch disabled; fi
     #
     disconnect_vpn "force"
     #
@@ -258,17 +267,11 @@ function set_defaults {
     if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi
     #if [[ "$protocol" == "UDP" ]]; then nordvpn set protocol TCP; fi
     #
-    if [[ "$firewall" == "disabled" ]]; then nordvpn set firewall enabled; fi
-    #if [[ "$firewall" == "enabled" ]]; then nordvpn set firewall disabled; fi
-    #
-    #if [[ "$routing" == "disabled" ]]; then nordvpn set routing enabled; fi
+    if [[ "$routing" == "disabled" ]]; then nordvpn set routing enabled; fi
     #if [[ "$routing" == "enabled" ]]; then nordvpn set routing disabled; fi
     #
     #if [[ "$analytics" == "disabled" ]]; then nordvpn set analytics enabled; fi
     #if [[ "$analytics" == "enabled" ]]; then nordvpn set analytics disabled; fi
-    #
-    #if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
-    if [[ "$killswitch" == "enabled" ]]; then nordvpn set killswitch disabled; fi
     #
     #if [[ "$tplite" == "disabled" ]]; then nordvpn set threatprotectionlite enabled; fi
     if [[ "$tplite" == "enabled" ]]; then nordvpn set threatprotectionlite disabled; fi
@@ -550,8 +553,10 @@ function set_vars {
     #
     if [[ "$routing" == "enabled" ]]; then
         rt="${EIColor}[RT]${Color_Off}"
+        routingc="${EColor}$routing${Color_Off}"
     else
         rt="${DIColor}[RT]${Color_Off}"
+        routingc="${DColor}$routing${Color_Off}"
     fi
     #
     if [[ "$analytics" == "enabled" ]]; then
@@ -688,6 +693,9 @@ function status {
         set_vars
     fi
     if [[ "$connected" == "connected" ]]; then
+        if [[ "$exitks" =~ ^[Yy]$ ]]; then
+            killswitch_enable
+        fi
         if [[ "$exitping" =~ ^[Yy]$ ]]; then
             if [[ "$obfuscate" == "enabled" ]]; then
                 echo -e "$ob - Unable to ping Obfuscated Servers"
@@ -937,23 +945,34 @@ function random_worldwide {
     status
     exit
 }
-function group_killswitch {
+function killswitch_enable {
+    # $1 = "groups" - for group connections with fast5 option
+    #
     if [[ "$killswitch" == "disabled" ]]; then
-        if [[ "$fast5" =~ ^[Yy]$ ]]; then
-            echo -e "${FColor}[F]ast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
-            echo
+        if [[ "$exitks" =~ ^[Yy]$ ]]; then
+            echo -e "${FColor}(exitks) - Enabling the Kill Switch.${Color_Off}"
             if [[ "$firewall" == "disabled" ]]; then
                 nordvpn set firewall enabled; wait
-                echo
             fi
             nordvpn set killswitch enabled; wait
             echo
-        else
-            if [[ "$firewall" == "disabled" ]]; then
-                echo -e "${WColor}Enabling the Kill Switch will also enable the Firewall.${Color_Off}"
+        elif [[ "$1" == "groups" ]]; then
+            if [[ "$fast5" =~ ^[Yy]$ ]]; then
+                echo -e "${FColor}[F]ast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
                 echo
+                if [[ "$firewall" == "disabled" ]]; then
+                    nordvpn set firewall enabled; wait
+                    echo
+                fi
+                nordvpn set killswitch enabled; wait
+                echo
+            else
+                if [[ "$firewall" == "disabled" ]]; then
+                    echo -e "${WColor}Enabling the Kill Switch will also enable the Firewall.${Color_Off}"
+                    echo
+                fi
+                change_setting "killswitch" "back"
             fi
-            change_setting "killswitch" "back"
         fi
     fi
 }
@@ -1048,7 +1067,7 @@ function group_connect {
                 echo
             fi
         fi
-        group_killswitch
+        killswitch_enable "groups"
         echo -e "Connect to the $1 group ${EColor}$location${Color_Off}"
         echo
         if [[ -n $location ]]; then
@@ -1757,13 +1776,17 @@ function customdns_menu {
     PS3=$'\n''Choose an Option: '
     # Note submcdns[@] - new entries should keep the same format for the "Test Servers" option
     # eg Name<space>DNS1<space>DNS2
-    submcdns=("Nord 103.86.96.100 103.86.99.100" "AdGuard 94.140.14.14 94.140.15.15" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
+    submcdns=("Nord 103.86.96.100 103.86.99.100" "Nord-TPLite 103.86.96.96 103.86.99.99" "AdGuard 94.140.14.14 94.140.15.15" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
     select cdns in "${submcdns[@]}"
     do
         case $cdns in
             "Nord 103.86.96.100 103.86.99.100")
                 echo
                 nordvpn set dns 103.86.96.100 103.86.99.100
+                ;;
+            "Nord-TPLite 103.86.96.96 103.86.99.99")
+                echo
+                nordvpn set dns 103.86.96.96 103.86.99.99
                 ;;
             "AdGuard 94.140.14.14 94.140.15.15")
                 echo
@@ -1914,6 +1937,8 @@ function login_nogui {
     echo -e "${LColor}      nordvpn login --legacy${Color_Off}"
     echo -e "${LColor}      nordvpn login --username <username> --password <password>${Color_Off}"
     echo
+    echo "Also see: Login (token)"
+    echo
     echo -e "${EColor}Nord Account login without a GUI ('man nordvpn' Note 2)${Color_Off}"
     echo
     echo -e "${EColor}SSH${Color_Off} = in the SSH session connected to the device"
@@ -1954,6 +1979,8 @@ function account_menu {
                 echo "Services - NordVPN - Access Token - Generate New Token"
                 echo
                 openlink "https://my.nordaccount.com/" "ask"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
                 read -r -p "Enter the login token: " logintoken
                 if [[ -z $logintoken ]]; then
@@ -2130,7 +2157,7 @@ function iptables_status {
     echo
     echo -e "The VPN is $connectedc. ${IPColor}$ip${Color_Off}"
     echo -e "$fw The Firewall is $firewallc. Firewall Mark: ${LColor}$fwmark${Color_Off}"
-    echo -e "$rt Routing is $routing."
+    echo -e "$rt Routing is $routingc."
     echo -e "$ks The Kill Switch is $killswitchc."
     echo -e "$mn Meshnet is $meshnetc."
     if [[ -n "${whitelist[*]}" ]]; then
@@ -2143,6 +2170,7 @@ function iptables_status {
     echo -e "${LColor}sudo iptables -S${Color_Off}"
     sudo iptables -S
     echo
+    COLUMNS=$menuwidth
 }
 function iptables_menu {
     # https://old.reddit.com/r/nordvpn/comments/qgakq9/linux_killswitch_problems_iptables/
@@ -2463,40 +2491,30 @@ function nordapi_menu {
     do
         case $napi in
             "Host Server Load")
-                echo
-                echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
-                echo
+                heading "Current $nordhost Load" "txt" "alt"
                 server_load
                 ;;
             "Host Server Info")
-                echo
-                echo -e "Retrieving ${LColor}$nordhost${Color_Off} information..."
-                echo
+                heading "Server $nordhost Info" "txt" "alt"
                 curl --silent https://api.nordvpn.com/server | jq '.[] | select(.domain == "'"$nordhost"'")'
                 ;;
             "Top 15 Recommended")
-                echo
-                echo -e "${LColor}Top 15 Recommended VPN Servers${Color_Off}"
-                echo
+                heading "Top 15 Recommended" "txt" "alt"
                 curl --silent "https://api.nordvpn.com/v1/servers/recommendations" | jq --raw-output 'limit(15;.[]) | "  Server: \(.name)\nHostname: \(.hostname)\nLocation: \(.locations[0].country.name) - \(.locations[0].country.city.name)\n    Load: \(.load)\n"'
                 ;;
             "Top 15 By Country")
-                echo
-                echo -e "${LColor}Top 15 VPN Servers by Country Code${Color_Off}"
-                echo
+                heading "Top 15 by Country Code" "txt" "alt"
                 curl --silent "https://api.nordvpn.com/v1/servers/countries" | jq --raw-output '.[] | [.id, .name] | @tsv'
                 echo
                 read -r -p "Enter the Country Code: " ccode
                 echo
-                echo -e "${LColor}SERVER: ${EColor}%LOAD${Color_Off}"
+                echo -e "${H2Color}SERVER: ${H1Color}%LOAD${Color_Off}"
                 echo
                 curl --silent "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$ccode&\[servers_groups\]\[identifier\]=legacy_standard" | jq --raw-output --slurp ' .[] | sort_by(.load) | limit(15;.[]) | [.hostname, .load] | "\(.[0]): \(.[1])"'
                 echo
                 ;;
             "#Servers per Country")
-                echo
-                echo -e "${LColor}Number of VPN Servers in each Country${Color_Off}"
-                echo
+                heading "Number of Servers per Country" "txt" "alt"
                 curl --silent https://api.nordvpn.com/server | jq --raw-output '. as $parent | [.[].country] | sort | unique | .[] as $country | ($parent | map(select(.country == $country)) | length) as $count |  [$country, $count] |  "\(.[0]): \(.[1])"'
                 echo
                 ;;
@@ -2519,7 +2537,7 @@ function nordapi_menu {
     done
 }
 function change_host {
-    echo
+    heading "Change Host" "txt"
     echo "Change the Hostname for testing purposes."
     echo
     if [[ "$connected" == "connected" ]]; then
@@ -2573,7 +2591,6 @@ function wireguard_gen {
     echo
     echo "Generate WireGuard config file:"
     echo -e "${LColor}$wgfull${Color_Off}"
-    echo
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
@@ -2846,21 +2863,22 @@ function tools_menu {
     done
 }
 function set_defaults_ask {
-    defaultsc="${LColor}[Defaults]${Color_Off}"'\n'
+    defaultsc="${LColor}[Set Defaults]${Color_Off}"'\n'
     echo
-    echo -e "$defaultsc  Disconnect and apply the NordVPN settings"
-    echo "  specified in 'function set_defaults'"
+    echo -e "$defaultsc    Disconnect the VPN and apply the NordVPN settings"
+    echo "    specified in 'function set_defaults'"
     echo
-    read -n 1 -r -p "Proceed? (y/n) "; echo
+    read -n 1 -r -p "    Proceed? (y/n) "; echo
+    echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         set_defaults
-        read -n 1 -r -p "$(echo -e "$defaultsc  Go to the 'Whitelist' setting? (y/n) ")"
+        read -n 1 -r -p "$(echo -e "$defaultsc    Go to the 'Whitelist' setting? (y/n) ")"
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             whitelist_setting "back"
         fi
         echo
-        read -n 1 -r -p "$(echo -e "$defaultsc  Go to the 'CustomDNS' setting? (y/n) ")"
+        read -n 1 -r -p "$(echo -e "$defaultsc    Go to the 'CustomDNS' setting? (y/n) ")"
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             set_vars
@@ -2960,11 +2978,7 @@ function group_favorites {
     echo "this list. For example low ping servers or streaming servers."
     echo "Can add multiple servers by editing the file directly."
     echo
-    echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr${Color_Off}"
-    if [[ -e "$nordfavoritesfile" ]]; then
-        echo -e "Favorites List: ${LColor}$nordfavoritesfile${Color_Off}"
-    else
-        echo
+    if [[ ! -e "$nordfavoritesfile" ]]; then
         echo -e "${WColor}$nordfavoritesfile does not exist.${Color_Off}"
         echo
         read -n 1 -r -p "Create the file? (y/n) "; echo
@@ -2975,17 +2989,19 @@ function group_favorites {
             group_menu
         fi
     fi
+    main_logo "stats_only"
     readarray -t favoritelist < <( sort < "$nordfavoritesfile" )
     if [[ "$connected" == "connected" ]]; then
         if grep -q "$server" "$nordfavoritesfile"; then
-            echo -e "Current Server is in the list:  ${FColor}$( grep "$server" "$nordfavoritesfile" )${Color_Off}"
+            echo -e "The Current Server is in the list:  ${FColor}$( grep "$server" "$nordfavoritesfile" )${Color_Off}"
+            echo
         else
             favoritelist+=( "Add Current Server" )
         fi
     fi
-    echo
-    favoritelist+=( "Add Server Name" "Edit File" "Exit" )
+    favoritelist+=( "Add Server" "Edit File" "Settings Menu" "Exit" )
     numfavorites=${#favoritelist[@]}
+    #COLUMNS=$menuwidth
     PS3=$'\n''Connect to Server: '
     select xfavorite in "${favoritelist[@]}"
     do
@@ -2993,19 +3009,24 @@ function group_favorites {
             "Exit")
                 main_menu
                 ;;
+            "Settings Menu")
+                settings_menu
+                ;;
             "Edit File")
-                echo
+                heading "Edit File" "txt"
                 echo "Add one server per line with no empty lines or trailing spaces."
+                echo
                 echo -e "Format:  AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
                 echo "Examples:  Netflix-us8247  Gaming-ca1672"
                 echo
                 openlink "$nordfavoritesfile" "ask" "exit"
+                group_favorites
                 ;;
-            "Add Server Name")
-                heading "Add Server Name" "txt"
-                echo "Must use this format with one <dash> total, no trailing spaces:"
-                echo -e "  AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
+            "Add Server")
+                heading "Add Server" "txt"
+                echo "Must use only one <dash> in total, no trailing spaces."
                 echo
+                echo -e "Format:  AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
                 echo "Examples:  Netflix-us8247  Gaming-ca1672"
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
@@ -3024,11 +3045,12 @@ function group_favorites {
                 ;;
             "Add Current Server")
                 favname="$(echo "$city" | tr -d ' ')"-"$server"
+                #
                 heading "Add $server to Favorites" "txt"
                 echo "Change the server name?"
                 echo
                 echo -e "Format:  AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
-                echo "Examples: Netflix-$server Gaming-$server"
+                echo "Examples:  Netflix-$server  Gaming-$server"
                 echo
                 read -r -p "Hit 'Enter' for default [$favname]: " favadd
                 favadd=${favadd:-$favname}
@@ -3053,6 +3075,7 @@ function group_favorites {
                 ;;
         esac
     done
+    # https://stackoverflow.com/questions/16414410/delete-empty-lines-using-sed/24957725#24957725
 }
 function group_menu {
     heading "Groups"
