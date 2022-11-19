@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.0 on Linux Mint 20.3
-# November 17, 2022
+# November 19, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -219,7 +219,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3230 (function main_menu).
+# The Main Menu starts on line 3232 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -238,6 +238,9 @@ function whitelist_commands {
     echo
 }
 function set_defaults {
+    echo
+    echo -e "${LColor}Apply the default configuration.${Color_Off}"
+    echo
     # Calling this function can be useful to change multiple settings
     # at once and get back to a typical configuration.
     #
@@ -294,8 +297,6 @@ function set_defaults {
     #if [[ "$customdns" == "disabled" ]]; then nordvpn set dns $default_dns; fi
     if [[ "$customdns" != "disabled" ]]; then nordvpn set dns disabled; fi
     #
-    echo
-    echo -e "${LColor}Default configuration applied.${Color_Off}"
     echo
 }
 function ascii_standard {
@@ -693,8 +694,14 @@ function status {
         set_vars
     fi
     if [[ "$connected" == "connected" ]]; then
-        if [[ "$exitks" =~ ^[Yy]$ ]]; then
+        if [[ "$exitks" =~ ^[Yy]$ ]] && [[ "$killswitch" == "disabled" ]]; then
+            echo -e "${FColor}(exitks) - Always enable the Kill Switch.${Color_Off}"
             killswitch_enable
+            if [[ "$exitlogo" =~ ^[Yy]$ ]]; then
+                echo -e "${FColor}Updating the logo.${Color_Off}"
+                clear -x
+                main_logo
+            fi
         fi
         if [[ "$exitping" =~ ^[Yy]$ ]]; then
             if [[ "$obfuscate" == "enabled" ]]; then
@@ -946,33 +953,28 @@ function random_worldwide {
     exit
 }
 function killswitch_enable {
-    # $1 = "groups" - for group connections with fast5 option
-    #
+    echo
+    if [[ "$firewall" == "disabled" ]]; then
+        nordvpn set firewall enabled; wait
+        echo
+    fi
+    nordvpn set killswitch enabled; wait
+    echo
+}
+function killswitch_groups {
     if [[ "$killswitch" == "disabled" ]]; then
         if [[ "$exitks" =~ ^[Yy]$ ]]; then
-            echo -e "${FColor}(exitks) - Enabling the Kill Switch.${Color_Off}"
+            echo -e "${FColor}(exitks) - Always enable the Kill Switch.${Color_Off}"
+            killswitch_enable
+        elif [[ "$fast5" =~ ^[Yy]$ ]]; then
+            echo -e "${FColor}[F]ast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
+            killswitch_enable
+        else
             if [[ "$firewall" == "disabled" ]]; then
-                nordvpn set firewall enabled; wait
-            fi
-            nordvpn set killswitch enabled; wait
-            echo
-        elif [[ "$1" == "groups" ]]; then
-            if [[ "$fast5" =~ ^[Yy]$ ]]; then
-                echo -e "${FColor}[F]ast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
+                echo -e "${WColor}Enabling the Kill Switch will also enable the Firewall.${Color_Off}"
                 echo
-                if [[ "$firewall" == "disabled" ]]; then
-                    nordvpn set firewall enabled; wait
-                    echo
-                fi
-                nordvpn set killswitch enabled; wait
-                echo
-            else
-                if [[ "$firewall" == "disabled" ]]; then
-                    echo -e "${WColor}Enabling the Kill Switch will also enable the Firewall.${Color_Off}"
-                    echo
-                fi
-                change_setting "killswitch" "back"
             fi
+            change_setting "killswitch" "back"
         fi
     fi
 }
@@ -1067,7 +1069,7 @@ function group_connect {
                 echo
             fi
         fi
-        killswitch_enable "groups"
+        killswitch_groups
         echo -e "Connect to the $1 group ${EColor}$location${Color_Off}"
         echo
         if [[ -n $location ]]; then
