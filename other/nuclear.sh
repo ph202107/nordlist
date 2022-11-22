@@ -22,12 +22,15 @@ logintoken=""
 #
 #
 function default_settings {
-    lbreak
+    lbreak "Apply Default Settings"
+    #
     # After installation is complete, these settings will be applied
     #
     #nordvpn set technology nordlynx
     #nordvpn set protocol UDP
     #nordvpn set firewall enabled
+    #nordvpn set routing enabled
+    #nordvpn set analytics enabled
     #nordvpn set killswitch disabled
     #nordvpn set threatprotectionlite disabled
     #nordvpn set obfuscate disabled
@@ -37,17 +40,22 @@ function default_settings {
     #nordvpn set dns disabled
     #nordvpn set meshnet enabled; wait
     #nordvpn whitelist add subnet 192.168.1.0/24
+    #
+    #nordvpn connect
+    #
+    wait
 }
 function lbreak {
     # break up wall of text
     echo
-    echo -e "${LYellow}=========================${Color_Off}"
+    echo -e "${LYellow}==========================="
+    echo -e "$1${Color_Off}"
     echo
 }
 function trashnord {
-    lbreak
+    lbreak "Password"
     sudo echo "OK"
-    lbreak
+    lbreak "Quit Nord & Stop Service"
     nordvpn set killswitch disabled
     nordvpn disconnect
     nordvpn logout
@@ -55,11 +63,11 @@ function trashnord {
     sudo systemctl stop nordvpnd.service
     sudo systemctl stop nordvpn.service
     wait
-    lbreak
+    lbreak "Flush iptables"
     flushtables
-    lbreak
+    lbreak "Purge nordvpn"
     sudo apt autoremove --purge nordvpn* -y
-    lbreak
+    lbreak "Remove Folders"
     # ====================================
     sudo rm -rf -v /var/lib/nordvpn
     sudo rm -rf -v /var/run/nordvpn
@@ -67,7 +75,7 @@ function trashnord {
     # ====================================
 }
 function installnord {
-    lbreak
+    lbreak "Add Repo"
     if [[ -e /etc/apt/sources.list.d/nordvpn.list ]]; then
         echo -e "${LGreen}NordVPN repository found.${Color_Off}"
     else
@@ -79,31 +87,32 @@ function installnord {
         sudo apt install "/home/$USER/Downloads/nordvpn-release_1.0.0_all.deb" -y
         # or: sudo dpkg -i "/home/$USER/Downloads/nordvpn-release_1.0.0_all.deb" -y
     fi
-    lbreak
+    lbreak "Apt Update"
     sudo apt update
-    lbreak
+    lbreak "Install $nord_version"
     sudo apt install $nord_version -y
     wait
 }
 function loginnord {
-    lbreak
+    lbreak "Check Group"
     if id -nG "$USER" | grep -qw "nordvpn"; then
         echo -e "${LGreen}$USER belongs to the 'nordvpn' group${Color_Off}"
-        lbreak
     else
         # for first-time installation (might also require reboot)
         echo -e "${BRed}$USER does not belong to the 'nordvpn' group${Color_Off}"
         echo -e "${LGreen}sudo usermod -aG nordvpn $USER ${Color_Off}"
         sudo usermod -aG nordvpn "$USER"
         echo "(May need to logout or reboot)"
-        lbreak
     fi
-    if ! systemctl is-active --quiet nordvpnd; then
+    lbreak "Check Service"
+    if systemctl is-active --quiet nordvpnd; then
+        echo -e "${LGreen}nordvpnd.service is active${Color_Off}"
+    else
         echo -e "${LGreen}Starting the service... ${Color_Off}"
         echo "sudo systemctl start nordvpnd.service"
         sudo systemctl start nordvpnd.service; wait
-        lbreak
     fi
+    lbreak "Login"
     if [[ -n $logintoken ]]; then
         nordvpn login --token "$logintoken"
     else
@@ -164,7 +173,6 @@ fi
 echo
 echo
 read -n 1 -r -p "Go nuclear? (y/n) "; echo
-echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     trashnord
     installnord
@@ -172,15 +180,14 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     default_settings
 else
     lbreak
-    echo -e "${BRed}** ABORT **${Color_Off}"
+    echo -e "${BRed}*** ABORT ***${Color_Off}"
+    echo
 fi
-lbreak
+lbreak "nordvpn settings"
 nordvpn settings
-lbreak
+lbreak "nordvpn status"
 nordvpn status
-lbreak
-echo -e "${LGreen}Completed \u2705${Color_Off}" # unicode checkmark
-echo
+lbreak "\n${LGreen}Completed \u2705" # unicode checkmark
 nordvpn --version
 lbreak
 #
