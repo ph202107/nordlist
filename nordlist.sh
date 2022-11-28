@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.15.0 on Linux Mint 20.3
-# November 19, 2022
+# Tested with NordVPN Version 3.15.1 on Linux Mint 20.3
+# November 28, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -130,7 +130,7 @@ exitlogo="y"
 #
 # Always enable the Kill Switch (and Firewall) when the script exits
 # and the VPN is connected.  "y" or "n"
-exitks="n"
+exitkillswitch="n"
 #
 # Ping the connected server when the script exits.  "y" or "n"
 exitping="n"
@@ -181,7 +181,7 @@ fast3="n"
 # groups: Obfuscated, Double-VPN, Onion+VPN, P2P
 fast4="n"
 #
-# Always enable the Kill Switch (and Firewall) when connecting to groups.
+# Always enable the Kill Switch (& Firewall) when connecting to groups.
 # (Does not apply when connecting through the "All_Groups" menu.)
 fast5="n"
 #
@@ -219,7 +219,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3232 (function main_menu).
+# The Main Menu starts on line 3236 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -259,8 +259,8 @@ function set_defaults {
     if [[ "$firewall" == "disabled" ]]; then nordvpn set firewall enabled; fi
     #if [[ "$firewall" == "enabled" ]]; then nordvpn set firewall disabled; fi
     #
-    #if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
-    if [[ "$killswitch" == "enabled" ]]; then nordvpn set killswitch disabled; fi
+    if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
+    #if [[ "$killswitch" == "enabled" ]]; then nordvpn set killswitch disabled; fi
     #
     disconnect_vpn "force"
     #
@@ -484,18 +484,17 @@ function set_vars {
     # "nordvpn status" - array nstatus - search function nstatus_search
     # When disconnected, $connected is the only variable from nstatus
     connected=$(nstatus_search "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')
-    nordhost=$(nstatus_search "Current server" | cut -f3 -d' ')     # full hostname
+    nordhost=$(nstatus_search "Hostname" | cut -f2 -d' ')           # full hostname
     server=$(echo "$nordhost" | cut -f1 -d'.')                      # shortened hostname
     # country and city names may have spaces
     country=$(nstatus_search "Country" | cut -f2 -d':' | cut -c 2-)
     city=$(nstatus_search "City" | cut -f2 -d':' | cut -c 2-)
-    ip=$(nstatus_search "Server IP" | cut -f 2-3 -d' ')             # includes "IP: "
+    ip=$(nstatus_search "IP:" )                                     # includes "IP: "
     ipaddr=$(echo "$ip" | cut -f2 -d' ')                            # IP address only
     #technology2=$(nstatus_search "technology" | cut -f3 -d' ')     # variable not used
     protocol2=$(nstatus_search "protocol" | cut -f3 -d' ' | tr '[:lower:]' '[:upper:]')
     transferd=$(nstatus_search "Transfer" | cut -f 2-3 -d' ')       # download stat with units
     transferu=$(nstatus_search "Transfer" | cut -f 5-6 -d' ')       # upload stat with units
-    #transfer="\u25bc $transferd  \u25b2 $transferu"                # unicode up/down arrows
     uptime=$(nstatus_search "Uptime" | cut -f 1-5 -d' ')
     #
     # "nordvpn settings" - array nsettings (all elements lowercase) - search function nsettings_search
@@ -507,9 +506,7 @@ function set_vars {
     routing=$(nsettings_search "Routing" | cut -f2 -d' ')
     analytics=$(nsettings_search "Analytics" | cut -f2 -d' ')
     killswitch=$(nsettings_search "Kill" | cut -f3 -d' ')
-    #tplite=$(printf '%s\n' "${nsettings[@]}" | grep -i -E "CyberSec|Threat" | awk '{print $NF}')
-    #tplite=$(nsettings_search "CyberSec" | cut -f2 -d' ')           # CyberSec (v3.13-)
-    tplite=$(nsettings_search "Threat" | cut -f4 -d' ')              # Threat Protection Lite (v3.14+)
+    tplite=$(nsettings_search "Threat" | cut -f4 -d' ')
     obfuscate=$(nsettings_search "Obfuscate" | cut -f2 -d' ')
     notify=$(nsettings_search "Notify" | cut -f2 -d' ')
     autoconnect=$(nsettings_search "Auto" | cut -f2 -d' ')
@@ -694,8 +691,8 @@ function status {
         set_vars
     fi
     if [[ "$connected" == "connected" ]]; then
-        if [[ "$exitks" =~ ^[Yy]$ ]] && [[ "$killswitch" == "disabled" ]]; then
-            echo -e "${FColor}(exitks) - Always enable the Kill Switch.${Color_Off}"
+        if [[ "$exitkillswitch" =~ ^[Yy]$ ]] && [[ "$killswitch" == "disabled" ]]; then
+            echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
             killswitch_enable
             if [[ "$exitlogo" =~ ^[Yy]$ ]]; then
                 echo -e "${FColor}Updating the logo.${Color_Off}"
@@ -963,8 +960,8 @@ function killswitch_enable {
 }
 function killswitch_groups {
     if [[ "$killswitch" == "disabled" ]]; then
-        if [[ "$exitks" =~ ^[Yy]$ ]]; then
-            echo -e "${FColor}(exitks) - Always enable the Kill Switch.${Color_Off}"
+        if [[ "$exitkillswitch" =~ ^[Yy]$ ]]; then
+            echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
             killswitch_enable
         elif [[ "$fast5" =~ ^[Yy]$ ]]; then
             echo -e "${FColor}[F]ast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
@@ -1643,9 +1640,16 @@ function meshnet_menu {
                 ;;
             "Peer Connect")
                 heading "Peer Connect" "txt"
-                echo "Treats a peer as a VPN server and connects to it if the"
-                echo " peer has allowed traffic routing."
+                echo "Treats a peer like a VPN server and connects to it if the"
+                echo "peer has allowed traffic routing."
                 echo
+                echo "You can route your traffic through one device at a time"
+                echo "and only while using the NordLynx connection protocol."
+                echo
+                if [[ "$technology" != "nordlynx" ]]; then
+                    echo -e "Currently using $technologydc."
+                    echo
+                fi
                 echo "Enter the public_key, hostname, or IP address."
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
