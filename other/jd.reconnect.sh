@@ -32,7 +32,7 @@
 #
 # Specify the full path and filename to use for the server list.
 # (Use the absolute path)
-jdlist="/home/$USER/Downloads/jd.nordservers.txt"
+jdlist="/home/$USER/Downloads/nord_jd2servers.txt"
 #
 # Specify alternate cities to use as the server lists are emptied.
 # These will be used in rotation.
@@ -56,7 +56,7 @@ function getserverlist {
     echo "EOF" >> "$jdlist"
 }
 function getcurrentinfo {
-    currenthost=$( nordvpn status | grep -i "Current server" | cut -f3 -d' ' )
+    currenthost=$( nordvpn status | grep -i "Hostname" | cut -f2 -d' ' )
     currentcity=$( nordvpn status | grep -i "City" | cut -f2 -d':' | cut -c 2- | tr ' ' '_' )
     shorthost=$( echo "$currenthost" | cut -f1 -d'.' )
     servercount=$(( $(wc -l < "$jdlist") - 1 ))
