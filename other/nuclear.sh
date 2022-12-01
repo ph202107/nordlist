@@ -13,7 +13,8 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.14.0"      # 01 Jun 2022 CyberSec changed to "Threat Protection Lite"
 #nord_version="nordvpn=3.14.1"      # 13 Jun 2022
 #nord_version="nordvpn=3.14.2"      # 28 Jul 2022 Works on Ubuntu 18.04, Mint 19.3
-#nord_version="nordvpn=3.15.0"      # 17 Oct 2022 Login token, routing, fwmark, analytics
+#nord_version="nordvpn=3.15.0"      # 17 Oct 2022 Added login token, routing, fwmark, analytics
+#nord_version="nordvpn=3.15.1"      # 28 Nov 2022 Works on older distros. Changes to "nordvpn status"
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -115,13 +116,14 @@ function loginnord {
     lbreak "Login"
     if [[ -n $logintoken ]]; then
         nordvpn login --token "$logintoken"
+        wait
     else
         nordvpn login
         #nordvpn login --legacy
         #nordvpn login --username <username> --password <password>
+        echo
+        read -n 1 -r -p "Press any key after login is complete... "; echo
     fi
-    echo
-    read -n 1 -r -p "Press any key after login is complete... "; echo
 }
 function flushtables {
     sudo iptables -S
