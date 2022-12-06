@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.15.1 on Linux Mint 20.3
-# November 28, 2022
+# Tested with NordVPN Version 3.15.2 on Linux Mint 20.3
+# December 6, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -36,7 +36,7 @@
 # 4) At the terminal type "nordlist.sh"
 #
 # (*) The script will work without figlet and lolcat by specifying
-#     "ascii_standard" in "function main_logo"
+#     "ascii_static" in "function main_logo"
 #
 # =====================================================================
 # Other Programs Used
@@ -219,7 +219,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3236 (function main_menu).
+# The Main Menu starts on line 3234 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -299,10 +299,10 @@ function set_defaults {
     #
     echo
 }
-function ascii_standard {
+function ascii_static {
     # This ASCII can display above the main menu if you prefer to use
     # other ASCII art. Place any ASCII art between cat << "EOF" and EOF
-    # and specify ascii_standard in "function main_logo".
+    # and specify ascii_static in "function main_logo".
     echo -ne "${SColor}"
     #
 cat << "EOF"
@@ -338,7 +338,7 @@ function main_logo {
     set_vars
     if [[ "$1" != "stats_only" ]]; then
         #
-        # Specify  ascii_standard or ascii_custom on the line below.
+        # Specify  ascii_static or ascii_custom on the line below.
         ascii_custom
         #
     fi
@@ -449,7 +449,7 @@ function set_colors {
     #
     WColor=${BRed}          # Warnings, errors, disconnects
     LColor=${LCyan}         # 'Changes' lists and key info text
-    SColor=${BBlue}         # Color for the ascii_standard image
+    SColor=${BBlue}         # Color for the ascii_static image
     H1Color=${LGreen}       # Non-figlet headings
     H2Color=${LCyan}        # Non-figlet headings alternate
     # main_logo
@@ -486,8 +486,7 @@ function set_vars {
     connected=$(nstatus_search "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')
     nordhost=$(nstatus_search "Hostname" | cut -f2 -d' ')           # full hostname
     server=$(echo "$nordhost" | cut -f1 -d'.')                      # shortened hostname
-    # country and city names may have spaces
-    country=$(nstatus_search "Country" | cut -f2 -d':' | cut -c 2-)
+    country=$(nstatus_search "Country" | cut -f2 -d':' | cut -c 2-) # country and city names may have spaces
     city=$(nstatus_search "City" | cut -f2 -d':' | cut -c 2-)
     ip=$(nstatus_search "IP:" )                                     # includes "IP: "
     ipaddr=$(echo "$ip" | cut -f2 -d' ')                            # IP address only
@@ -511,7 +510,7 @@ function set_vars {
     notify=$(nsettings_search "Notify" | cut -f2 -d' ')
     autoconnect=$(nsettings_search "Auto" | cut -f2 -d' ')
     ipversion6=$(nsettings_search "IPv6" | cut -f2 -d' ')
-    meshnet=$(nsettings_search "Meshnet" | cut -f2 -d' ' | tr -d '\n')
+    meshnet=$(nsettings_search "Meshnet" | cut -f2 -d' ')
     customdns=$(nsettings_search "DNS" | cut -f2 -d' ')                  # disabled or not=disabled
     dns_servers=$(nsettings_search "DNS" | tr '[:lower:]' '[:upper:]')   # Server IPs, includes "DNS: "
     whitelist=$( printf '%s\n' "${nsettings[@]}" | grep -A100 -i "whitelist" )
@@ -2980,9 +2979,9 @@ function group_all_menu {
 }
 function group_favorites {
     heading "Favorites"
+    main_logo "stats_only"
     echo "Keep track of your favorite individual servers by adding them to"
     echo "this list. For example low ping servers or streaming servers."
-    echo "Can add multiple servers by editing the file directly."
     echo
     if [[ ! -e "$nordfavoritesfile" ]]; then
         echo -e "${WColor}$nordfavoritesfile does not exist.${Color_Off}"
@@ -2995,7 +2994,6 @@ function group_favorites {
             group_menu
         fi
     fi
-    main_logo "stats_only"
     readarray -t favoritelist < <( sort < "$nordfavoritesfile" )
     if [[ "$connected" == "connected" ]]; then
         if grep -q "$server" "$nordfavoritesfile"; then
@@ -3497,6 +3495,10 @@ main_menu "start"
 # Nord Account login without a GUI
 #   nordvpn login --legacy
 #   nordvpn login --username <username> --password <password>
+#
+#   nordvpn login --token <token>
+#   To create a token, login to your Nord Account and navigate to:
+#   Services - NordVPN - Access Token - Generate New Token
 #
 #   'man nordvpn' Note 2
 #   SSH = in the SSH session connected to the device
