@@ -15,11 +15,14 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.14.2"      # 28 Jul 2022 Works on Ubuntu 18.04, Mint 19.3
 #nord_version="nordvpn=3.15.0"      # 17 Oct 2022 Added login token, routing, fwmark, analytics
 #nord_version="nordvpn=3.15.1"      # 28 Nov 2022 Works on older distros. Changes to "nordvpn status"
+#nord_version="nordvpn=3.15.2"      # 06 Dec 2022 Fix for meshnet unavailable
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
 # Services - NordVPN - Access Token - Generate New Token
 logintoken=""
+#
+nordchangelog="/usr/share/doc/nordvpn/changelog.gz"
 #
 #
 function default_settings {
@@ -31,7 +34,7 @@ function default_settings {
     #nordvpn set protocol UDP
     #nordvpn set firewall enabled
     #nordvpn set routing enabled
-    #nordvpn set analytics enabled
+    #nordvpn set analytics disabled
     #nordvpn set killswitch disabled
     #nordvpn set threatprotectionlite disabled
     #nordvpn set obfuscate disabled
@@ -180,6 +183,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     installnord
     loginnord
     default_settings
+    lbreak "Changelog"
+    zcat "$nordchangelog" | head -n 15
 else
     lbreak
     echo -e "${BRed}*** ABORT ***${Color_Off}"
