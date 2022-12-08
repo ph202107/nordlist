@@ -224,7 +224,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3297 (function main_menu).
+# The Main Menu starts on line 3302 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -1087,6 +1087,8 @@ function group_connect {
         fi
         status
         exit
+    elif [[ "$REPLY" == "$upmenu" ]]; then
+        group_menu
     else
         echo
         echo "No changes made."
@@ -1344,6 +1346,8 @@ function change_setting {
             nordvpn set "$1" disabled; wait
             #
         fi
+    elif [[ "$REPLY" == "$upmenu" ]] && [[ "$2" != "back" ]]; then
+        settings_menu
     else
         echo -e "$chgind Keep $chgname $chgvarc."
     fi
@@ -1932,9 +1936,7 @@ function whitelist_setting {
     echo
     read -n 1 -r -p "Apply your default whitelist settings? (y/n/C/E) "; echo
     echo
-    if [[ "$REPLY" == "$upmenu" ]]; then
-        settings_menu
-    elif [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         whitelist_commands
         set_vars
     elif [[ $REPLY =~ ^[Cc]$ ]]; then
@@ -1944,6 +1946,8 @@ function whitelist_setting {
         echo -e "Modify ${LColor}function whitelist_commands${Color_Off} starting on ${FColor}line $(( startline + 1 ))${Color_Off}"
         echo
         openlink "$0" "noask" "exit"
+    elif [[ "$REPLY" == "$upmenu" ]] && [[ "$1" != "back" ]]; then
+        settings_menu
     else
         echo "No changes made."
     fi
@@ -2114,9 +2118,7 @@ function restart_service {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
-    if [[ "$REPLY" == "$upmenu" ]]; then
-        settings_menu
-    elif [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         sudo systemctl restart nordvpnd.service
         sudo systemctl restart nordvpn.service
         echo
@@ -2127,7 +2129,6 @@ function restart_service {
             echo -n "$t "; sleep 1
         done
         echo
-        sudo -K     # timeout sudo
         if [[ "$1" == "after_reset" ]]; then
             echo
             nordvpn login
@@ -2139,6 +2140,8 @@ function restart_service {
         fi
         status
         exit
+    elif [[ "$REPLY" == "$upmenu" ]]; then
+        settings_menu
     fi
     main_menu
 }
@@ -2161,9 +2164,7 @@ function reset_app {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
-    if [[ "$REPLY" == "$upmenu" ]]; then
-        settings_menu
-    elif [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         # first four redundant
         if [[ "$killswitch" == "enabled" ]]; then
             nordvpn set killswitch disabled; wait
@@ -2185,6 +2186,8 @@ function reset_app {
         read -n 1 -s -r -p "Press any key to restart the service..."; echo
         set_vars
         restart_service "after_reset"
+    elif [[ "$REPLY" == "$upmenu" ]]; then
+        settings_menu
     fi
     main_menu
 }
@@ -2640,9 +2643,7 @@ function wireguard_gen {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
-    if [[ "$REPLY" == "$upmenu" ]]; then
-        tools_menu
-    elif [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
         #
         address=$(/sbin/ifconfig nordlynx | grep 'inet ' | tr -s ' ' | cut -d" " -f3)
         #listenport=$(sudo wg showconf nordlynx | grep 'ListenPort = .*')
@@ -2676,6 +2677,8 @@ function wireguard_gen {
         fi
         echo
         openlink "$wgfull" "ask"
+    elif [[ "$REPLY" == "$upmenu" ]]; then
+        tools_menu
     fi
     echo
 }
@@ -2941,6 +2944,8 @@ function set_defaults_ask {
             customdns_menu
         fi
         main_menu
+    elif [[ "$REPLY" == "$upmenu" ]]; then
+        settings_menu
     fi
 }
 function script_info {
