@@ -224,7 +224,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3302 (function main_menu).
+# The Main Menu starts on line 3312 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -1136,6 +1136,8 @@ function technology_setting {
             echo
             protocol_ask
         fi
+    elif [[ "$REPLY" == "$upmenu" ]] && [[ "$1" != "back" ]]; then
+        settings_menu
     else
         echo
         echo -e "Continue to use $technologydc."
@@ -1167,6 +1169,8 @@ function protocol_setting {
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             technology_setting
+        elif [[ "$REPLY" == "$upmenu" ]]; then
+            settings_menu
         else
             main_menu
         fi
@@ -1193,6 +1197,8 @@ function protocol_setting {
         else
             nordvpn set protocol UDP; wait
         fi
+    elif [[ "$REPLY" == "$upmenu" ]]; then
+        settings_menu
     else
         echo
         echo -e "Continue to use $protocoldc."
@@ -1483,6 +1489,8 @@ function obfuscate_setting {
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             technology_setting "back"
             obfuscate_setting
+        elif [[ "$REPLY" == "$upmenu" ]]; then
+            settings_menu
         else
             main_menu
         fi
@@ -1517,6 +1525,8 @@ function obfuscate_setting {
         fi
         echo
         protocol_ask
+    elif [[ "$REPLY" == "$upmenu" ]]; then
+        settings_menu
     else
         echo
         echo -e "$ob Keep Obfuscate $obfuscatec."
