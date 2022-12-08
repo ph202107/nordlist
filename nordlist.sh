@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.2 on Linux Mint 20.3
-# December 6, 2022
+# December 8, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -156,6 +156,11 @@ newfirefox="n"
 # Leave blank to have the menu width change with the window size.
 menuwidth="70"
 #
+# Entering this value while in a submenu will return you to the default
+# parent menu.  To avoid conflicts avoid using any numbers other than
+# zero, or the letters y,n,c,e,s.    eg. upmenu="0" or upmenu="b"
+upmenu="0"
+#
 # =====================================================================
 # Fast Options
 # =============
@@ -219,7 +224,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3234 (function main_menu).
+# The Main Menu starts on line 3297 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -769,10 +774,15 @@ function openlink {
     fi
 }
 function invalid_option {
+    # $1 = total menu items
+    # $2 = name of parent menu
+    #
     echo
     echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
     echo
-    echo "Select any number from 1-$1 ($1 to Exit)."
+    echo "Select any number from 1-$1, or $upmenu"
+    echo "  $upmenu = Return to $2"
+    echo "  $1 = Exit to Main Menu"
 }
 function create_list {
     #
@@ -815,7 +825,7 @@ function country_menu {
     PS3=$'\n''Choose a Country: '
     select xcountry in "${countrylist[@]}"
     do
-        if [[ "$xcountry" == "Exit" ]]; then
+        if [[ "$xcountry" == "Exit" ]] || [[ "$REPLY" == "$upmenu" ]]; then
             main_menu
         elif [[ "$xcountry" == "Random" ]]; then
             xcountry="$rcountry"
@@ -823,7 +833,7 @@ function country_menu {
         elif (( 1 <= REPLY )) && (( REPLY <= numcountries )); then
             city_menu
         else
-            invalid_option "$numcountries"
+            invalid_option "$numcountries" "Main Menu"
         fi
     done
 }
@@ -888,8 +898,10 @@ function city_menu {
                     nordvpn connect "$xcity"
                     status
                     exit
+                elif [[ "$REPLY" == "$upmenu" ]]; then
+                    country_menu
                 else
-                    invalid_option "$numcities"
+                    invalid_option "$numcities" "Countries"
                 fi
                 ;;
         esac
@@ -1758,7 +1770,11 @@ function meshnet_menu {
                 main_menu
                 ;;
             *)
-                invalid_option "${#submesh[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    settings_menu
+                else
+                    invalid_option "${#submesh[@]}" "Settings"
+                fi
                 ;;
         esac
     done
@@ -1877,7 +1893,11 @@ function customdns_menu {
                 main_menu
                 ;;
             *)
-                invalid_option "${#submcdns[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    settings_menu
+                else
+                    invalid_option "${#submcdns[@]}" "Settings"
+                fi
                 ;;
         esac
     done
@@ -1912,7 +1932,9 @@ function whitelist_setting {
     echo
     read -n 1 -r -p "Apply your default whitelist settings? (y/n/C/E) "; echo
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$REPLY" == "$upmenu" ]]; then
+        settings_menu
+    elif [[ $REPLY =~ ^[Yy]$ ]]; then
         whitelist_commands
         set_vars
     elif [[ $REPLY =~ ^[Cc]$ ]]; then
@@ -2069,7 +2091,11 @@ function account_menu {
                 main_menu
                 ;;
             *)
-                invalid_option "${#submacct[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    settings_menu
+                else
+                    invalid_option "${#submacct[@]}" "Settings"
+                fi
                 ;;
         esac
     done
@@ -2088,7 +2114,9 @@ function restart_service {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$REPLY" == "$upmenu" ]]; then
+        settings_menu
+    elif [[ $REPLY =~ ^[Yy]$ ]]; then
         sudo systemctl restart nordvpnd.service
         sudo systemctl restart nordvpn.service
         echo
@@ -2133,7 +2161,9 @@ function reset_app {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$REPLY" == "$upmenu" ]]; then
+        settings_menu
+    elif [[ $REPLY =~ ^[Yy]$ ]]; then
         # first four redundant
         if [[ "$killswitch" == "enabled" ]]; then
             nordvpn set killswitch disabled; wait
@@ -2311,11 +2341,14 @@ function iptables_menu {
                 iptables_status
                 ;;
             "Exit")
-                #sudo -K     # timeout sudo
                 main_menu
                 ;;
             *)
-                invalid_option "${#submipt[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    settings_menu
+                else
+                    invalid_option "${#submipt[@]}" "Settings"
+                fi
                 ;;
         esac
     done
@@ -2470,10 +2503,14 @@ function allservers_menu {
                 fi
                 ;;
             "Exit")
-                nordapi_menu
+                main_menu
                 ;;
             *)
-                invalid_option "${#submallvpn[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    nordapi_menu
+                else
+                    invalid_option "${#submallvpn[@]}" "Nord API"
+                fi
                 ;;
         esac
     done
@@ -2536,7 +2573,11 @@ function nordapi_menu {
                 main_menu
                 ;;
             *)
-                invalid_option "${#submapi[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    tools_menu
+                else
+                    invalid_option "${#submapi[@]}" "Tools"
+                fi
                 ;;
         esac
     done
@@ -2599,7 +2640,9 @@ function wireguard_gen {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "$REPLY" == "$upmenu" ]]; then
+        tools_menu
+    elif [[ $REPLY =~ ^[Yy]$ ]]; then
         #
         address=$(/sbin/ifconfig nordlynx | grep 'inet ' | tr -s ' ' | cut -d" " -f3)
         #listenport=$(sudo wg showconf nordlynx | grep 'ListenPort = .*')
@@ -2718,7 +2761,11 @@ function speedtest_menu {
                 main_menu
                 ;;
             *)
-                invalid_option "${#submspeed[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    tools_menu
+                else
+                    invalid_option "${#submspeed[@]}" "Tools"
+                fi
                 ;;
         esac
     done
@@ -2862,7 +2909,11 @@ function tools_menu {
                 main_menu
                 ;;
             *)
-                invalid_option "${#submtools[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    settings_menu
+                else
+                    invalid_option "${#submtools[@]}" "Settings"
+                fi
                 ;;
         esac
     done
@@ -2972,12 +3023,14 @@ function group_all_menu {
             nordvpn connect --group "$xgroup"
             status
             exit
+        elif [[ "$REPLY" == "$upmenu" ]]; then
+            group_menu
         else
-            invalid_option "$numgroups"
+            invalid_option "$numgroups" "Groups"
         fi
     done
 }
-function group_favorites {
+function favorites_menu {
     heading "Favorites"
     main_logo "stats_only"
     echo "Keep track of your favorite individual servers by adding them to"
@@ -2989,7 +3042,7 @@ function group_favorites {
         read -n 1 -r -p "Create the file? (y/n) "; echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             touch "$nordfavoritesfile"
-            group_favorites
+            favorites_menu
         else
             group_menu
         fi
@@ -3024,7 +3077,7 @@ function group_favorites {
                 echo "Examples:  Netflix-us8247  Gaming-ca1672"
                 echo
                 openlink "$nordfavoritesfile" "ask" "exit"
-                group_favorites
+                favorites_menu
                 ;;
             "Add Server")
                 heading "Add Server" "txt"
@@ -3045,7 +3098,7 @@ function group_favorites {
                     echo -e "${DColor}(Skipped)${Color_Off}"
                     echo
                 fi
-                group_favorites
+                favorites_menu
                 ;;
             "Add Current Server")
                 favname="$(echo "$city" | tr -d ' ')"-"$server"
@@ -3062,7 +3115,7 @@ function group_favorites {
                 echo
                 echo -e "Added $favadd to ${LColor}$nordfavoritesfile${Color_Off}"
                 echo
-                group_favorites
+                favorites_menu
                 ;;
             *)
                 if (( 1 <= REPLY )) && (( REPLY <= numfavorites )); then
@@ -3073,8 +3126,10 @@ function group_favorites {
                     nordvpn connect "$(echo "$xfavorite" | cut -f2 -d'-')"
                     status
                     exit
+                elif [[ "$REPLY" == "$upmenu" ]]; then
+                    group_menu
                 else
-                    invalid_option "$numfavorites"
+                    invalid_option "$numfavorites" "Groups"
                 fi
                 ;;
         esac
@@ -3105,13 +3160,17 @@ function group_menu {
                 group_connect "P2P"
                 ;;
             "Favorites")
-                group_favorites
+                favorites_menu
                 ;;
             "Exit")
                 main_menu
                 ;;
             *)
-                invalid_option "${#submgroups[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    main_menu
+                else
+                    invalid_option "${#submgroups[@]}" "Main Menu"
+                fi
                 ;;
         esac
     done
@@ -3193,7 +3252,11 @@ function settings_menu {
                 main_menu
                 ;;
             *)
-                invalid_option "${#submsett[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    main_menu
+                else
+                    invalid_option "${#submsett[@]}" "Main Menu"
+                fi
                 ;;
         esac
     done
@@ -3325,7 +3388,7 @@ function main_menu {
             "Favorites")
                 # can add to mainmenu
                 # connect from a list of individual server names
-                group_favorites
+                favorites_menu
                 ;;
             "Countries")
                 country_menu
@@ -3352,7 +3415,11 @@ function main_menu {
                 break
                 ;;
             *)
-                invalid_option "${#mainmenu[@]}"
+                if [[ "$REPLY" == "$upmenu" ]]; then
+                    main_menu
+                else
+                    invalid_option "${#mainmenu[@]}" "Main Menu"
+                fi
                 main_menu
                 ;;
         esac
