@@ -224,7 +224,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3312 (function main_menu).
+# The Main Menu starts on line 3295 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -773,6 +773,33 @@ function openlink {
         exit
     fi
 }
+function parent_menu {
+    # $1 = the parent menu
+    # $2 = skip if returning
+    #
+    if [[ "$REPLY" == "$upmenu" ]] && [[ "$2" != "back" ]]; then
+        case "$1" in
+            "main")
+                main_menu
+                ;;
+            "country")
+                country_menu
+                ;;
+            "settings")
+                settings_menu
+                ;;
+            "group")
+                group_menu
+                ;;
+            "tools")
+                tools_menu
+                ;;
+            "nordapi")
+                nordapi_menu
+                ;;
+        esac
+    fi
+}
 function invalid_option {
     # $1 = total menu items
     # $2 = name of parent menu
@@ -825,7 +852,8 @@ function country_menu {
     PS3=$'\n''Choose a Country: '
     select xcountry in "${countrylist[@]}"
     do
-        if [[ "$xcountry" == "Exit" ]] || [[ "$REPLY" == "$upmenu" ]]; then
+        parent_menu "main"
+        if [[ "$xcountry" == "Exit" ]]; then
             main_menu
         elif [[ "$xcountry" == "Random" ]]; then
             xcountry="$rcountry"
@@ -867,6 +895,7 @@ function city_menu {
     PS3=$'\n''Connect to City: '
     select xcity in "${citylist[@]}"
     do
+        parent_menu "country"
         case $xcity in
             "Exit")
                 main_menu
@@ -898,8 +927,6 @@ function city_menu {
                     nordvpn connect "$xcity"
                     status
                     exit
-                elif [[ "$REPLY" == "$upmenu" ]]; then
-                    country_menu
                 else
                     invalid_option "$numcities" "Countries"
                 fi
@@ -1058,6 +1085,7 @@ function group_connect {
             REPLY="y"
         fi
     fi
+    parent_menu "group"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnect_vpn "force"
         if [[ "$1" == "Obfuscated_Servers" ]]; then
@@ -1087,8 +1115,6 @@ function group_connect {
         fi
         status
         exit
-    elif [[ "$REPLY" == "$upmenu" ]]; then
-        group_menu
     else
         echo
         echo "No changes made."
@@ -1119,6 +1145,7 @@ function technology_setting {
     else
         read -n 1 -r -p "Change the Technology to OpenVPN? (y/n) "; echo
     fi
+    parent_menu "settings" "$1"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnect_vpn "force"
         if [[ "$technology" == "openvpn" ]]; then
@@ -1136,8 +1163,6 @@ function technology_setting {
             echo
             protocol_ask
         fi
-    elif [[ "$REPLY" == "$upmenu" ]] && [[ "$1" != "back" ]]; then
-        settings_menu
     else
         echo
         echo -e "Continue to use $technologydc."
@@ -1167,10 +1192,9 @@ function protocol_setting {
         echo
         read -n 1 -r -p "Go to the 'Technology' setting? (y/n) "; echo
         echo
+        parent_menu "settings"
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             technology_setting
-        elif [[ "$REPLY" == "$upmenu" ]]; then
-            settings_menu
         else
             main_menu
         fi
@@ -1190,6 +1214,7 @@ function protocol_setting {
     else
         read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
     fi
+    parent_menu "settings"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnect_vpn "force"
         if [[ "$protocol" == "UDP" ]]; then
@@ -1197,8 +1222,6 @@ function protocol_setting {
         else
             nordvpn set protocol UDP; wait
         fi
-    elif [[ "$REPLY" == "$upmenu" ]]; then
-        settings_menu
     else
         echo
         echo -e "Continue to use $protocoldc."
@@ -1296,6 +1319,7 @@ function change_setting {
         read -n 1 -r -p "$chgprompt"; echo
     fi
     echo
+    parent_menu "settings" "$2"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if [[ "$chgvar" == "disabled" ]]; then
             case "$1" in
@@ -1352,8 +1376,6 @@ function change_setting {
             nordvpn set "$1" disabled; wait
             #
         fi
-    elif [[ "$REPLY" == "$upmenu" ]] && [[ "$2" != "back" ]]; then
-        settings_menu
     else
         echo -e "$chgind Keep $chgname $chgvarc."
     fi
@@ -1396,7 +1418,7 @@ function routing_setting {
     echo "If this setting is disabled, the app will connect to the"
     echo "VPN server (or peer) but won’t route any traffic."
     echo
-    change_setting "routing" "back" # disable fast2
+    change_setting "routing" "back" # disable fast2.  "upmenu" not available
     main_menu
 }
 function analytics_setting {
@@ -1486,11 +1508,10 @@ function obfuscate_setting {
         echo
         read -n 1 -r -p "Go to the 'Technology' setting and return? (y/n) "; echo
         echo
+        parent_menu "settings"
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             technology_setting "back"
             obfuscate_setting
-        elif [[ "$REPLY" == "$upmenu" ]]; then
-            settings_menu
         else
             main_menu
         fi
@@ -1516,6 +1537,7 @@ function obfuscate_setting {
     else
         read -n 1 -r -p "$(echo -e "${EColor}Enable${Color_Off} Obfuscate? (y/n) ")"; echo
     fi
+    parent_menu "settings"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnect_vpn "force"
         if [[ "$obfuscate" == "enabled" ]]; then
@@ -1525,8 +1547,6 @@ function obfuscate_setting {
         fi
         echo
         protocol_ask
-    elif [[ "$REPLY" == "$upmenu" ]]; then
-        settings_menu
     else
         echo
         echo -e "$ob Keep Obfuscate $obfuscatec."
@@ -1552,6 +1572,7 @@ function meshnet_menu {
     submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Support" "Exit")
     select mesh in "${submesh[@]}"
     do
+        parent_menu "settings"
         case $mesh in
             "Enable/Disable")
                 clear -x
@@ -1784,11 +1805,7 @@ function meshnet_menu {
                 main_menu
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    settings_menu
-                else
-                    invalid_option "${#submesh[@]}" "Settings"
-                fi
+                invalid_option "${#submesh[@]}" "Settings"
                 ;;
         esac
     done
@@ -1814,6 +1831,7 @@ function customdns_menu {
     submcdns=("Nord 103.86.96.100 103.86.99.100" "Nord-TPLite 103.86.96.96 103.86.99.99" "AdGuard 94.140.14.14 94.140.15.15" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
     select cdns in "${submcdns[@]}"
     do
+        parent_menu "settings"
         case $cdns in
             "Nord 103.86.96.100 103.86.99.100")
                 echo
@@ -1907,11 +1925,7 @@ function customdns_menu {
                 main_menu
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    settings_menu
-                else
-                    invalid_option "${#submcdns[@]}" "Settings"
-                fi
+                invalid_option "${#submcdns[@]}" "Settings"
                 ;;
         esac
     done
@@ -1946,6 +1960,7 @@ function whitelist_setting {
     echo
     read -n 1 -r -p "Apply your default whitelist settings? (y/n/C/E) "; echo
     echo
+    parent_menu "settings" "$1"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         whitelist_commands
         set_vars
@@ -1956,8 +1971,6 @@ function whitelist_setting {
         echo -e "Modify ${LColor}function whitelist_commands${Color_Off} starting on ${FColor}line $(( startline + 1 ))${Color_Off}"
         echo
         openlink "$0" "noask" "exit"
-    elif [[ "$REPLY" == "$upmenu" ]] && [[ "$1" != "back" ]]; then
-        settings_menu
     else
         echo "No changes made."
     fi
@@ -2003,6 +2016,7 @@ function account_menu {
     submacct=("Login (browser)" "Login (legacy)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "NordAccount" "Exit")
     select acc in "${submacct[@]}"
     do
+        parent_menu "settings"
         case $acc in
             "Login (browser)")
                 echo
@@ -2105,11 +2119,7 @@ function account_menu {
                 main_menu
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    settings_menu
-                else
-                    invalid_option "${#submacct[@]}" "Settings"
-                fi
+                invalid_option "${#submacct[@]}" "Settings"
                 ;;
         esac
     done
@@ -2128,6 +2138,7 @@ function restart_service {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
+    parent_menu "settings"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         sudo systemctl restart nordvpnd.service
         sudo systemctl restart nordvpn.service
@@ -2150,8 +2161,6 @@ function restart_service {
         fi
         status
         exit
-    elif [[ "$REPLY" == "$upmenu" ]]; then
-        settings_menu
     fi
     main_menu
 }
@@ -2174,6 +2183,7 @@ function reset_app {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
+    parent_menu "settings"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         # first four redundant
         if [[ "$killswitch" == "enabled" ]]; then
@@ -2196,8 +2206,6 @@ function reset_app {
         read -n 1 -s -r -p "Press any key to restart the service..."; echo
         set_vars
         restart_service "after_reset"
-    elif [[ "$REPLY" == "$upmenu" ]]; then
-        settings_menu
     fi
     main_menu
 }
@@ -2236,6 +2244,7 @@ function iptables_menu {
     submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "Ping Google" "Disconnect" "Exit")
     select ipt in "${submipt[@]}"
     do
+        parent_menu "settings"
         case $ipt in
             "View IPTables")
                 set_vars
@@ -2357,11 +2366,7 @@ function iptables_menu {
                 main_menu
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    settings_menu
-                else
-                    invalid_option "${#submipt[@]}" "Settings"
-                fi
+                invalid_option "${#submipt[@]}" "Settings"
                 ;;
         esac
     done
@@ -2430,6 +2435,7 @@ function allservers_menu {
     submallvpn=("List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Update List" "Exit")
     select avpn in "${submallvpn[@]}"
     do
+        parent_menu "nordapi"
         case $avpn in
             "List All Servers")
                 heading "All the VPN Servers" "txt"
@@ -2519,11 +2525,7 @@ function allservers_menu {
                 main_menu
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    nordapi_menu
-                else
-                    invalid_option "${#submallvpn[@]}" "Nord API"
-                fi
+                invalid_option "${#submallvpn[@]}" "Nord API"
                 ;;
         esac
     done
@@ -2544,6 +2546,7 @@ function nordapi_menu {
     submapi=("Host Server Load" "Host Server Info" "Top 15 Recommended" "Top 15 By Country" "#Servers per Country" "All VPN Servers" "Change Host" "Connect" "Exit")
     select napi in "${submapi[@]}"
     do
+        parent_menu "tools"
         case $napi in
             "Host Server Load")
                 heading "Current $nordhost Load" "txt" "alt"
@@ -2586,11 +2589,7 @@ function nordapi_menu {
                 main_menu
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    tools_menu
-                else
-                    invalid_option "${#submapi[@]}" "Tools"
-                fi
+                invalid_option "${#submapi[@]}" "Tools"
                 ;;
         esac
     done
@@ -2653,6 +2652,7 @@ function wireguard_gen {
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
+    parent_menu "tools"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         #
         address=$(/sbin/ifconfig nordlynx | grep 'inet ' | tr -s ' ' | cut -d" " -f3)
@@ -2687,8 +2687,6 @@ function wireguard_gen {
         fi
         echo
         openlink "$wgfull" "ask"
-    elif [[ "$REPLY" == "$upmenu" ]]; then
-        tools_menu
     fi
     echo
 }
@@ -2709,6 +2707,7 @@ function speedtest_menu {
     submspeed=( "Download & Upload" "Download Only" "Upload Only" "Latency & Load" "speedtest.net"  "speedof.me" "fast.com" "linode.com" "digitalocean.com" "nperf.com" "Exit" )
     select spd in "${submspeed[@]}"
     do
+        parent_menu "tools"
         case $spd in
             "Download & Upload")
                 echo
@@ -2774,11 +2773,7 @@ function speedtest_menu {
                 main_menu
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    tools_menu
-                else
-                    invalid_option "${#submspeed[@]}" "Tools"
-                fi
+                invalid_option "${#submspeed[@]}" "Tools"
                 ;;
         esac
     done
@@ -2801,6 +2796,7 @@ function tools_menu {
     submtools=( "NordVPN API" "External IP" "WireGuard" "Speed Tests" "Rate VPN Server" "Ping VPN" "Ping Google" "My TraceRoute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Exit" )
     select tool in "${submtools[@]}"
     do
+        parent_menu "settings"
         case $tool in
             "NordVPN API")
                 nordapi_menu
@@ -2922,11 +2918,7 @@ function tools_menu {
                 main_menu
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    settings_menu
-                else
-                    invalid_option "${#submtools[@]}" "Settings"
-                fi
+                invalid_option "${#submtools[@]}" "Settings"
                 ;;
         esac
     done
@@ -2939,6 +2931,7 @@ function set_defaults_ask {
     echo
     read -n 1 -r -p "    Proceed? (y/n) "; echo
     echo
+    parent_menu "settings"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         set_defaults
         read -n 1 -r -p "$(echo -e "$defaultsc    Go to the 'Whitelist' setting? (y/n) ")"
@@ -2954,8 +2947,6 @@ function set_defaults_ask {
             customdns_menu
         fi
         main_menu
-    elif [[ "$REPLY" == "$upmenu" ]]; then
-        settings_menu
     fi
 }
 function script_info {
@@ -3028,6 +3019,7 @@ function group_all_menu {
     PS3=$'\n''Connect to Group: '
     select xgroup in "${grouplist[@]}"
     do
+        parent_menu "group"
         if [[ "$xgroup" == "Exit" ]]; then
             main_menu
         elif (( 1 <= REPLY )) && (( REPLY <= numgroups )); then
@@ -3038,8 +3030,6 @@ function group_all_menu {
             nordvpn connect --group "$xgroup"
             status
             exit
-        elif [[ "$REPLY" == "$upmenu" ]]; then
-            group_menu
         else
             invalid_option "$numgroups" "Groups"
         fi
@@ -3077,6 +3067,7 @@ function favorites_menu {
     PS3=$'\n''Connect to Server: '
     select xfavorite in "${favoritelist[@]}"
     do
+        parent_menu "group"
         case $xfavorite in
             "Exit")
                 main_menu
@@ -3141,8 +3132,6 @@ function favorites_menu {
                     nordvpn connect "$(echo "$xfavorite" | cut -f2 -d'-')"
                     status
                     exit
-                elif [[ "$REPLY" == "$upmenu" ]]; then
-                    group_menu
                 else
                     invalid_option "$numfavorites" "Groups"
                 fi
@@ -3158,6 +3147,7 @@ function group_menu {
     submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Favorites" "Exit")
     select grp in "${submgroups[@]}"
     do
+        parent_menu "main"
         case $grp in
             "All_Groups")
                 group_all_menu
@@ -3181,11 +3171,7 @@ function group_menu {
                 main_menu
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    main_menu
-                else
-                    invalid_option "${#submgroups[@]}" "Main Menu"
-                fi
+                invalid_option "${#submgroups[@]}" "Main Menu"
                 ;;
         esac
     done
@@ -3199,6 +3185,7 @@ function settings_menu {
     submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
+        parent_menu "main"
         case $sett in
             "Technology")
                 technology_setting
@@ -3267,11 +3254,7 @@ function settings_menu {
                 main_menu
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    main_menu
-                else
-                    invalid_option "${#submsett[@]}" "Main Menu"
-                fi
+                invalid_option "${#submsett[@]}" "Main Menu"
                 ;;
         esac
     done
@@ -3327,6 +3310,7 @@ function main_menu {
     #
     select opt in "${mainmenu[@]}"
     do
+        parent_menu "main"
         case $opt in
             "Vancouver")
                 main_header
@@ -3430,11 +3414,7 @@ function main_menu {
                 break
                 ;;
             *)
-                if [[ "$REPLY" == "$upmenu" ]]; then
-                    main_menu
-                else
-                    invalid_option "${#mainmenu[@]}" "Main Menu"
-                fi
+                invalid_option "${#mainmenu[@]}" "Main Menu"
                 main_menu
                 ;;
         esac
