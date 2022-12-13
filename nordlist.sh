@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.2 on Linux Mint 20.3
-# December 9, 2022
+# December 13, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -46,8 +46,7 @@
 # speedtest-cli    Settings-Tools-Speed Tests  (function speedtest_menu)
 # highlight        Settings-Script             (function script_info)
 #
-# eg.   "sudo apt install wireguard wireguard-tools"
-#       "sudo apt install speedtest-cli highlight"
+# "sudo apt install wireguard wireguard-tools speedtest-cli highlight"
 #
 # For VPN On/Off status on the desktop I use the Linux Mint Cinnamon
 # applet "Bash Sensors". Screenshot: https://i.imgur.com/fLOoyiJ.jpg
@@ -224,7 +223,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3305 (function main_menu).
+# The Main Menu starts on line 3304 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -778,12 +777,13 @@ function parent_menu {
     # $2 = $1 or $2 (back) of the calling function - disable upmenu if a return is required
     #
     if [[ "$REPLY" == "$upmenu" ]]; then
-        echo
         if [[ "$2" == "back" ]]; then
+            echo
             echo -e "${FColor}(upmenu) - N/A - The function needs to return.${Color_Off}"
             echo
         else
-            echo -e "${FColor}(upmenu) Return to the $1 menu.${Color_Off}"
+            echo
+            echo -e "${FColor}(upmenu) - Return to the $1 menu.${Color_Off}"
             case "$1" in
                 "Main")
                     main_menu
@@ -833,15 +833,13 @@ function create_list {
             rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
             # Replaced "Bosnia_And_Herzegovina" with "Sarajevo" to help compact the list.
             countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Sarajevo}")
-            countrylist+=( "Random" )
-            countrylist+=( "Exit" )
+            countrylist+=( "Random" "Exit" )
             ;;
         "city")
             readarray -t citylist < <( nordvpn cities "$xcountry" | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
             rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
             if (( "${#citylist[@]}" > 1 )); then
-                citylist+=( "Random" )
-                citylist+=( "Best" )
+                citylist+=( "Random" "Best" )
             fi
             citylist+=( "Exit" )
             ;;
@@ -939,7 +937,7 @@ function city_menu {
                     status
                     exit
                 else
-                    invalid_option "$numcities" "Countries"
+                    invalid_option "$numcities" "Country"
                 fi
                 ;;
         esac
@@ -1202,7 +1200,6 @@ function protocol_setting {
         echo "Change Technology to OpenVPN to use TCP or UDP."
         echo
         read -n 1 -r -p "Go to the 'Technology' setting? (y/n) "; echo
-        echo
         parent_menu "Settings"
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             technology_setting
@@ -1938,6 +1935,7 @@ function customdns_menu {
                 invalid_option "${#submcdns[@]}" "Settings"
                 ;;
         esac
+        set_vars
     done
 }
 function whitelist_setting {
@@ -2063,6 +2061,7 @@ function account_menu {
                 echo
                 disconnect_vpn "force" "check_ks"
                 nordvpn logout
+                set_vars
                 echo
                 ;;
             "Account Info")
@@ -3041,7 +3040,7 @@ function group_all_menu {
             status
             exit
         else
-            invalid_option "$numgroups" "Groups"
+            invalid_option "$numgroups" "Group"
         fi
     done
 }
@@ -3143,7 +3142,7 @@ function favorites_menu {
                     status
                     exit
                 else
-                    invalid_option "$numfavorites" "Groups"
+                    invalid_option "$numfavorites" "Group"
                 fi
                 ;;
         esac
