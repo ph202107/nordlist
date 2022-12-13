@@ -17,7 +17,9 @@ To download:
 Then:   
 - Make the script executable with "chmod +x nordlist.sh"
 - Recommended: "sudo apt install figlet lolcat curl jq"
-- Customization notes are included in the script
+- Optional: "sudo apt install wireguard wireguard-tools speedtest-cli highlight"
+- Open the script in any text editor or IDE
+- Configure the customization options at the beginning of the script
 
 =================================
 
