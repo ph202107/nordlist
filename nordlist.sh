@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.2 on Linux Mint 20.3
-# December 13, 2022
+# December 20, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -27,7 +27,7 @@
 #
 # 1) Save as nordlist.sh
 #       For convenience I use a directory in my PATH (echo $PATH)
-#       eg. /home/username/bin/nordlist.sh
+#       eg. /home/username/.local/bin/nordlist.sh
 # 2) Make the script executable with
 #       "chmod +x nordlist.sh"
 # 3) To generate ASCII images and to use NordVPN API functions
@@ -87,7 +87,6 @@ acwhere=""
 #
 # Specify your Custom DNS servers with a description.
 # Can specify up to 3 IP addresses separated by a space.
-#default_dns="192.168.1.70"; dnsdesc="PiHole"
 default_dns="103.86.96.100 103.86.99.100"; dnsdesc="Nord"
 #
 # Specify a VPN hostname to use for testing while the VPN is off.
@@ -173,8 +172,8 @@ upmenu="0"
 # Return to the main menu without prompting "Press any key..."
 fast1="n"
 #
-# Automatically change these settings without prompting:
-# Firewall, Analytics, KillSwitch, TPLite, Notify, AutoConnect, IPv6
+# Automatically change these settings without prompting:  Firewall,
+# Routing, Analytics, KillSwitch, TPLite, Notify, AutoConnect, IPv6
 fast2="n"
 #
 # Automatically change these settings which also disconnect the VPN:
@@ -223,7 +222,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3304 (function main_menu).
+# The Main Menu starts on line 3321 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -762,7 +761,7 @@ function openlink {
             return
         fi
     fi
-    if [[ "$1" == *"http"* ]] && [[ "$newfirefox" =~ ^[Yy]$ ]]; then
+    if [[ "$1" =~ ^https?:// ]] && [[ "$newfirefox" =~ ^[Yy]$ ]]; then
         nohup /usr/bin/firefox --new-window "$1" > /dev/null 2>&1 &
     else
         nohup xdg-open "$1" > /dev/null 2>&1 &
@@ -1090,7 +1089,9 @@ function group_connect {
             echo "The location must support $1."
             echo "Leave blank to have the app choose automatically."
             echo
-            read -r -p "Enter the $1 location: " location
+            read -r -p "Enter the $1 location: "
+            parent_menu "Group"
+            location="$REPLY"
             REPLY="y"
         fi
     fi
@@ -1323,6 +1324,14 @@ function change_setting {
     if [[ "$fast2" =~ ^[Yy]$ ]] && [[ "$2" != "back" ]]; then
         echo -e "${FColor}[F]ast2 is enabled.  Changing the setting.${Color_Off}"
         REPLY="y"
+        case "$1" in    # confirmation prompt
+            "routing")
+                if [[ "$chgvar" == "enabled" ]]; then
+                    echo
+                    read -n 1 -r -p "$(echo -e "Confirm: ${WColor}Disable $chgname${Color_Off} (y/n) ")"; echo
+                fi
+                ;;
+        esac
     else
         read -n 1 -r -p "$chgprompt"; echo
     fi
@@ -1426,8 +1435,7 @@ function routing_setting {
     echo "If this setting is disabled, the app will connect to the"
     echo "VPN server (or peer) but won’t route any traffic."
     echo
-    change_setting "routing" "back" # disable fast2.  "upmenu" not available
-    main_menu
+    change_setting "routing"
 }
 function analytics_setting {
     heading "Analytics"
@@ -1817,6 +1825,13 @@ function meshnet_menu {
         esac
     done
 }
+function tplite_disable {
+    echo
+    if [[ "$tplite" == "enabled" ]]; then
+        nordvpn set threatprotectionlite disabled
+        echo
+    fi
+}
 function customdns_menu {
     heading "CustomDNS"
     echo "The NordVPN app automatically uses NordVPN DNS servers"
@@ -1841,38 +1856,38 @@ function customdns_menu {
         parent_menu "Settings"
         case $cdns in
             "Nord 103.86.96.100 103.86.99.100")
-                echo
+                tplite_disable
                 nordvpn set dns 103.86.96.100 103.86.99.100
                 ;;
             "Nord-TPLite 103.86.96.96 103.86.99.99")
-                echo
+                tplite_disable
                 nordvpn set dns 103.86.96.96 103.86.99.99
                 ;;
             "AdGuard 94.140.14.14 94.140.15.15")
-                echo
+                tplite_disable
                 nordvpn set dns 94.140.14.14 94.140.15.15
                 ;;
             "OpenDNS 208.67.220.220 208.67.222.222")
-                echo
+                tplite_disable
                 nordvpn set dns 208.67.220.220 208.67.222.222
                 ;;
             "CB-Security 185.228.168.9 185.228.169.9")
                 # Clean Browsing Security 185.228.168.9 185.228.169.9
                 # Clean Browsing Adult 185.228.168.10 185.228.169.11
                 # Clean Browsing Family 185.228.168.168 185.228.169.168
-                echo
+                tplite_disable
                 nordvpn set dns 185.228.168.9 185.228.169.9
                 ;;
             "Quad9 9.9.9.9 149.112.112.11")
-                echo
+                tplite_disable
                 nordvpn set dns 9.9.9.9 149.112.112.11
                 ;;
             "Cloudflare 1.0.0.1 1.1.1.1")
-                echo
+                tplite_disable
                 nordvpn set dns 1.0.0.1 1.1.1.1
                 ;;
             "Google 8.8.4.4 8.8.8.8")
-                echo
+                tplite_disable
                 nordvpn set dns 8.8.4.4 8.8.8.8
                 ;;
             "Specify or Default")
@@ -1882,7 +1897,7 @@ function customdns_menu {
                 echo
                 read -r -p "Up to 3 DNS server IPs: " dns3srvrs
                 dns3srvrs=${dns3srvrs:-$default_dns}
-                echo
+                tplite_disable
                 nordvpn set dns $dns3srvrs
                 ;;
             "Disable Custom DNS")
@@ -2427,7 +2442,7 @@ function allservers_menu {
     # If you get this error try again later.
     heading "All Servers"
     if (( ${#allnordservers[@]} == 0 )); then
-        if [[ -e "$nordserversfile" ]]; then
+        if [[ -f "$nordserversfile" ]]; then
             echo -e "${EColor}Server List: ${LColor}$nordserversfile${Color_Off}"
             head -n 1 "$nordserversfile"
             readarray -t allnordservers < <( tail -n +4 "$nordserversfile" )
@@ -2494,7 +2509,7 @@ function allservers_menu {
                 ;;
             "Update List")
                 echo
-                if [[ -e "$nordserversfile" ]]; then
+                if [[ -f "$nordserversfile" ]]; then
                     echo -e "${EColor}Server List: ${LColor}$nordserversfile${Color_Off}"
                     head -n 2 "$nordserversfile"
                     echo
@@ -2506,7 +2521,7 @@ function allservers_menu {
                 fi
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    if [[ -e "$nordserversfile" ]]; then
+                    if [[ -f "$nordserversfile" ]]; then
                         echo "Retrieving the list of NordVPN servers..."
                         echo
                         readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
@@ -2515,7 +2530,7 @@ function allservers_menu {
                         echo
                         echo -e "${WColor}Server list is empty. Parse Error? Try again later.${Color_Off}"
                         echo
-                        if [[ -e "$nordserversfile" ]]; then
+                        if [[ -f "$nordserversfile" ]]; then
                             # rebuild array if it was blanked out on retrieval attempt
                             readarray -t allnordservers < <( tail -n +4 "$nordserversfile" )
                         fi
@@ -3050,7 +3065,10 @@ function favorites_menu {
     echo "Keep track of your favorite individual servers by adding them to"
     echo "this list. For example low ping servers or streaming servers."
     echo
-    if [[ ! -e "$nordfavoritesfile" ]]; then
+    if [[ -f "$nordfavoritesfile" ]]; then
+        # trim spaces and remove empty lines https://stackoverflow.com/questions/16414410/delete-empty-lines-using-sed/24957725#24957725
+        sed -i 's/^ *//; s/ *$//; /^$/d' "$nordfavoritesfile"
+    else
         echo -e "${WColor}$nordfavoritesfile does not exist.${Color_Off}"
         echo
         read -n 1 -r -p "Create the file? (y/n) "; echo
@@ -3147,7 +3165,6 @@ function favorites_menu {
                 ;;
         esac
     done
-    # https://stackoverflow.com/questions/16414410/delete-empty-lines-using-sed/24957725#24957725
 }
 function group_menu {
     heading "Groups"
