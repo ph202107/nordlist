@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.2 on Linux Mint 20.3
-# December 20, 2022
+# December 27, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -222,7 +222,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3321 (function main_menu).
+# The Main Menu starts on line 3326 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -2253,8 +2253,6 @@ function iptables_status {
     COLUMNS=$menuwidth
 }
 function iptables_menu {
-    # https://old.reddit.com/r/nordvpn/comments/qgakq9/linux_killswitch_problems_iptables/
-    # * changes in version 3.13.0 - "We made changes in firewall handling. Now we filter packets by firewall marks instead of IP addresses of VPN servers."
     heading "IPTables"
     echo "Flushing the IPTables may help resolve problems enabling or"
     echo "disabling the KillSwitch or with other connection issues."
@@ -2456,7 +2454,11 @@ function allservers_menu {
     echo "Server Count: ${#allnordservers[@]}"
     echo
     PS3=$'\n''Choose an option: '
-    submallvpn=("List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Update List" "Exit")
+    submallvpn=( "List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Update List" )
+    if [[ -f "$nordserversfile" ]]; then
+        submallvpn+=( "Edit File" )
+    fi
+    submallvpn+=( "Exit" )
     select avpn in "${submallvpn[@]}"
     do
         parent_menu "Nord API"
@@ -2544,6 +2546,10 @@ function allservers_menu {
                         echo
                     fi
                 fi
+                ;;
+            "Edit File")
+                echo
+                openlink "$nordserversfile" "ask" "exit"
                 ;;
             "Exit")
                 main_menu
@@ -3302,9 +3308,8 @@ function main_menu {
     if [[ "$1" == "start" ]]; then
         echo -e "${EIColor}Welcome to nordlist!${Color_Off}"
         echo
-    elif [[ "$fast1" =~ ^[Yy]$ ]]; then
+    elif [[ "$fast1" =~ ^[Yy]$ ]] || [[ "$REPLY" == "$upmenu" ]]; then
         echo
-        #echo -e "${FColor}[F]ast1 is enabled.  Return to the Main Menu.${Color_Off}"
         echo
     else
         echo
