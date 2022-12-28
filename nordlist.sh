@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.2 on Linux Mint 20.3
-# December 27, 2022
+# December 28, 2022
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -222,7 +222,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3326 (function main_menu).
+# The Main Menu starts on line 3329 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -3072,7 +3072,8 @@ function favorites_menu {
     echo "this list. For example low ping servers or streaming servers."
     echo
     if [[ -f "$nordfavoritesfile" ]]; then
-        # trim spaces and remove empty lines https://stackoverflow.com/questions/16414410/delete-empty-lines-using-sed/24957725#24957725
+        # trim spaces and remove empty lines
+        # https://stackoverflow.com/questions/16414410/delete-empty-lines-using-sed/24957725#24957725
         sed -i 's/^ *//; s/ *$//; /^$/d' "$nordfavoritesfile"
     else
         echo -e "${WColor}$nordfavoritesfile does not exist.${Color_Off}"
@@ -3110,20 +3111,20 @@ function favorites_menu {
                 ;;
             "Edit File")
                 heading "Edit File" "txt"
-                echo "Add one server per line with no empty lines or trailing spaces."
+                echo "Add one server per line."
                 echo
-                echo -e "Format:  AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
-                echo "Examples:  Netflix-us8247  Gaming-ca1672"
+                echo -e "Format:  AnyName${H2Color}<underscore>${Color_Off}ActualServerNumber"
+                echo "Examples:  Netflix_us8247  Gaming_ca1672"
                 echo
                 openlink "$nordfavoritesfile" "ask" "exit"
                 favorites_menu
                 ;;
             "Add Server")
                 heading "Add Server" "txt"
-                echo "Must use only one <dash> in total, no trailing spaces."
+                echo -e "Must use only one ${H2Color}<underscore>${Color_Off} in total."
                 echo
-                echo -e "Format:  AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
-                echo "Examples:  Netflix-us8247  Gaming-ca1672"
+                echo -e "Format:  AnyName${H2Color}<underscore>${Color_Off}ActualServerNumber"
+                echo "Examples:  Netflix_us8247  Gaming_ca1672"
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
@@ -3140,15 +3141,17 @@ function favorites_menu {
                 favorites_menu
                 ;;
             "Add Current Server")
-                favname="$(echo "$city" | tr -d ' ')"-"$server"
+                favname="$(echo "$city" | tr -d ' _')"_"$server"
                 #
                 heading "Add $server to Favorites" "txt"
                 echo "Change the server name?"
                 echo
-                echo -e "Format:  AnyName${H2Color}<dash>${Color_Off}ActualServerNumber"
-                echo "Examples:  Netflix-$server  Gaming-$server"
+                echo -e "Format:  AnyName${H2Color}<underscore>${Color_Off}ActualServerNumber"
+                echo "Examples:  Netflix_$server  Gaming_$server"
                 echo
-                read -r -p "Hit 'Enter' for default [$favname]: " favadd
+                echo -e "${FColor}Default:${Color_Off}  $favname"
+                echo
+                read -r -p "Enter the server name or hit 'Enter' for default: " favadd
                 favadd=${favadd:-$favname}
                 echo "$favadd" >> "$nordfavoritesfile"
                 echo
@@ -3158,11 +3161,11 @@ function favorites_menu {
                 ;;
             *)
                 if (( 1 <= REPLY )) && (( REPLY <= numfavorites )); then
-                    heading "$(echo "$xfavorite" | cut -f1 -d'-')"
+                    heading "$(echo "$xfavorite" | cut -f1 -d'_')"
                     disconnect_vpn
                     echo "Connect to $xfavorite"
                     echo
-                    nordvpn connect "$(echo "$xfavorite" | cut -f2 -d'-')"
+                    nordvpn connect "$(echo "$xfavorite" | cut -f2 -d'_')"
                     status
                     exit
                 else
