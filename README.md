@@ -1,4 +1,4 @@
-Bash script to use with the NordVPN Linux CLI.  
+Unofficial bash script to use with the NordVPN Linux CLI.  
 Requires bash version 4 or greater.  
 Tested with Linux Mint only (Debian/Ubuntu base).   
 Fully customizable. 
@@ -23,7 +23,7 @@ Then:
 
 =================================
 
-NordVPN versions 3.14.2, 3.15.0, 3.15.1, 3.15.2 currently have these issues:
+NordVPN versions 3.14.2, 3.15.0, 3.15.1, 3.15.2, 3.15.3 currently have these issues:
 
 - When connecting to the Obfuscated_Servers Group:  
 "The specified group does not exist."
