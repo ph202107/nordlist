@@ -14,8 +14,9 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.14.1"      # 13 Jun 2022
 #nord_version="nordvpn=3.14.2"      # 28 Jul 2022 Works on Ubuntu 18.04, Mint 19.3
 #nord_version="nordvpn=3.15.0"      # 17 Oct 2022 Added login token, routing, fwmark, analytics
-#nord_version="nordvpn=3.15.1"      # 28 Nov 2022 Works on older distros. Changes to "nordvpn status"
+#nord_version="nordvpn=3.15.1"      # 28 Nov 2022 Fix for older distros. Changes to "nordvpn status"
 #nord_version="nordvpn=3.15.2"      # 06 Dec 2022 Fix for meshnet unavailable
+#nord_version="nordvpn=3.15.3"      # 28 Dec 2022 Fix crash after suspend
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -43,6 +44,7 @@ function default_settings {
     #nordvpn set ipv6 disabled
     #nordvpn set dns disabled
     #nordvpn set meshnet enabled; wait
+    #nordvpn set meshnet disabled; wait
     #nordvpn whitelist add subnet 192.168.1.0/24
     #
     #nordvpn connect
