@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.3 on Linux Mint 20.3
-# December 29, 2022
+# January 17, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -222,7 +222,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3329 (function main_menu).
+# The Main Menu starts on line 3336 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -738,7 +738,7 @@ function status {
     fi
     date
     echo
-    if [[ "$exitapplet" =~ ^[Yy]$ ]]; then
+    if [[ "$exitapplet" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
         # reload the "Bash Sensors" Linux Mint Cinnamon applet
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
     fi
@@ -755,13 +755,18 @@ function openlink {
     # $2 = "ask"  - ask first
     # $3 = "exit" - exit after opening
     #
-    if [[ "$2" == "ask" ]]; then
+    if (( "$usingssh" )); then
+        echo
+        echo -e "${FColor}(The script is currently running over SSH)${Color_Off}"
+        echo
+    fi
+    if [[ "$2" == "ask" ]] || (( "$usingssh" )); then
         read -n 1 -r -p "$(echo -e "Open ${EColor}$1${Color_Off} ? (y/n) ")"; echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             return
         fi
     fi
-    if [[ "$1" =~ ^https?:// ]] && [[ "$newfirefox" =~ ^[Yy]$ ]]; then
+    if [[ "$1" =~ ^https?:// ]] && [[ "$newfirefox" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
         nohup /usr/bin/firefox --new-window "$1" > /dev/null 2>&1 &
     else
         nohup xdg-open "$1" > /dev/null 2>&1 &
@@ -770,6 +775,7 @@ function openlink {
         echo
         exit
     fi
+    # https://github.com/suan/local-open
 }
 function parent_menu {
     # $1 = the parent menu name
@@ -2753,16 +2759,14 @@ function speedtest_menu {
                 ;;
             "Latency & Load")
                 echo
-                if [[ "$connected" == "connected" ]]; then
-                    echo -e "Connected to: ${EColor}$server.nordvpn.com${Color_Off}"
-                else
+                if [[ "$connected" != "connected" ]]; then
                     echo -e "(VPN $connectedc)"
                     read -r -p "Enter a Hostname/IP [Default $default_vpnhost]: " nordhost
                     nordhost=${nordhost:-$default_vpnhost}
                     echo
+                    echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
+                    echo
                 fi
-                echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
-                echo
                 if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]]; then
                     if [[ "$obfuscate" == "enabled" ]]; then
                         echo -e "$ob - Unable to ping Obfuscated Servers"
@@ -2823,7 +2827,7 @@ function tools_menu {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    submtools=( "NordVPN API" "External IP" "WireGuard" "Speed Tests" "Rate VPN Server" "Ping VPN" "Ping Google" "My TraceRoute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipx.ac" "ipinfo.io" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Exit" )
+    submtools=( "NordVPN API" "External IP" "WireGuard" "Speed Tests" "Rate VPN Server" "Ping VPN" "Ping Google" "My TraceRoute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipx.ac" "ipinfo.io" "ip2location.io" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Exit" )
     select tool in "${submtools[@]}"
     do
         parent_menu "Settings"
@@ -2914,6 +2918,9 @@ function tools_menu {
                 ;;
             "ipinfo.io")
                 openlink "https://ipinfo.io/"
+                ;;
+            "ip2location.io")
+                openlink "https://www.ip2location.io/"
                 ;;
             "locatejs.com")
                 openlink "https://locatejs.com/"
@@ -3488,6 +3495,13 @@ function check_depends {
 #
 set_colors
 echo
+if [[ -n $SSH_TTY ]]; then
+        # Check if the script is being run in an ssh session
+        echo
+        echo -e "${FColor}(The script is currently running over SSH)${Color_Off}"
+        echo
+        usingssh="1"
+fi
 check_depends
 echo
 if (( BASH_VERSINFO < 4 )); then
