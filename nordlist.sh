@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.3 on Linux Mint 20.3
-# January 17, 2023
+# January 25, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -222,7 +222,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3336 (function main_menu).
+# The Main Menu starts on line 3368 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -513,7 +513,7 @@ function set_vars {
     notify=$(nsettings_search "Notify" | cut -f2 -d' ')
     autoconnect=$(nsettings_search "Auto" | cut -f2 -d' ')
     ipversion6=$(nsettings_search "IPv6" | cut -f2 -d' ')
-    meshnet=$(nsettings_search "Meshnet" | cut -f2 -d' ')
+    meshnet=$(nsettings_search "Meshnet" | cut -f2 -d' ' | tr -d '\n')
     customdns=$(nsettings_search "DNS" | cut -f2 -d' ')                  # disabled or not=disabled
     dns_servers=$(nsettings_search "DNS" | tr '[:lower:]' '[:upper:]')   # Server IPs, includes "DNS: "
     whitelist=$( printf '%s\n' "${nsettings[@]}" | grep -A100 -i "whitelist" )
@@ -757,7 +757,7 @@ function openlink {
     #
     if (( "$usingssh" )); then
         echo
-        echo -e "${FColor}(The script is currently running over SSH)${Color_Off}"
+        echo -e "${FColor}(The script is running over SSH)${Color_Off}"
         echo
     fi
     if [[ "$2" == "ask" ]] || (( "$usingssh" )); then
@@ -835,6 +835,7 @@ function create_list {
     case "$1" in
         "country")
             readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
+            if [[ "$2" == "count" ]]; then return; fi
             rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
             # Replaced "Bosnia_And_Herzegovina" with "Sarajevo" to help compact the list.
             countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Sarajevo}")
@@ -842,6 +843,7 @@ function create_list {
             ;;
         "city")
             readarray -t citylist < <( nordvpn cities "$xcountry" | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
+            if [[ "$2" == "count" ]]; then return; fi
             rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
             if (( "${#citylist[@]}" > 1 )); then
                 citylist+=( "Random" "Best" )
@@ -947,6 +949,33 @@ function city_menu {
                 ;;
         esac
     done
+}
+function city_count {
+    # list all the available cities by country and alphabetically
+    allcities=()
+    create_list "country" "count"
+    heading "Countries" "txt"
+    printf '%s\n' "${countrylist[@]}" | sort
+    heading "Cities by Country" "txt"
+    for xcountry in "${countrylist[@]}"
+    do
+        echo "$xcountry"
+        create_list "city" "count"
+        for city in "${citylist[@]}"
+        do
+            echo "    $city"
+            allcities+=( "$city $xcountry" )
+        done
+        echo
+    done
+    heading "Cities Alphabetical" "txt"
+    printf '%s\n' "${allcities[@]}" | sort
+    echo
+    echo "====================="
+    echo "Total Countries = ${#countrylist[@]}"
+    echo "Total Cities = ${#allcities[@]}"
+    echo "====================="
+    echo
 }
 function host_connect {
     heading "Hostname"
@@ -2579,7 +2608,7 @@ function nordapi_menu {
     echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
     echo
     PS3=$'\n''API Call: '
-    submapi=("Host Server Load" "Host Server Info" "Top 15 Recommended" "Top 15 By Country" "#Servers per Country" "All VPN Servers" "Change Host" "Connect" "Exit")
+    submapi=("Host Server Load" "Host Server Info" "Top 15 Recommended" "Top 15 By Country" "#Servers per Country" "All VPN Servers" "All Cities" "Change Host" "Connect" "Exit")
     select napi in "${submapi[@]}"
     do
         parent_menu "Tools"
@@ -2614,6 +2643,9 @@ function nordapi_menu {
                 ;;
             "All VPN Servers")
                 allservers_menu
+                ;;
+            "All Cities")
+                city_count
                 ;;
             "Change Host")
                 change_host
@@ -2657,8 +2689,8 @@ function wireguard_gen {
     echo
     set_vars
     wgcity=$( echo "$city" | tr -d ' ' )
-    wgconfig="$wgcity"_"$server"_wg.conf    # Filename
-    wgfull="$wgdir/$wgconfig"               # Full path and filename
+    wgconfig="${wgcity}_${server}.conf"     # Filename
+    wgfull="${wgdir}/${wgconfig}"           # Full path and filename
     #
     if ! (( "$wg_exists" )); then
         echo -e "${WColor}WireGuard-Tools could not be found.${Color_Off}"
@@ -3148,7 +3180,7 @@ function favorites_menu {
                 favorites_menu
                 ;;
             "Add Current Server")
-                favname="$(echo "$city" | tr -d ' _')"_"$server"
+                favname="$(echo "$city" | tr -d ' _')_$server"
                 #
                 heading "Add $server to Favorites" "txt"
                 echo "Change the server name?"
@@ -3497,8 +3529,7 @@ set_colors
 echo
 if [[ -n $SSH_TTY ]]; then
         # Check if the script is being run in an ssh session
-        echo
-        echo -e "${FColor}(The script is currently running over SSH)${Color_Off}"
+        echo -e "${FColor}(The script is running over SSH)${Color_Off}"
         echo
         usingssh="1"
 fi
@@ -3574,7 +3605,8 @@ main_menu "start"
 #
 # To downgrade:
 #   sudo apt autoremove --purge nordvpn*
-#   delete: /var/lib/nordvpn    (should already be deleted)
+#   delete: /var/lib/nordvpn
+#   delete: /var/run/nordvpn
 #   delete: /home/username/.config/nordvpn
 #   May need to re-add repo
 #   sudo apt update
