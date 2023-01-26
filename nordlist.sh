@@ -2,7 +2,7 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.15.3 on Linux Mint 20.3
+# Tested with NordVPN Version 3.15.4 on Linux Mint 20.3
 # January 26, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
