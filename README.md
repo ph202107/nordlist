@@ -23,6 +23,15 @@ Then:
 
 =================================
 
+NordVPN version 3.15.4 currently has this issue:
+
+- When connecting to the Obfuscated_Servers Group:  
+"The specified group does not exist."
+
+Workaround - enable the 'Obfuscate' setting, and connect to supported locations through the "Countries" menu.
+
+=================================
+
 NordVPN versions 3.14.2, 3.15.0, 3.15.1, 3.15.2, 3.15.3 currently have these issues:
 
 - When connecting to the Obfuscated_Servers Group:  
@@ -30,14 +39,3 @@ NordVPN versions 3.14.2, 3.15.0, 3.15.1, 3.15.2, 3.15.3 currently have these iss
 
 - When connecting to any supported location with Obfuscate enabled:  
 "The specified server is not available at the moment or does not support your connection settings."
-
-=================================
-
-NordVPN versions 3.12.4, 3.12.5, 3.13.0, 3.14.0, 3.14.1 have these issues:
-
- - Problems connecting to any specific location while the Kill Switch is enabled.  
- - Problems connecting to any specific location while Obfuscate is enabled.
- - Problems connecting to Groups when specifying a location. 
- - Problems connecting to Groups while the Kill Switch is enabled. 
- - The "Notify" setting has been broken for the last ten versions, since 3.11.0 (Sept 2021).
-
