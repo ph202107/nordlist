@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.3 on Linux Mint 20.3
-# January 25, 2023
+# January 26, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -222,7 +222,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3368 (function main_menu).
+# The Main Menu starts on line 3373 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -976,6 +976,11 @@ function city_count {
     echo "Total Cities = ${#allcities[@]}"
     echo "====================="
     echo
+    if [[ "$obfuscate" == "enabled" ]]; then
+        echo -e "$ob Obfuscate is $obfuscatec."
+        echo "These locations have Obfuscation support."
+        echo
+    fi
 }
 function host_connect {
     heading "Hostname"
