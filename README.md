@@ -28,7 +28,7 @@ NordVPN version 3.15.4 currently has this issue:
 - When connecting to the Obfuscated_Servers Group:  
 "The specified group does not exist."
 
-Workaround - enable the 'Obfuscate' setting, and connect to supported locations through the "Countries" menu.
+Workaround - enable the 'Obfuscate' setting, and connect to supported locations using all lower-case letters.  For example "nordvpn connect atlanta" will work, "nordvpn connect Atlanta" will fail.
 
 =================================
 
