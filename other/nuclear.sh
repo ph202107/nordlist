@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Basic script to reinstall or downgrade the NordVPN Linux client.
+# Basic script to upgrade, reinstall, or downgrade the NordVPN client.
 #
 # Only tested on Linux Mint 20.3.  The script flushes iptables and
 # deletes directories, review carefully before use.  Do not use.
@@ -11,12 +11,13 @@
 nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.13.0"      # 23 May 2022 firewall - filter packets by firewall marks
 #nord_version="nordvpn=3.14.0"      # 01 Jun 2022 CyberSec changed to "Threat Protection Lite"
-#nord_version="nordvpn=3.14.1"      # 13 Jun 2022
+#nord_version="nordvpn=3.14.1"      # 13 Jun 2022 Fix for app freezing
 #nord_version="nordvpn=3.14.2"      # 28 Jul 2022 Works on Ubuntu 18.04, Mint 19.3
 #nord_version="nordvpn=3.15.0"      # 17 Oct 2022 Added login token, routing, fwmark, analytics
 #nord_version="nordvpn=3.15.1"      # 28 Nov 2022 Fix for older distros. Changes to "nordvpn status"
 #nord_version="nordvpn=3.15.2"      # 06 Dec 2022 Fix for meshnet unavailable
-#nord_version="nordvpn=3.15.3"      # 28 Dec 2022 Fix crash after suspend
+#nord_version="nordvpn=3.15.3"      # 28 Dec 2022 Fix for crash after suspend
+#nord_version="nordvpn=3.15.4"      # 26 Jan 2023 Faster meshnet connections
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -47,7 +48,7 @@ function default_settings {
     #nordvpn set meshnet disabled; wait
     #nordvpn whitelist add subnet 192.168.1.0/24
     #
-    #nordvpn connect
+    #echo; nordvpn connect
     #
     wait
 }
