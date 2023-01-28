@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.4 on Linux Mint 20.3
-# January 26, 2023
+# January 28, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -222,7 +222,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3373 (function main_menu).
+# The Main Menu starts on line 3376 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -820,7 +820,10 @@ function invalid_option {
     echo -e "${WColor}** Invalid option: $REPLY${Color_Off}"
     echo
     echo "Select any number from 1-$1, or enter $upmenu"
-    if [[ "$2" == "Main" ]]; then
+    if [[ "$2" == "TopMenu" ]]; then
+        echo " $upmenu = Reload the Main menu"
+        echo " $1 = Exit the script"
+    elif [[ "$2" == "Main" ]]; then
         echo " $upmenu or $1 = Return to the Main menu"
     else
         echo " $upmenu = Return to the $2 menu"
@@ -955,7 +958,7 @@ function city_count {
     allcities=()
     create_list "country" "count"
     heading "Countries" "txt"
-    printf '%s\n' "${countrylist[@]}" | sort
+    printf '%s\n' "${countrylist[@]}"
     heading "Cities by Country" "txt"
     for xcountry in "${countrylist[@]}"
     do
@@ -3492,7 +3495,7 @@ function main_menu {
                 break
                 ;;
             *)
-                invalid_option "${#mainmenu[@]}" "Main"
+                invalid_option "${#mainmenu[@]}" "TopMenu"
                 main_menu
                 ;;
         esac
