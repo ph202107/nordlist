@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.4 on Linux Mint 20.3
-# January 28, 2023
+# February 9, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -59,6 +59,7 @@
 #   These functions will ask for a sudo password:
 #   - function restart_service
 #   - function iptables_status
+#   - function iptables_menu "Flush IPTables"
 #   - function wireguard_gen
 #   - function customdns_menu "Flush DNS Cache"
 #
@@ -103,6 +104,7 @@ default_dnshost="reddit.com"
 nordchangelog="/usr/share/doc/nordvpn/changelog.gz"
 #
 # Save generated WireGuard config files into this folder.
+# Note: $USER will automatically translate to your username.
 # Use the absolute path, no trailing slash (/)
 wgdir="/home/$USER/Downloads"
 #
@@ -148,6 +150,9 @@ exitapplet="n"
 # Open http links in a new Firefox window.  "y" or "n"
 # Choose "n" to use the default browser or method.
 newfirefox="n"
+#
+# Specify the number of pings to send when pinging a destination.
+pingcount="3"
 #
 # Set 'menuwidth' to your terminal width or lower eg. menuwidth="70"
 # Lowering the value will compact the menus horizontally.
@@ -222,7 +227,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3376 (function main_menu).
+# The Main Menu starts on line 3401 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -712,8 +717,7 @@ function status {
                 fi
                 echo
             else
-                echo -ne "${LColor}($nordhost) ${Color_Off}"
-                ping -c 3 -q "$ipaddr" | grep -A4 -i "statistics"
+                ping_host "$ipaddr" "stats" "$nordhost"
             fi
             echo
         fi
@@ -725,13 +729,11 @@ function status {
         ipinfo_curl
         if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ "$obfuscate" != "enabled" ]] && [[ -n "$extip" ]]; then
             if [[ "$technology" == "openvpn" ]]; then
-                echo -ne "${LColor}(External IP) ${Color_Off}"
-                ping -c 3 -q "$extip" | grep -A4 -i "statistics"
+                ping_host "$extip" "stats" "External IP"
                 echo
             elif [[ "$server" == *"-"* ]] && [[ "$server" != *"onion"* ]]; then
                 # ping both hops of Double-VPN servers when using NordLynx
-                echo -ne "${LColor}(Double-VPN) ${Color_Off}"
-                ping -c 3 -q "$extip" | grep -A4 -i "statistics"
+                ping_host "$extip" "stats" "Double-VPN"
                 echo
             fi
         fi
@@ -741,6 +743,24 @@ function status {
     if [[ "$exitapplet" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
         # reload the "Bash Sensors" Linux Mint Cinnamon applet
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+    fi
+}
+function ping_host {
+    # $1 = destination
+    # $2 = "stats" - display the stats only, with a label
+    # $2 = "show" - display the ping command first
+    # $3 = the label used with "stats"
+    #
+    if [[ "$2" == "stats" ]]; then
+        echo -ne "${LColor}($3) ${Color_Off}"
+        ping -c "$pingcount" -q "$1" | grep -A4 -i "statistics"
+    elif [[ "$2" == "show" ]]; then
+        echo -e "${LColor}ping -c $pingcount $1${Color_Off}"
+        echo
+        ping -c "$pingcount" "$1"
+        echo
+    else
+        ping -c "$pingcount" "$1"
     fi
 }
 function disconnect_warning {
@@ -1627,7 +1647,7 @@ function meshnet_menu {
     echo -e "$mn Meshnet is $meshnetc."
     echo
     PS3=$'\n''Choose an Option: '
-    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Support" "Exit")
+    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Restart Service" "Support" "Exit")
     select mesh in "${submesh[@]}"
     do
         parent_menu "Settings"
@@ -1640,7 +1660,7 @@ function meshnet_menu {
                 ;;
             "Peer List")
                 heading "Peer List" "txt"
-                echo "Lists available peers in a meshnet."
+                echo "List the available peers in your meshnet."
                 echo
                 echo -e "${H1Color}nordvpn meshnet peer list${Color_Off}"
                 echo
@@ -1648,7 +1668,7 @@ function meshnet_menu {
                 ;;
             "Peer Refresh")
                 heading "Peer Refresh" "txt"
-                echo "Refreshes the meshnet in case it was not updated automatically."
+                echo "Refresh the meshnet in case it was not updated automatically."
                 echo
                 echo -e "${H1Color}nordvpn meshnet peer refresh${Color_Off}"
                 echo
@@ -1656,7 +1676,7 @@ function meshnet_menu {
                 ;;
             "Peer Remove")
                 heading "Peer Remove" "txt"
-                echo "Removes a peer from the meshnet."
+                echo "Remove a peer from the meshnet."
                 echo
                 echo "Enter the public_key, hostname, or IP address."
                 echo
@@ -1769,7 +1789,7 @@ function meshnet_menu {
                 ;;
             "Invite List")
                 heading "Invite List" "txt" "alt"
-                echo "Displays the list of all sent and received meshnet invitations."
+                echo "Display the list of all sent and received meshnet invitations."
                 echo
                 echo -e "${H2Color}nordvpn meshnet invite list${Color_Off}"
                 echo
@@ -1777,7 +1797,7 @@ function meshnet_menu {
                 ;;
             "Invite Send")
                 heading "Invite Send" "txt" "alt"
-                echo "Sends an invitation to join the mesh network."
+                echo "Send an invitation to join the mesh network."
                 echo
                 echo "Usage: nordvpn meshnet invite send [options] [email]"
                 echo
@@ -1800,7 +1820,7 @@ function meshnet_menu {
                 ;;
             "Invite Accept")
                 heading "Invite Accept" "txt" "alt"
-                echo "Accepts an invitation to join the inviter's mesh network."
+                echo "Accept an invitation to join the inviter's mesh network."
                 echo
                 echo "Usage: nordvpn meshnet invite accept [options] [email]"
                 echo
@@ -1823,7 +1843,7 @@ function meshnet_menu {
                 ;;
             "Invite Deny")
                 heading "Invite Deny" "txt" "alt"
-                echo "Denies an invitation to join the inviter's mesh network."
+                echo "Deny an invitation to join the inviter's mesh network."
                 echo
                 echo "Enter the email address to deny."
                 echo
@@ -1840,7 +1860,7 @@ function meshnet_menu {
                 ;;
             "Invite Revoke")
                 heading "Invite Revoke" "txt" "alt"
-                echo "Revokes a sent invitation."
+                echo "Revoke a sent invitation."
                 echo
                 echo "Enter the email address to revoke."
                 echo
@@ -1853,6 +1873,21 @@ function meshnet_menu {
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
                     echo
+                fi
+                ;;
+            "Restart Service")
+                heading "Restart Service" "txt"
+                echo "The peer list may not populate if the nordvpn service"
+                echo "was started without network access."
+                echo
+                read -n 1 -r -p "Disconnect the VPN and restart the nordvpn service? (y/n) "; echo
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    if [[ "$killswitch" == "enabled" ]]; then
+                        change_setting "killswitch" "back"
+                    fi
+                    disconnect_vpn "force"
+                    restart_service "back"
                 fi
                 ;;
             "Support")
@@ -2192,42 +2227,40 @@ function account_menu {
     done
 }
 function restart_service {
-    # $1 = "after_reset" - login and prompt to apply default settings
+    # $1 = "back" - no heading, no prompt, return
     #
-    heading "Restart"
-    echo
-    echo "Restart nordvpn services."
+    if [[ "$1" != "back" ]]; then
+        heading "Restart"
+        echo "Restart nordvpn services."
+    fi
     echo -e "${WColor}"
     echo "Send commands:"
     echo "sudo systemctl restart nordvpnd.service"
     echo "sudo systemctl restart nordvpn.service"
     echo -e "${Color_Off}"
-    echo
-    read -n 1 -r -p "Proceed? (y/n) "; echo
-    echo
-    parent_menu "Settings"
+    if [[ "$1" == "back" ]]; then
+        REPLY="y"
+    else
+        read -n 1 -r -p "Proceed? (y/n) "; echo
+        echo
+    fi
+    parent_menu "Settings" "$1"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         sudo systemctl restart nordvpnd.service
         sudo systemctl restart nordvpn.service
         echo
-        echo "Please wait 10s for the service to restart..."
-        echo "If Auto-Connect is enabled NordVPN will reconnect."
-        echo
-        for t in {10..1}; do
-            echo -n "$t "; sleep 1
+        echo "Please wait 10s."
+        for ((i=10; i>=1; i--))
+        do
+            echo -ne "\r $i  "
+            sleep 1
         done
         echo
-        if [[ "$1" == "after_reset" ]]; then
-            echo
-            nordvpn login
-            wait
-            echo
-            read -n 1 -r -p "Press any key after login is complete... "; echo
-            echo
-            set_defaults_ask
-        fi
-        status
-        exit
+    fi
+    if [[ "$1" == "back" ]]; then
+        set_vars
+        echo
+        return
     fi
     main_menu
 }
@@ -2271,8 +2304,14 @@ function reset_app {
         echo -e "${LColor}Reconfigure the Whitelist and other settings.${Color_Off}"
         echo
         read -n 1 -s -r -p "Press any key to restart the service..."; echo
-        set_vars
-        restart_service "after_reset"
+        echo
+        restart_service "back"
+        echo
+        nordvpn login
+        echo
+        read -n 1 -r -p "Press any key after login is complete... "; echo
+        echo
+        set_defaults_ask
     fi
     main_menu
 }
@@ -2306,7 +2345,7 @@ function iptables_menu {
     echo "  - Commands require 'sudo'"
     echo
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Services" "Ping Google" "Disconnect" "Exit")
+    submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Service" "Ping Google" "Disconnect" "Exit")
     select ipt in "${submipt[@]}"
     do
         parent_menu "Settings"
@@ -2379,7 +2418,7 @@ function iptables_menu {
                     echo
                 fi
                 ;;
-            "Restart Services")
+            "Restart Service")
                 echo
                 echo -e "${WColor}Disconnect the VPN and restart nordvpn services.${Color_Off}"
                 echo
@@ -2390,19 +2429,9 @@ function iptables_menu {
                         change_setting "autoconnect" "back"
                     fi
                     disconnect_vpn "force"
-                    echo -e "${LColor}Restart NordVPN services. Wait 10s${Color_Off}"
-                    echo
-                    sudo systemctl restart nordvpnd.service
-                    sudo systemctl restart nordvpn.service
-                    for t in {10..1}; do
-                        echo -n "$t "; sleep 1
-                    done
-                    echo
-                    set_vars
+                    restart_service "back"
                     iptables_status
-                    echo -e "${LColor}ping -c 3 google.com${Color_Off}"
-                    ping -c 3 google.com
-                    echo
+                    ping_host "google.com" "show"
                 else
                     echo
                     echo "No changes made."
@@ -2411,9 +2440,7 @@ function iptables_menu {
                 ;;
             "Ping Google")
                 iptables_status
-                echo -e "${LColor}ping -c 3 google.com${Color_Off}"
-                ping -c 3 google.com
-                echo
+                ping_host "google.com" "show"
                 ;;
             "Disconnect")
                 echo
@@ -2609,6 +2636,7 @@ function nordapi_menu {
     heading "Nord API"
     echo "Query the NordVPN Public API.  Requires 'curl' and 'jq'"
     echo "Commands may take a few seconds to complete."
+    echo "Rate-limiting by the server may result in a Parse error."
     echo
     if [[ "$connected" == "connected" ]]; then
         echo -e "Connected to: ${EColor}$server.nordvpn.com${Color_Off}"
@@ -2744,7 +2772,8 @@ function wireguard_gen {
         echo "[INTERFACE]" >> "$wgfull"
         echo "Address = ${address}/32" >> "$wgfull"
         echo "${privatekey}" >> "$wgfull"
-        echo "DNS = 103.86.96.100, 103.86.99.100" >> "$wgfull"
+        echo "DNS = 103.86.96.100, 103.86.99.100" >> "$wgfull"  # Regular DNS
+        # echo "DNS = 103.86.96.96, 103.86.99.99" >> "$wgfull"  # Threat Protection Lite DNS
         echo >> "$wgfull"
         echo "[PEER]" >> "$wgfull"
         echo "${endpoint}" >> "$wgfull"
@@ -2816,13 +2845,12 @@ function speedtest_menu {
                         echo
                         ipinfo_curl
                         if [[ -n "$extip" ]]; then
-                            ping -c 3 "$extip"
+                            ping_host "$extip" "show"
                         fi
                     fi
                 else
-                    ping -c 3 "$nordhost"
+                    ping_host "$nordhost" "show"
                 fi
-                echo
                 server_load
                 ;;
             "speedtest.net")
@@ -2891,10 +2919,7 @@ function tools_menu {
                 ;;
             "Ping VPN")
                 echo
-                echo -e "${LColor}ping -c 5 $nordhost${Color_Off}"
-                echo
-                ping -c 5 "$nordhost"
-                echo
+                ping_host "$nordhost" "show"
                 ;;
             "Ping Google")
                 clear -x
@@ -2906,13 +2931,13 @@ function tools_menu {
                 echo "(CTRL-C to quit)"
                 echo -e "${Color_Off}"
                 echo -e "${LColor}===== Google =====${Color_Off}"
-                ping -c 5 8.8.8.8; echo
-                ping -c 5 8.8.4.4; echo
+                ping_host "8.8.8.8"; echo
+                ping_host "8.8.4.4"; echo
                 echo -e "${LColor}===== Cloudflare =====${Color_Off}"
-                ping -c 5 1.1.1.1; echo
-                ping -c 5 1.0.0.1; echo
+                ping_host "1.1.1.1"; echo
+                ping_host "1.0.0.1"; echo
                 echo -e "${LColor}===== Telstra =====${Color_Off}"
-                ping -c 5 139.130.4.4; echo
+                ping_host "139.130.4.4"; echo
                 ;;
             "My TraceRoute")
                 echo
