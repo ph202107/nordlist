@@ -18,6 +18,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.15.2"      # 06 Dec 2022 Fix for meshnet unavailable
 #nord_version="nordvpn=3.15.3"      # 28 Dec 2022 Fix for crash after suspend
 #nord_version="nordvpn=3.15.4"      # 26 Jan 2023 Faster meshnet connections
+#nord_version="nordvpn=3.15.5"      # 20 Feb 2023 (No changelog)
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -32,18 +33,7 @@ function default_settings {
     #
     # After installation is complete, these settings will be applied
     #
-    #nordvpn set technology nordlynx
-    #nordvpn set protocol UDP
-    #nordvpn set firewall enabled
-    #nordvpn set routing enabled
     #nordvpn set analytics disabled
-    #nordvpn set killswitch disabled
-    #nordvpn set threatprotectionlite disabled
-    #nordvpn set obfuscate disabled
-    #nordvpn set notify disabled
-    #nordvpn set autoconnect disabled
-    #nordvpn set ipv6 disabled
-    #nordvpn set dns disabled
     #nordvpn set meshnet enabled; wait
     #nordvpn set meshnet disabled; wait
     #nordvpn whitelist add subnet 192.168.1.0/24
@@ -75,11 +65,11 @@ function trashnord {
     lbreak "Purge nordvpn"
     sudo apt autoremove --purge nordvpn* -y
     lbreak "Remove Folders"
-    # ====================================
+    # ======================================
     sudo rm -rf -v /var/lib/nordvpn
     sudo rm -rf -v /var/run/nordvpn
     rm -rf -v "/home/$USER/.config/nordvpn"
-    # ====================================
+    # ======================================
 }
 function installnord {
     lbreak "Add Repo"
@@ -203,7 +193,6 @@ lbreak
 #
 # Alternate install method:
 #  sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
-# On subsequent reinstalls the repository won't be removed
 #
 # https://nordvpn.com/blog/nordvpn-linux-release-notes/
 # https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
