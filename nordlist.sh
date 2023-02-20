@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.15.4 on Linux Mint 20.3
-# February 9, 2023
+# Tested with NordVPN Version 3.15.5 on Linux Mint 20.3
+# February 20, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -160,7 +160,7 @@ pingcount="3"
 menuwidth="70"
 #
 # Entering this value while in a submenu will return you to the default
-# parent menu.  To avoid conflicts avoid using any numbers other than
+# parent menu.  To avoid conflicts avoid using any number other than
 # zero, or the letters y,n,c,e,s.    eg. upmenu="0" or upmenu="b"
 upmenu="0"
 #
@@ -227,7 +227,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3401 (function main_menu).
+# The Main Menu starts on line 3397 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -365,9 +365,9 @@ function heading {
     if ! (( "$figlet_exists" )) || ! (( "$lolcat_exists" )) || [[ "$2" == "txt" ]]; then
         echo
         if [[ "$3" == "alt" ]]; then
-            echo -e "${H2Color}== $1 ==${Color_Off}"
+            echo -e "${H2Color}=== $1 ===${Color_Off}"
         else
-            echo -e "${H1Color}== $1 ==${Color_Off}"
+            echo -e "${H1Color}=== $1 ===${Color_Off}"
         fi
         echo
         COLUMNS=$menuwidth
@@ -384,7 +384,7 @@ function heading {
         figlet -f small "$1" | lolcat -p 1000
     else                            # more than 18 characters
         echo
-        echo -e "${H1Color}== $1 ==${Color_Off}"
+        echo -e "${H1Color}=== $1 ===${Color_Off}"
         echo
     fi
     COLUMNS=$menuwidth
@@ -660,7 +660,7 @@ function ipinfo_search {
 }
 function ipinfo_curl {
     echo -n "External IP: "
-    readarray -t ipinfo < <( timeout 10 curl --silent ipinfo.io )
+    readarray -t ipinfo < <( timeout 6 curl --silent ipinfo.io )
     extip=$( ipinfo_search "ip" )
     exthost=$( ipinfo_search "hostname" )
     extorg=$( ipinfo_search "org" )
@@ -910,7 +910,7 @@ function city_menu {
     echo
     if [[ "$xcountry" == "Sarajevo" ]]; then  # special case
         xcountry="Bosnia_and_Herzegovina"
-        echo -e "${H1Color}== $xcountry ==${Color_Off}"
+        echo -e "${H1Color}=== $xcountry ===${Color_Off}"
         echo
     fi
     if [[ "$obfuscate" == "enabled" ]]; then
@@ -1311,11 +1311,11 @@ function protocol_ask {
         echo -e "${FColor}[F]ast6 is enabled.  Always choose $fast6p.${Color_Off}"
         echo
         if [[ "$protocol" == "UDP" ]] && [[ "$fast6p" == "TCP" ]]; then
-                nordvpn set protocol TCP; wait
-                echo
+            nordvpn set protocol TCP; wait
+            echo
         elif [[ "$protocol" == "TCP" ]] && [[ "$fast6p" == "UDP" ]]; then
-                nordvpn set protocol UDP; wait
-                echo
+            nordvpn set protocol UDP; wait
+            echo
         fi
         return
     elif [[ "$protocol" == "UDP" ]]; then
@@ -2432,10 +2432,6 @@ function iptables_menu {
                     restart_service "back"
                     iptables_status
                     ping_host "google.com" "show"
-                else
-                    echo
-                    echo "No changes made."
-                    echo
                 fi
                 ;;
             "Ping Google")
@@ -3026,23 +3022,23 @@ function tools_menu {
     done
 }
 function set_defaults_ask {
-    defaultsc="${LColor}[Set Defaults]${Color_Off}"'\n'
+    heading "Set Defaults: ${H2Color}Settings${H1Color}" "txt"
+    echo "Disconnect the VPN and apply the NordVPN settings"
+    echo "specified in 'function set_defaults'"
     echo
-    echo -e "$defaultsc    Disconnect the VPN and apply the NordVPN settings"
-    echo "    specified in 'function set_defaults'"
-    echo
-    read -n 1 -r -p "    Proceed? (y/n) "; echo
+    read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
     parent_menu "Settings"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         set_defaults
-        read -n 1 -r -p "$(echo -e "$defaultsc    Go to the 'Whitelist' setting? (y/n) ")"
+        heading "Set Defaults: ${H2Color}Whitelist${H1Color}" "txt"
+        read -n 1 -r -p "Go to the Whitelist setting? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             whitelist_setting "back"
         fi
-        echo
-        read -n 1 -r -p "$(echo -e "$defaultsc    Go to the 'CustomDNS' setting? (y/n) ")"
+        heading "Set Defaults: ${H2Color}CustomDNS${H1Color}" "txt"
+        read -n 1 -r -p "Go to the CustomDNS setting? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             set_vars
@@ -3561,10 +3557,10 @@ function check_depends {
 set_colors
 echo
 if [[ -n $SSH_TTY ]]; then
-        # Check if the script is being run in an ssh session
-        echo -e "${FColor}(The script is running over SSH)${Color_Off}"
-        echo
-        usingssh="1"
+    # Check if the script is being run in an ssh session
+    echo -e "${FColor}(The script is running over SSH)${Color_Off}"
+    echo
+    usingssh="1"
 fi
 check_depends
 echo
