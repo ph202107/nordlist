@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.5 on Linux Mint 20.3
-# February 20, 2023
+# February 21, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -227,7 +227,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3397 (function main_menu).
+# The Main Menu starts on line 3435 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -272,7 +272,8 @@ function set_defaults {
     #
     disconnect_vpn "force"
     #
-    if [[ "$technology" == "openvpn" ]]; then nordvpn set technology nordlynx; set_vars; fi
+    # Fix for the "NordLynx TCP" bug introduced in version 3.15.3 December 2022
+    if [[ "$technology" == "openvpn" ]]; then if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi; nordvpn set technology nordlynx; set_vars; fi
     #if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; set_vars; fi
     #
     if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi
@@ -1193,6 +1194,42 @@ function group_connect {
         echo "No changes made."
         main_menu
     fi
+}
+function obfuscated_temp {
+    heading "Obfuscated"
+    echo "The command 'nordvpn connect --group Obfuscated_Servers' has been"
+    echo "broken since version 3.14.2 released July 2022.  This function is"
+    echo "a temporary replacement for 'group_connect Obfuscated_Servers'"
+    echo
+    echo "Enables the Firewall, Killswitch, Obfuscate, and OpenVPN TCP"
+    echo
+    echo "Obfuscated Server Locations:"
+    echo "Amsterdam Atlanta Chicago Dubai Frankfurt Hong_Kong Istanbul London"
+    echo "Los_Angeles Madrid Miami Milan New_York Paris Singapore Stockholm"
+    echo "Tokyo Toronto Warsaw Zurich"
+    echo
+    if [[ -z $obwhere ]]; then
+        obwhere="Los_Angeles"
+    fi
+    echo -e "Default location: ${EColor}$obwhere${Color_Off}"
+    echo
+    read -r -p "Choose a location or hit 'Enter' for default: " obconnect
+    REPLY="$obconnect"
+    parent_menu "Group"
+    obconnect=${obconnect:-$obwhere}
+    # bug in the Nord app - must use all lower case
+    obconnect=$( echo "$obconnect" | tr '[:upper:]' '[:lower:]' )
+    echo
+    if [[ "$firewall" == "disabled" ]]; then nordvpn set firewall enabled; fi
+    if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
+    disconnect_vpn "force"
+    if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; set_vars; fi
+    if [[ "$protocol" == "UDP" ]]; then nordvpn set protocol TCP; fi
+    if [[ "$obfuscate" == "disabled" ]]; then nordvpn set obfuscate enabled; fi
+    echo
+    nordvpn connect "$obconnect"
+    status
+    exit
 }
 function technology_setting {
     # $1 = "back" - ignore fast3, return
@@ -3256,7 +3293,8 @@ function group_menu {
                 group_all_menu
                 ;;
             "Obfuscated")
-                group_connect "Obfuscated_Servers"
+                # group_connect "Obfuscated_Servers"
+                obfuscated_temp
                 ;;
             "Double-VPN")
                 group_connect "Double_VPN"
