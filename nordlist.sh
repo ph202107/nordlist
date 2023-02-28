@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.5 on Linux Mint 20.3
-# February 21, 2023
+# February 28, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -123,7 +123,14 @@ nordfavoritesfile="/home/$USER/Downloads/nord_favorites.txt"
 disconnect="n"
 #
 # Always 'Rate Server' when disconnecting via the main menu. "y" or "n"
-alwaysrate="y"
+rate_prompt="y"
+#
+# Ask to pause the VPN when disconnecting via the main menu
+# (disconnect and automatically reconnect).  "y" or "n"
+pause_prompt="y"
+#
+# Specify the default number of minutes to pause the VPN.
+default_pause="5"
 #
 # Show the logo when the script exits.  "y" or "n"
 exitlogo="y"
@@ -227,7 +234,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3435 (function main_menu).
+# The Main Menu starts on line 3497 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -2289,7 +2296,7 @@ function restart_service {
         echo "Please wait 10s."
         for ((i=10; i>=1; i--))
         do
-            echo -ne "\r $i  "
+            echo -ne "\r $i   "
             sleep 1
         done
         echo
@@ -3413,6 +3420,61 @@ function main_header {
     echo "Connect to $opt"
     echo
 }
+function main_disconnect {
+    heading "Disconnect"
+    echo
+    if [[ "$rate_prompt" =~ ^[Yy]$ ]]; then
+        rate_server
+    fi
+    if [[ "$connected" == "connected" ]] && [[ "$pause_prompt" =~ ^[Yy]$ ]]; then
+        echo
+        read -n 1 -r -p "Pause the VPN? (y/n) "; echo
+        echo
+        if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+            pcity=$(echo "$city" | tr ' ' '_' )
+            pcountry=$(echo "$country" | tr ' ' '_' )
+            #
+            heading "Pause and Reconnect" "txt"
+            echo -e "$connectedcl ${CIColor}$pcity ${COColor}$pcountry ${SVColor}$server${Color_Off}"
+            echo
+            read -r -p "Reconnect to any location. Hit 'Enter' for [$pcity]: " pwhere
+            pwhere=${pwhere:-$pcity}
+            echo
+            read -r -p "How many minutes? Hit 'Enter' for [$default_pause]: " pminutes
+            pminutes=${pminutes:-$default_pause}
+            # bash math limitation - use 'bc' to handle decimal minute input, eg. 1.5
+            pseconds=$( echo "scale=0; $pminutes * 60/1" | bc )
+            #
+            disconnect_vpn "force" "check_ks"
+            if [[ "$exitapplet" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
+                # reload the "Bash Sensors" Linux Mint Cinnamon applet
+                dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+            fi
+            heading "Pause VPN"
+            echo
+            echo -e "${FColor}Please do not close this window.${Color_Off}"
+            echo
+            echo -e "Will connect to ${EColor}$pwhere${Color_Off} after $pminutes minutes."
+            echo
+            echo "Countdown from $pseconds seconds:"
+            for ((i="$pseconds"; i>=1; i--))
+            do
+                echo -ne "\r $i   "
+                sleep 1
+            done
+            heading "Reconnect"
+            echo
+            echo "Connect to $pwhere"
+            echo
+            nordvpn connect "$pwhere"
+            status
+            exit
+        fi
+    fi
+    disconnect_vpn "force" "check_ks"
+    status
+    exit
+}
 function main_menu {
     if [[ "$1" == "start" ]]; then
         echo -e "${EIColor}Welcome to nordlist!${Color_Off}"
@@ -3539,14 +3601,7 @@ function main_menu {
                 settings_menu
                 ;;
             "Disconnect")
-                heading "Disconnect"
-                echo
-                if [[ "$alwaysrate" =~ ^[Yy]$ ]]; then
-                    rate_server
-                fi
-                disconnect_vpn "force" "check_ks"
-                status
-                break
+                main_disconnect
                 ;;
             "Exit")
                 heading "Goodbye!"
