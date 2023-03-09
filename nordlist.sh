@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.15.5 on Linux Mint 20.3
-# February 28, 2023
+# March 9, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -234,7 +234,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3497 (function main_menu).
+# The Main Menu starts on line 3509 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -804,6 +804,24 @@ function openlink {
         exit
     fi
     # https://github.com/suan/local-open
+}
+function countdown_timer {
+    # $1 = time in seconds
+    #
+    echo "Countdown:"
+    for ((i="$1"; i>=0; i--))
+    do
+        days=$(( "$i" / 86400 ))
+        if (( days >= 1 )); then
+            echo -ne "    $days days and $(date -u -d "@$i" +%H:%M:%S)\033[0K\r"
+        else
+            echo -ne "    $(date -u -d "@$i" +%H:%M:%S)\033[0K\r"
+        fi
+        sleep 1
+    done
+    echo
+    # https://superuser.com/a/611582    (more accurate timer)
+    # https://stackoverflow.com/a/5861713
 }
 function parent_menu {
     # $1 = the parent menu name
@@ -1972,7 +1990,7 @@ function customdns_menu {
     PS3=$'\n''Choose an Option: '
     # Note submcdns[@] - new entries should keep the same format for the "Test Servers" option
     # eg Name<space>DNS1<space>DNS2
-    submcdns=("Nord 103.86.96.100 103.86.99.100" "Nord-TPLite 103.86.96.96 103.86.99.99" "AdGuard 94.140.14.14 94.140.15.15" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
+    submcdns=("Nord 103.86.96.100 103.86.99.100" "Nord-TPLite 103.86.96.96 103.86.99.99" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "AdGuard 94.140.14.14 94.140.15.15" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
     select cdns in "${submcdns[@]}"
     do
         parent_menu "Settings"
@@ -1985,10 +2003,6 @@ function customdns_menu {
                 tplite_disable
                 nordvpn set dns 103.86.96.96 103.86.99.99
                 ;;
-            "AdGuard 94.140.14.14 94.140.15.15")
-                tplite_disable
-                nordvpn set dns 94.140.14.14 94.140.15.15
-                ;;
             "OpenDNS 208.67.220.220 208.67.222.222")
                 tplite_disable
                 nordvpn set dns 208.67.220.220 208.67.222.222
@@ -1999,6 +2013,10 @@ function customdns_menu {
                 # Clean Browsing Family 185.228.168.168 185.228.169.168
                 tplite_disable
                 nordvpn set dns 185.228.168.9 185.228.169.9
+                ;;
+            "AdGuard 94.140.14.14 94.140.15.15")
+                tplite_disable
+                nordvpn set dns 94.140.14.14 94.140.15.15
                 ;;
             "Quad9 9.9.9.9 149.112.112.11")
                 tplite_disable
@@ -2020,6 +2038,7 @@ function customdns_menu {
                 read -r -p "Up to 3 DNS server IPs: " dns3srvrs
                 dns3srvrs=${dns3srvrs:-$default_dns}
                 tplite_disable
+                # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1 8.8.8.8"
                 nordvpn set dns $dns3srvrs
                 ;;
             "Disable Custom DNS")
@@ -2294,12 +2313,8 @@ function restart_service {
         sudo systemctl restart nordvpn.service
         echo
         echo "Please wait 10s."
-        for ((i=10; i>=1; i--))
-        do
-            echo -ne "\r $i   "
-            sleep 1
-        done
         echo
+        countdown_timer "10"
     fi
     if [[ "$1" == "back" ]]; then
         set_vars
@@ -3429,7 +3444,7 @@ function main_disconnect {
     if [[ "$connected" == "connected" ]] && [[ "$pause_prompt" =~ ^[Yy]$ ]]; then
         echo
         read -n 1 -r -p "Pause the VPN? (y/n) "; echo
-        echo
+        #
         if [[ "$REPLY" =~ ^[Yy]$ ]]; then
             pcity=$(echo "$city" | tr ' ' '_' )
             pcountry=$(echo "$country" | tr ' ' '_' )
@@ -3451,22 +3466,19 @@ function main_disconnect {
                 dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
             fi
             heading "Pause VPN"
+            date
             echo
             echo -e "${FColor}Please do not close this window.${Color_Off}"
             echo
             echo -e "Will connect to ${EColor}$pwhere${Color_Off} after $pminutes minutes."
             echo
-            echo "Countdown from $pseconds seconds:"
-            for ((i="$pseconds"; i>=1; i--))
-            do
-                echo -ne "\r $i   "
-                sleep 1
-            done
+            countdown_timer "$pseconds"
             heading "Reconnect"
             echo
             echo "Connect to $pwhere"
             echo
-            nordvpn connect "$pwhere"
+            # shellcheck disable=SC2086 # word splitting eg. "--group P2P United_States"
+            nordvpn connect $pwhere
             status
             exit
         fi
