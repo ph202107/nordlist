@@ -23,7 +23,7 @@ Then:
 
 =========================================
 
-NordVPN versions 3.15.4, 3.15.5 currently have these issues:
+NordVPN versions 3.15.5, 3.16.0 currently have these issues:
 
 - Error when connecting to the Obfuscated_Servers Group.  
 For example "nordvpn connect --group Obfuscated_Servers" responds with:   
