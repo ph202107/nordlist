@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.15.5 on Linux Mint 20.3
-# March 9, 2023
+# Tested with NordVPN Version 3.16.0 on Linux Mint 20.3
+# March 13, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -234,7 +234,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3509 (function main_menu).
+# The Main Menu starts on line 3579 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -853,6 +853,9 @@ function parent_menu {
                     ;;
                 "Nord API")
                     nordapi_menu
+                    ;;
+                "Meshnet")
+                    meshnet_menu
                     ;;
             esac
         fi
@@ -1693,6 +1696,62 @@ function obfuscate_setting {
     fi
     main_menu
 }
+function meshnet_filter {
+    heading "Filter Peer List" "txt"
+    echo "Search your peer list by applying filters."
+    echo
+    echo -e "${H1Color}nordvpn meshnet peer list --filter <value>${Color_Off}"
+    echo
+    echo -e "${FColor}(Enter '$upmenu' to return to the Meshnet menu)${Color_Off}"
+    echo
+    submpeer=("peer list" "peer refresh" "online" "offline" "internal" "external" "allows-incoming-traffic" "incoming-traffic-allowed" "allows-routing" "routing-allowed" "multiple filters" "Exit")
+    select mpeer in "${submpeer[@]}"
+    do
+        parent_menu "Meshnet"
+        case $mpeer in
+            "Exit")
+                main_menu
+                ;;
+            "multiple filters")
+                heading "Apply Multiple Filters" "txt"
+                echo "Enter the desired filters separated by commas only (no spaces)."
+                echo "Contradictory filters will give no results."
+                echo
+                echo "online                    offline"
+                echo "internal                  external"
+                echo "allows-incoming-traffic   incoming-traffic-allowed"
+                echo "allows-routing            routing-allowed"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn meshnet peer list --filter "
+                if [[ -n $REPLY ]]; then
+                    heading "$REPLY" "txt"
+                    nordvpn meshnet peer list --filter $REPLY
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "peer refresh")
+                heading "nordvpn meshnet peer refresh" "txt"
+                nordvpn meshnet peer refresh
+                ;;
+            "peer list")
+                heading "nordvpn meshnet peer list" "txt"
+                nordvpn meshnet peer list
+                ;;
+            *)
+                if (( 1 <= REPLY )) && (( REPLY <= ${#submpeer[@]} )); then
+                    heading "$mpeer" "txt"
+                    nordvpn meshnet peer list --filter "$mpeer"
+                else
+                    invalid_option "${#submpeer[@]}" "Meshnet"
+                fi
+                ;;
+        esac
+    done
+}
 function meshnet_menu {
     # https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm
     # https://nordvpn.com/features/meshnet
@@ -1709,7 +1768,7 @@ function meshnet_menu {
     echo -e "$mn Meshnet is $meshnetc."
     echo
     PS3=$'\n''Choose an Option: '
-    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Restart Service" "Support" "Exit")
+    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Filter" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Restart Service" "Support" "Exit")
     select mesh in "${submesh[@]}"
     do
         parent_menu "Settings"
@@ -1722,7 +1781,7 @@ function meshnet_menu {
                 ;;
             "Peer List")
                 heading "Peer List" "txt"
-                echo "List the available peers in your meshnet."
+                echo "List all the peers in your meshnet."
                 echo
                 echo -e "${H1Color}nordvpn meshnet peer list${Color_Off}"
                 echo
@@ -1735,6 +1794,9 @@ function meshnet_menu {
                 echo -e "${H1Color}nordvpn meshnet peer refresh${Color_Off}"
                 echo
                 nordvpn meshnet peer refresh
+                ;;
+            "Peer Filter")
+                meshnet_filter
                 ;;
             "Peer Remove")
                 heading "Peer Remove" "txt"
@@ -1865,9 +1927,13 @@ function meshnet_menu {
                 echo
                 echo "Options:"
                 echo "  --allow-incoming-traffic"
-                echo "      Allow incoming traffic from a peer. (default: false)"
+                echo "      Allow incoming traffic from the peer. (default: false)"
                 echo "  --allow-traffic-routing"
                 echo "      Allow the peer to route traffic through this device. (default: false)"
+                echo "  --allow-local-network-access"
+                echo "      Allow the peer access to the local network when routing. (default: false)"
+                echo "  --allow-peer-send-files"
+                echo "      Allow the peer to send you files. (default: false)"
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
@@ -1891,6 +1957,10 @@ function meshnet_menu {
                 echo "      Allow incoming traffic from the peer. (default: false)"
                 echo "  --allow-traffic-routing"
                 echo "      Allow the peer to route traffic through this device. (default: false)"
+                echo "  --allow-local-network-access"
+                echo "      Allow the peer access to the local network when routing. (default: false)"
+                echo "  --allow-peer-send-files"
+                echo "      Allow the peer to send you files. (default: false)"
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
@@ -2597,10 +2667,10 @@ function allservers_menu {
                 ;;
             "Double-VPN Servers")
                 heading "Double-VPN Servers" "txt"
-                printf '%s\n' "${allnordservers[@]}" | grep "-" | grep -i -v -e "socks" -e "onion"
+                printf '%s\n' "${allnordservers[@]}" | grep "-" | grep -i -v -E "socks|onion|napps-6"
                 echo
                 # work in progress
-                echo "Double-VPN Servers: $( printf '%s\n' "${allnordservers[@]}" | grep "-" | grep -i -v -e "socks" -e "onion" -c )"
+                echo "Double-VPN Servers: $( printf '%s\n' "${allnordservers[@]}" | grep "-" | grep -i -v -E "socks|onion|napps-6" -c )"
                 echo
                 ;;
             "Onion Servers")
@@ -2720,7 +2790,7 @@ function nordapi_menu {
                 heading "Top 15 by Country Code" "txt" "alt"
                 curl --silent "https://api.nordvpn.com/v1/servers/countries" | jq --raw-output '.[] | [.id, .name] | @tsv'
                 echo
-                read -r -p "Enter the Country Code: " ccode
+                read -r -p "Enter the Country Code number: " ccode
                 echo
                 echo -e "${H2Color}SERVER: ${H1Color}%LOAD${Color_Off}"
                 echo
