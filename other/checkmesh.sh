@@ -20,14 +20,22 @@ refresh_interval="3600"
 #
 #
 function countdown_timer {
+    # $1 = time in seconds
+    #
     echo
     echo "Countdown $1s. Peer Refresh $rcount"
     date
-    for ((i="$1"; i>=1; i--))
+    for ((i="$1"; i>=0; i--))
     do
-        echo -ne "\r$i "
+        days=$(( "$i" / 86400 ))
+        if (( days >= 1 )); then
+            echo -ne "    $days days and $(date -u -d "@$i" +%H:%M:%S)\033[0K\r"
+        else
+            echo -ne "    $(date -u -d "@$i" +%H:%M:%S)\033[0K\r"
+        fi
         sleep 1
     done
+    echo
 }
 function check_meshnet {
     #
