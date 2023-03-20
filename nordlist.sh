@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.0 on Linux Mint 20.3
-# March 13, 2023
+# March 20, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -234,7 +234,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3579 (function main_menu).
+# The Main Menu starts on line 3600 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -739,7 +739,7 @@ function status {
             if [[ "$technology" == "openvpn" ]]; then
                 ping_host "$extip" "stats" "External IP"
                 echo
-            elif [[ "$server" == *"-"* ]] && [[ "$server" != *"onion"* ]]; then
+            elif [[ "$server" == *"-"* ]] && [[ "$server" != *"onion"* ]] && [[ "$server" != *"napps"* ]]; then
                 # ping both hops of Double-VPN servers when using NordLynx
                 ping_host "$extip" "stats" "Double-VPN"
                 echo
@@ -806,8 +806,11 @@ function openlink {
     # https://github.com/suan/local-open
 }
 function countdown_timer {
+    # Adds about 15s per hour but close enough.
     # $1 = time in seconds
     #
+    echo -e "Press ${WColor}R${Color_Off} to quit the timer and resume."
+    echo
     echo "Countdown:"
     for ((i="$1"; i>=0; i--))
     do
@@ -817,11 +820,13 @@ function countdown_timer {
         else
             echo -ne "    $(date -u -d "@$i" +%H:%M:%S)\033[0K\r"
         fi
-        sleep 1
+        read -t 1 -n 1 -r -s countinput
+        if [[ "$countinput" =~ ^[Rr]$ ]]; then
+            echo -e "    ${WColor}Quit${Color_Off}\033[0K\r"
+            break
+        fi
     done
     echo
-    # https://superuser.com/a/611582    (more accurate timer)
-    # https://stackoverflow.com/a/5861713
 }
 function parent_menu {
     # $1 = the parent menu name
@@ -1452,14 +1457,11 @@ function change_setting {
     if [[ "$fast2" =~ ^[Yy]$ ]] && [[ "$2" != "back" ]]; then
         echo -e "${FColor}[F]ast2 is enabled.  Changing the setting.${Color_Off}"
         REPLY="y"
-        case "$1" in    # confirmation prompt
-            "routing")
-                if [[ "$chgvar" == "enabled" ]]; then
-                    echo
-                    read -n 1 -r -p "$(echo -e "Confirm: ${WColor}Disable $chgname${Color_Off} (y/n) ")"; echo
-                fi
-                ;;
-        esac
+        if [[ "$chgvar" == "enabled" ]] && [[ "$1" == "routing" ]]; then
+            # confirmation prompt before disable routing
+            echo
+            read -n 1 -r -p "$(echo -e "Confirm: ${WColor}Disable $chgname${Color_Off} (y/n) ")"; echo
+        fi
     else
         read -n 1 -r -p "$chgprompt"; echo
     fi
@@ -1704,7 +1706,7 @@ function meshnet_filter {
     echo
     echo -e "${FColor}(Enter '$upmenu' to return to the Meshnet menu)${Color_Off}"
     echo
-    submpeer=("peer list" "peer refresh" "online" "offline" "internal" "external" "allows-incoming-traffic" "incoming-traffic-allowed" "allows-routing" "routing-allowed" "multiple filters" "Exit")
+    submpeer=("peer list" "peer refresh" "online" "offline" "internal" "external" "incoming-traffic-allowed" "allows-incoming-traffic" "routing-allowed" "allows-routing" "multiple filters" "Exit")
     select mpeer in "${submpeer[@]}"
     do
         parent_menu "Meshnet"
@@ -1719,8 +1721,8 @@ function meshnet_filter {
                 echo
                 echo "online                    offline"
                 echo "internal                  external"
-                echo "allows-incoming-traffic   incoming-traffic-allowed"
-                echo "allows-routing            routing-allowed"
+                echo "incoming-traffic-allowed  allows-incoming-traffic"
+                echo "routing-allowed           allows-routing"
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
@@ -1768,7 +1770,7 @@ function meshnet_menu {
     echo -e "$mn Meshnet is $meshnetc."
     echo
     PS3=$'\n''Choose an Option: '
-    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Filter" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Restart Service" "Support" "Exit")
+    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Online" "Peer Filter" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Restart Service" "Support" "Exit")
     select mesh in "${submesh[@]}"
     do
         parent_menu "Settings"
@@ -1794,6 +1796,14 @@ function meshnet_menu {
                 echo -e "${H1Color}nordvpn meshnet peer refresh${Color_Off}"
                 echo
                 nordvpn meshnet peer refresh
+                ;;
+            "Peer Online")
+                heading "Peer Online" "txt"
+                echo "List all the peers that are currently online."
+                echo
+                echo -e "${H1Color}nordvpn meshnet peer list --filter online${Color_Off}"
+                echo
+                nordvpn meshnet peer list --filter online
                 ;;
             "Peer Filter")
                 meshnet_filter
@@ -2243,6 +2253,17 @@ function login_nogui {
     echo "      6. Run 'nordvpn account' to verify that the login was successful"
     echo
 }
+function logout_nord {
+    # use "--persist-token" flag if available (v3.16.0+)
+    # https://github.com/NordSecurity/nordvpn-linux/issues/8
+    #
+    if nordvpn logout --help | grep -q -i "persist-token"; then
+        nordvpn logout --persist-token
+    else
+        nordvpn logout
+    fi
+    wait
+}
 function account_menu {
     heading "Account"
     echo
@@ -2286,7 +2307,7 @@ function account_menu {
             "Logout")
                 echo
                 disconnect_vpn "force" "check_ks"
-                nordvpn logout
+                logout_nord
                 set_vars
                 echo
                 ;;
@@ -2419,7 +2440,7 @@ function reset_app {
             nordvpn set killswitch disabled; wait
         fi
         disconnect_vpn "force"
-        nordvpn logout; wait
+        logout_nord
         echo
         nordvpn whitelist remove all; wait
         echo
@@ -3385,7 +3406,7 @@ function group_menu {
                 group_all_menu
                 ;;
             "Obfuscated")
-                # group_connect "Obfuscated_Servers"
+                #group_connect "Obfuscated_Servers"
                 obfuscated_temp
                 ;;
             "Double-VPN")
