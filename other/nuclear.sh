@@ -18,7 +18,8 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.15.2"      # 06 Dec 2022 Fix for meshnet unavailable
 #nord_version="nordvpn=3.15.3"      # 28 Dec 2022 Fix for crash after suspend
 #nord_version="nordvpn=3.15.4"      # 26 Jan 2023 Faster meshnet connections
-#nord_version="nordvpn=3.15.5"      # 20 Feb 2023 (No changelog)
+#nord_version="nordvpn=3.15.5"      # 20 Feb 2023 Fix for Meshnet connectivity issue
+#nord_version="nordvpn=3.16.0"      # 10 Mar 2023 Additional Meshnet features
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -55,7 +56,12 @@ function trashnord {
     lbreak "Quit Nord & Stop Service"
     nordvpn set killswitch disabled
     nordvpn disconnect
-    nordvpn logout
+    if nordvpn logout --help | grep -q -i "persist-token"; then
+        # use "--persist-token" flag if available (v3.16.0+)
+        nordvpn logout --persist-token
+    else
+        nordvpn logout
+    fi
     wait
     sudo systemctl stop nordvpnd.service
     sudo systemctl stop nordvpn.service
