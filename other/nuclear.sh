@@ -57,9 +57,10 @@ function trashnord {
     nordvpn set killswitch disabled
     nordvpn disconnect
     if nordvpn logout --help | grep -q -i "persist-token"; then
-        # use "--persist-token" flag if available (v3.16.0+)
+        echo -e "${LGreen}(nordvpn logout --persist-token)${Color_Off}"
         nordvpn logout --persist-token
     else
+        echo -e "${LGreen}(nordvpn logout)${Color_Off}"
         nordvpn logout
     fi
     wait
@@ -69,7 +70,7 @@ function trashnord {
     lbreak "Flush iptables"
     flushtables
     lbreak "Purge nordvpn"
-    sudo apt autoremove --purge nordvpn* -y
+    sudo apt autoremove --purge nordvpn -y
     lbreak "Remove Folders"
     # ======================================
     sudo rm -rf -v /var/lib/nordvpn
