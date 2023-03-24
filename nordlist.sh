@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.0 on Linux Mint 20.3
-# March 20, 2023
+# March 24, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -234,7 +234,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3600 (function main_menu).
+# The Main Menu starts on line 3629 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -279,7 +279,6 @@ function set_defaults {
     #
     disconnect_vpn "force"
     #
-    # Fix for the "NordLynx TCP" bug introduced in version 3.15.3 December 2022
     if [[ "$technology" == "openvpn" ]]; then if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi; nordvpn set technology nordlynx; set_vars; fi
     #if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; set_vars; fi
     #
@@ -485,50 +484,67 @@ function set_colors {
 # =====================================================================
 #
 function nstatus_search {
-    # search "status" array by line (case insensitive)
-    printf '%s\n' "${nstatus[@]}" | grep -i "$1"
+    # search the nstatus array by line
+    # $1 = search string
+    # $2 = "line" - return the entire line
+    #
+    if [[ "$2" == "line" ]]; then
+        printf '%s\n' "${nstatus[@]}" | grep -i "$1"
+    else
+        # the last field using <colon> as delimiter
+        # some elements may have spaces eg Los Angeles, United States
+        printf '%s\n' "${nstatus[@]}" | grep -i "$1" | grep -o '[^:]*$' | cut -c 2-
+    fi
 }
 function nsettings_search {
-    # search "settings" array by line (case insensitive)
-    printf '%s\n' "${nsettings[@]}" | grep -i "$1"
+    # search the nsettings array by line
+    # $1 = search string
+    # $2 = "line" - return the entire line
+    #
+    if [[ "$2" == "line" ]]; then
+        printf '%s\n' "${nsettings[@]}" | grep -i "$1"
+    else
+        # the last field using <space> as delimiter
+        printf '%s\n' "${nsettings[@]}" | grep -i "$1" | grep -o '[^ ]*$'
+    fi
+    # can also use: | awk -F' ' '{print $NF}'
+    # https://stackoverflow.com/questions/22727107/how-to-find-the-last-field-using-cut
 }
 function set_vars {
     # Store info in arrays (BASH v4)
     readarray -t nstatus < <( nordvpn status | tr -d '\r' )
     readarray -t nsettings < <( nordvpn settings | tr -d '\r' | tr '[:upper:]' '[:lower:]' )
     #
-    # "nordvpn status" - array nstatus - search function nstatus_search
+    # "nordvpn status"
     # When disconnected, $connected is the only variable from nstatus
-    connected=$(nstatus_search "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')
-    nordhost=$(nstatus_search "Hostname" | cut -f2 -d' ')           # full hostname
-    server=$(echo "$nordhost" | cut -f1 -d'.')                      # shortened hostname
-    country=$(nstatus_search "Country" | cut -f2 -d':' | cut -c 2-) # country and city names may have spaces
-    city=$(nstatus_search "City" | cut -f2 -d':' | cut -c 2-)
-    ip=$(nstatus_search "IP:" )                                     # includes "IP: "
-    ipaddr=$(echo "$ip" | cut -f2 -d' ')                            # IP address only
-    #technology2=$(nstatus_search "technology" | cut -f3 -d' ')     # variable not used
-    protocol2=$(nstatus_search "protocol" | cut -f3 -d' ' | tr '[:lower:]' '[:upper:]')
-    transferd=$(nstatus_search "Transfer" | cut -f 2-3 -d' ')       # download stat with units
-    transferu=$(nstatus_search "Transfer" | cut -f 5-6 -d' ')       # upload stat with units
-    uptime=$(nstatus_search "Uptime" | cut -f 1-5 -d' ')
+    connected=$( nstatus_search "Status" | tr '[:upper:]' '[:lower:]' )
+    nordhost=$( nstatus_search "Hostname" )
+    server=$( echo "$nordhost" | cut -f1 -d'.' )
+    country=$( nstatus_search "Country" )
+    city=$( nstatus_search "City" )
+    ipaddr=$( nstatus_search "IP:" )
+    protocol2=$( nstatus_search "protocol" | tr '[:lower:]' '[:upper:]' )
+    transferd=$( nstatus_search "Transfer" "line" | cut -f 2-3 -d' ' )  # download stat with units
+    transferu=$( nstatus_search "Transfer" "line" | cut -f 5-6 -d' ' )  # upload stat with units
+    uptime=$( nstatus_search "Uptime" "line" | cut -f 1-5 -d' ' )
     #
-    # "nordvpn settings" - array nsettings (all elements lowercase) - search function nsettings_search
+    # "nordvpn settings"
     # $protocol and $obfuscate are not listed when using NordLynx
-    technology=$(nsettings_search "Technology" | cut -f2 -d':' | cut -c 2-)
-    protocol=$(nsettings_search "Protocol" | cut -f2 -d' ' | tr '[:lower:]' '[:upper:]')
-    firewall=$(nsettings_search "Firewall:" | cut -f2 -d' ')
-    fwmark=$(nsettings_search "Firewall Mark" | cut -f3 -d' ')
-    routing=$(nsettings_search "Routing" | cut -f2 -d' ')
-    analytics=$(nsettings_search "Analytics" | cut -f2 -d' ')
-    killswitch=$(nsettings_search "Kill" | cut -f3 -d' ')
-    tplite=$(nsettings_search "Threat" | cut -f4 -d' ')
-    obfuscate=$(nsettings_search "Obfuscate" | cut -f2 -d' ')
-    notify=$(nsettings_search "Notify" | cut -f2 -d' ')
-    autoconnect=$(nsettings_search "Auto" | cut -f2 -d' ')
-    ipversion6=$(nsettings_search "IPv6" | cut -f2 -d' ')
-    meshnet=$(nsettings_search "Meshnet" | cut -f2 -d' ' | tr -d '\n')
-    customdns=$(nsettings_search "DNS" | cut -f2 -d' ')                  # disabled or not=disabled
-    dns_servers=$(nsettings_search "DNS" | tr '[:lower:]' '[:upper:]')   # Server IPs, includes "DNS: "
+    technology=$( nsettings_search "Technology" )
+    protocol=$( nsettings_search "Protocol" | tr '[:lower:]' '[:upper:]' )
+    firewall=$( nsettings_search "Firewall:" )
+    fwmark=$( nsettings_search "Firewall Mark" )
+    routing=$( nsettings_search "Routing" )
+    analytics=$( nsettings_search "Analytics" )
+    killswitch=$( nsettings_search "Kill" )
+    tplite=$( nsettings_search "Threat" )
+    obfuscate=$( nsettings_search "Obfuscate" )
+    notify=$( nsettings_search "Notify" )
+    autoconnect=$( nsettings_search "Auto" )
+    ipversion6=$( nsettings_search "IPv6" )
+    meshnet=$( nsettings_search "Meshnet" | tr -d '\n' )
+    customdns=$( nsettings_search "DNS" )                                       # disabled or not=disabled
+    dns_servers=$( nsettings_search "DNS" "line" | tr '[:lower:]' '[:upper:]' ) # Server IPs, includes "DNS: "
     whitelist=$( printf '%s\n' "${nsettings[@]}" | grep -A100 -i "whitelist" )
     #
     # Prefer common spelling.
@@ -809,7 +825,7 @@ function countdown_timer {
     # Adds about 15s per hour but close enough.
     # $1 = time in seconds
     #
-    echo -e "Press ${WColor}R${Color_Off} to quit the timer and resume."
+    echo -e "Type ${LColor}R${Color_Off} to quit the timer and resume."
     echo
     echo "Countdown:"
     for ((i="$1"; i>=0; i--))
@@ -1755,10 +1771,6 @@ function meshnet_filter {
     done
 }
 function meshnet_menu {
-    # https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm
-    # https://nordvpn.com/features/meshnet
-    # https://support.nordvpn.com/General-info/Features/1845333902/What-is-Meshnet.htm
-    # https://nordvpn.com/blog/meshnet-feature-launch/
     heading "Meshnet"
     echo "Using NordLynx, Meshnet lets you access devices over encrypted private"
     echo "  tunnels directly, instead of connecting to a VPN server."
@@ -2034,7 +2046,7 @@ function meshnet_menu {
                 ;;
             "Support")
                 heading "Support" "txt" "alt"
-                openlink "https://support.nordvpn.com/General-info/Features/1847604142/Using-Meshnet-on-Linux.htm" "ask"
+                openlink "https://meshnet.nordvpn.com/" "ask"
                 ;;
             "Exit")
                 main_menu
@@ -2258,8 +2270,12 @@ function logout_nord {
     # https://github.com/NordSecurity/nordvpn-linux/issues/8
     #
     if nordvpn logout --help | grep -q -i "persist-token"; then
+        echo -e "${EColor}nordvpn logout --persist-token${Color_Off}"
+        echo
         nordvpn logout --persist-token
     else
+        echo -e "${EColor}nordvpn logout${Color_Off}"
+        echo
         nordvpn logout
     fi
     wait
@@ -2467,7 +2483,7 @@ function reset_app {
 }
 function iptables_status {
     echo
-    echo -e "The VPN is $connectedc. ${IPColor}$ip${Color_Off}"
+    echo -e "The VPN is $connectedc. IP: ${IPColor}$ipaddr${Color_Off}"
     echo -e "$fw The Firewall is $firewallc. Firewall Mark: ${LColor}$fwmark${Color_Off}"
     echo -e "$rt Routing is $routingc."
     echo -e "$ks The Kill Switch is $killswitchc."
@@ -2895,7 +2911,7 @@ function wireguard_gen {
         return
     fi
     echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
-    echo -e "${CIColor}$city ${COColor}$country ${IPColor}$ip ${Color_Off}"
+    echo -e "${CIColor}$city ${COColor}$country ${IPColor}$ipaddr ${Color_Off}"
     echo
     echo "Generate WireGuard config file:"
     echo -e "${LColor}$wgfull${Color_Off}"
@@ -2913,7 +2929,7 @@ function wireguard_gen {
         #
         echo "# $server.nordvpn.com" > "$wgfull"
         echo "# $city $country" >> "$wgfull"
-        echo "# Server $ip" >> "$wgfull"
+        echo "# Server IP: $ipaddr" >> "$wgfull"
         echo >> "$wgfull"
         echo "[INTERFACE]" >> "$wgfull"
         echo "Address = ${address}/32" >> "$wgfull"
@@ -3513,6 +3529,54 @@ function settings_menu {
         esac
     done
 }
+function pause_vpn {
+    # disconnect the VPN, pause for a chosen number of minutes, then reconnect to any location
+    #
+    pcity=$(echo "$city" | tr ' ' '_' )
+    pcountry=$(echo "$country" | tr ' ' '_' )
+    #
+    heading "Disconnect, Pause, and Reconnect" "txt" "alt"
+    echo -e "$connectedcl ${CIColor}$pcity ${COColor}$pcountry ${SVColor}$server${Color_Off}"
+    echo
+    echo "Reconnect to any City, Country, Server, or Group."
+    echo; echo
+    echo -e "Complete this command or hit 'Enter' for ${EColor}$pcity${Color_Off}"
+    echo
+    read -r -p "nordvpn connect " pwhere
+    if [[ -z "$pwhere" ]]; then
+        printf '\e[A\e[K'   # erase previous line
+        echo  "nordvpn connect $pcity"
+    fi
+    pwhere=${pwhere:-$pcity}
+    echo
+    read -r -p "How many minutes? Hit 'Enter' for [$default_pause]: " pminutes
+    pminutes=${pminutes:-$default_pause}
+    # use 'bc' to handle decimal minute input
+    pseconds=$( echo "scale=0; $pminutes * 60/1" | bc )
+    #
+    disconnect_vpn "force" "check_ks"
+    if [[ "$exitapplet" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
+        # reload the "Bash Sensors" Linux Mint Cinnamon applet
+        dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+    fi
+    heading "Pause VPN"
+    set_vars
+    echo -e "$connectedcl @ $(date)"
+    echo
+    echo -e "${FColor}Please do not close this window.${Color_Off}"
+    echo
+    echo -e "Will connect to ${EColor}$pwhere${Color_Off} after $pminutes minutes."
+    echo
+    countdown_timer "$pseconds"
+    heading "Reconnect"
+    echo
+    echo "Connect to $pwhere"
+    echo
+    # shellcheck disable=SC2086 # word splitting eg. "--group P2P United_States"
+    nordvpn connect $pwhere
+    status
+    exit
+}
 function main_header {
     # headings used for main_menu connections
     # $1 = "defaults" - force a disconnect and apply default settings
@@ -3535,43 +3599,8 @@ function main_disconnect {
     if [[ "$connected" == "connected" ]] && [[ "$pause_prompt" =~ ^[Yy]$ ]]; then
         echo
         read -n 1 -r -p "Pause the VPN? (y/n) "; echo
-        #
         if [[ "$REPLY" =~ ^[Yy]$ ]]; then
-            pcity=$(echo "$city" | tr ' ' '_' )
-            pcountry=$(echo "$country" | tr ' ' '_' )
-            #
-            heading "Pause and Reconnect" "txt"
-            echo -e "$connectedcl ${CIColor}$pcity ${COColor}$pcountry ${SVColor}$server${Color_Off}"
-            echo
-            read -r -p "Reconnect to any location. Hit 'Enter' for [$pcity]: " pwhere
-            pwhere=${pwhere:-$pcity}
-            echo
-            read -r -p "How many minutes? Hit 'Enter' for [$default_pause]: " pminutes
-            pminutes=${pminutes:-$default_pause}
-            # bash math limitation - use 'bc' to handle decimal minute input, eg. 1.5
-            pseconds=$( echo "scale=0; $pminutes * 60/1" | bc )
-            #
-            disconnect_vpn "force" "check_ks"
-            if [[ "$exitapplet" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
-                # reload the "Bash Sensors" Linux Mint Cinnamon applet
-                dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
-            fi
-            heading "Pause VPN"
-            date
-            echo
-            echo -e "${FColor}Please do not close this window.${Color_Off}"
-            echo
-            echo -e "Will connect to ${EColor}$pwhere${Color_Off} after $pminutes minutes."
-            echo
-            countdown_timer "$pseconds"
-            heading "Reconnect"
-            echo
-            echo "Connect to $pwhere"
-            echo
-            # shellcheck disable=SC2086 # word splitting eg. "--group P2P United_States"
-            nordvpn connect $pwhere
-            status
-            exit
+            pause_vpn
         fi
     fi
     disconnect_vpn "force" "check_ks"
