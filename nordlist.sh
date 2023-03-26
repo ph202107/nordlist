@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.0 on Linux Mint 20.3
-# March 24, 2023
+# March 26, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -103,8 +103,12 @@ default_dnshost="reddit.com"
 #nordchangelog="/var/lib/dpkg/info/nordvpn.changelog"
 nordchangelog="/usr/share/doc/nordvpn/changelog.gz"
 #
-# Save generated WireGuard config files into this folder.
+# Save incoming Meshnet file transfers into this folder.
 # Note: $USER will automatically translate to your username.
+# Use the absolute path, no trailing slash (/)
+meshnetdir="/home/$USER/Downloads"
+#
+# Save generated WireGuard config files into this folder.
 # Use the absolute path, no trailing slash (/)
 wgdir="/home/$USER/Downloads"
 #
@@ -234,7 +238,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3629 (function main_menu).
+# The Main Menu starts on line 3816 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -710,6 +714,7 @@ function ipinfo_curl {
     fi
 }
 function status {
+    reload_applet
     echo
     nordvpn settings
     echo
@@ -764,9 +769,12 @@ function status {
     fi
     date
     echo
+}
+function reload_applet {
+    # reload the "Bash Sensors" Linux Mint Cinnamon applet
     if [[ "$exitapplet" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
-        # reload the "Bash Sensors" Linux Mint Cinnamon applet
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+        wait
     fi
 }
 function ping_host {
@@ -811,7 +819,7 @@ function openlink {
         fi
     fi
     if [[ "$1" =~ ^https?:// ]] && [[ "$newfirefox" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
-        nohup /usr/bin/firefox --new-window "$1" > /dev/null 2>&1 &
+        nohup "$(command -v firefox)" --new-window "$1" > /dev/null 2>&1 &
     else
         nohup xdg-open "$1" > /dev/null 2>&1 &
     fi
@@ -1770,6 +1778,255 @@ function meshnet_filter {
         esac
     done
 }
+function meshnet_invite {
+    heading "Invitations"
+    echo "Send and receive invitations to join a meshnet."
+    echo
+    subinv=("Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Exit")
+    select inv in "${subinv[@]}"
+    do
+        parent_menu "Meshnet"
+        case $inv in
+            "Invite List")
+                heading "Invite List" "txt" "alt"
+                echo "Display the list of all sent and received meshnet invitations."
+                echo
+                echo -e "${H2Color}nordvpn meshnet invite list${Color_Off}"
+                echo
+                nordvpn meshnet invite list
+                ;;
+            "Invite Send")
+                heading "Invite Send" "txt" "alt"
+                echo "Send an invitation to join the mesh network."
+                echo
+                echo "Usage: nordvpn meshnet invite send [options] [email]"
+                echo
+                echo "Options:"
+                echo "  --allow-incoming-traffic"
+                echo "      Allow incoming traffic from the peer. (default: false)"
+                echo "  --allow-traffic-routing"
+                echo "      Allow the peer to route traffic through this device. (default: false)"
+                echo "  --allow-local-network-access"
+                echo "      Allow the peer access to the local network when routing. (default: false)"
+                echo "  --allow-peer-send-files"
+                echo "      Allow the peer to send you files. (default: false)"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn meshnet invite send "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet invite send $REPLY
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Invite Accept")
+                heading "Invite Accept" "txt" "alt"
+                echo "Accept an invitation to join the inviter's mesh network."
+                echo
+                echo "Usage: nordvpn meshnet invite accept [options] [email]"
+                echo
+                echo "Options:"
+                echo "  --allow-incoming-traffic"
+                echo "      Allow incoming traffic from the peer. (default: false)"
+                echo "  --allow-traffic-routing"
+                echo "      Allow the peer to route traffic through this device. (default: false)"
+                echo "  --allow-local-network-access"
+                echo "      Allow the peer access to the local network when routing. (default: false)"
+                echo "  --allow-peer-send-files"
+                echo "      Allow the peer to send you files. (default: false)"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn meshnet invite accept "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet invite accept $REPLY
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Invite Deny")
+                heading "Invite Deny" "txt" "alt"
+                echo "Deny an invitation to join the inviter's mesh network."
+                echo
+                echo "Enter the email address to deny."
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn meshnet invite deny "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet invite deny "$REPLY"
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Invite Revoke")
+                heading "Invite Revoke" "txt" "alt"
+                echo "Revoke a sent invitation."
+                echo
+                echo "Enter the email address to revoke."
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn meshnet invite revoke "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet invite revoke "$REPLY"
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Exit")
+                main_menu
+                ;;
+            *)
+                invalid_option "${#subinv[@]}" "Meshnet"
+                ;;
+        esac
+    done
+}
+function meshnet_transfers {
+    echo
+    if [[ "$1" == "incoming" ]]; then
+        nordvpn fileshare list --incoming
+    elif [[ "$1" == "outgoing" ]]; then
+        nordvpn fileshare list --outgoing
+    else
+        nordvpn fileshare list --incoming
+        echo
+        nordvpn fileshare list --outgoing
+    fi
+    echo
+}
+function meshnet_fileshare {
+    heading "File Sharing"
+    echo "Send and receive files securely over Meshnet."
+    echo "Peers must have file sharing permissions."
+    echo "Transfers use the --background flag by default."
+    echo
+    submshare=("List Transfers" "List Files" "Send" "Accept" "Cancel" "Exit")
+    select mshare in "${submshare[@]}"
+    do
+        parent_menu "Meshnet"
+        case $mshare in
+            "List Transfers")
+                heading "List Transfers" "txt"
+                meshnet_transfers
+                ;;
+            "List Files")
+                heading "List Files" "txt"
+                meshnet_transfers
+                echo "Enter the transfer id to list the individual files."
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn fileshare list "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn fileshare list "$REPLY"
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                echo
+                ;;
+            "Send")
+                heading "Fileshare Send" "txt"
+                echo "Send files directly to a meshnet peer."
+                echo
+                echo "nordvpn fileshare send --background <peer> </path/file1> </path/file2>"
+                #
+                echo
+                echo -e "${WColor}'fileshare send' is not fully working with the script.${Color_Off}"
+                echo "Transfers will fail if there is a space in the path. (File not found)"
+                echo "Workaround: Copy the output command and paste it in a new terminal window."
+                #
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "Enter the public_key, hostname, or IP: " meshwhere
+                if [[ -n "$meshwhere" ]]; then
+                    echo
+                    echo "Enter the full paths and filenames, or try dragging the"
+                    echo "files from your file manager to paste the paths."
+                    echo
+                    read -r -p "Files: " meshfiles
+                    if [[ -n "$meshfiles" ]]; then
+                        echo
+                        echo -e "${EColor}Output Command:${Color_Off}"
+                        echo "nordvpn fileshare send --background $meshwhere $meshfiles"
+                        echo
+                        # error: "file not found" when this command is run from the script:
+                        # nordvpn fileshare send --background "$meshwhere" $meshfiles
+                        # issue explained here: https://redd.it/1224ed7
+                        # workaround = remove all single quotes (/u/oh5nxo via reddit)
+                        meshfiles=${meshfiles//\'}
+                        #
+                        # shellcheck disable=SC2086 # word splitting (multiple file input)
+                        nordvpn fileshare send --background "$meshwhere" $meshfiles
+                        meshnet_transfers "outgoing"
+                    else
+                        echo -e "${DColor}(Skipped)${Color_Off}"
+                        echo
+                    fi
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Accept")
+                heading "Fileshare Accept" "txt"
+                echo -e "Save to: ${H2Color}$meshnetdir${Color_Off}"
+                meshnet_transfers "incoming"
+                echo -e "Enter the transfer id to ${EColor}accept${Color_Off} or specify"
+                echo "individual files with: <id> <file1> <file2>...​"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn fileshare accept --path $meshnetdir --background "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn fileshare accept --path "$meshnetdir" --background $REPLY
+                    meshnet_transfers "incoming"
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Cancel")
+                heading "Fileshare Cancel" "txt"
+                meshnet_transfers
+                echo -e "Enter the transfer id to ${DColor}cancel${Color_Off} or specify"
+                echo "individual files with: <id> <file1> <file2>...​"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn fileshare cancel "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn fileshare cancel $REPLY
+                    meshnet_transfers
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
+            "Exit")
+                main_menu
+                ;;
+            *)
+                invalid_option "${#submshare[@]}" "Meshnet"
+                ;;
+        esac
+    done
+}
 function meshnet_menu {
     heading "Meshnet"
     echo "Using NordLynx, Meshnet lets you access devices over encrypted private"
@@ -1782,7 +2039,7 @@ function meshnet_menu {
     echo -e "$mn Meshnet is $meshnetc."
     echo
     PS3=$'\n''Choose an Option: '
-    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Online" "Peer Filter" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer Connect" "Invite List" "Invite Send" "Invite Accept" "Invite Deny" "Invite Revoke" "Restart Service" "Support" "Exit")
+    submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Online" "Peer Filter" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer FileShare" "Peer Connect" "Invitations" "File Sharing" "Restart Service" "Support" "Exit")
     select mesh in "${submesh[@]}"
     do
         parent_menu "Settings"
@@ -1908,6 +2165,29 @@ function meshnet_menu {
                     echo
                 fi
                 ;;
+            "Peer FileShare")
+                heading "Peer FileShare" "txt"
+                echo "Allow or Deny file sharing with a peer."
+                echo
+                echo "Usage: nordvpn meshnet peer fileshare [options] [public_key|hostname|ip]"
+                echo
+                echo "Options:"
+                echo "  allow - Allow file sharing with this peer"
+                echo "  deny  - Do not allow file sharing with this peer"
+                echo
+                echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn meshnet peer fileshare "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet peer fileshare $REPLY
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
             "Peer Connect")
                 heading "Peer Connect" "txt"
                 echo "Treats a peer like a VPN server and connects to it if the"
@@ -1933,101 +2213,11 @@ function meshnet_menu {
                     echo
                 fi
                 ;;
-            "Invite List")
-                heading "Invite List" "txt" "alt"
-                echo "Display the list of all sent and received meshnet invitations."
-                echo
-                echo -e "${H2Color}nordvpn meshnet invite list${Color_Off}"
-                echo
-                nordvpn meshnet invite list
+            "Invitations")
+                meshnet_invite
                 ;;
-            "Invite Send")
-                heading "Invite Send" "txt" "alt"
-                echo "Send an invitation to join the mesh network."
-                echo
-                echo "Usage: nordvpn meshnet invite send [options] [email]"
-                echo
-                echo "Options:"
-                echo "  --allow-incoming-traffic"
-                echo "      Allow incoming traffic from the peer. (default: false)"
-                echo "  --allow-traffic-routing"
-                echo "      Allow the peer to route traffic through this device. (default: false)"
-                echo "  --allow-local-network-access"
-                echo "      Allow the peer access to the local network when routing. (default: false)"
-                echo "  --allow-peer-send-files"
-                echo "      Allow the peer to send you files. (default: false)"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
-                read -r -p "nordvpn meshnet invite send "
-                if [[ -n $REPLY ]]; then
-                    echo
-                    nordvpn meshnet invite send $REPLY
-                else
-                    echo -e "${DColor}(Skipped)${Color_Off}"
-                    echo
-                fi
-                ;;
-            "Invite Accept")
-                heading "Invite Accept" "txt" "alt"
-                echo "Accept an invitation to join the inviter's mesh network."
-                echo
-                echo "Usage: nordvpn meshnet invite accept [options] [email]"
-                echo
-                echo "Options:"
-                echo "  --allow-incoming-traffic"
-                echo "      Allow incoming traffic from the peer. (default: false)"
-                echo "  --allow-traffic-routing"
-                echo "      Allow the peer to route traffic through this device. (default: false)"
-                echo "  --allow-local-network-access"
-                echo "      Allow the peer access to the local network when routing. (default: false)"
-                echo "  --allow-peer-send-files"
-                echo "      Allow the peer to send you files. (default: false)"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
-                read -r -p "nordvpn meshnet invite accept "
-                if [[ -n $REPLY ]]; then
-                    echo
-                    nordvpn meshnet invite accept $REPLY
-                else
-                    echo -e "${DColor}(Skipped)${Color_Off}"
-                    echo
-                fi
-                ;;
-            "Invite Deny")
-                heading "Invite Deny" "txt" "alt"
-                echo "Deny an invitation to join the inviter's mesh network."
-                echo
-                echo "Enter the email address to deny."
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
-                read -r -p "nordvpn meshnet invite deny "
-                if [[ -n $REPLY ]]; then
-                    echo
-                    nordvpn meshnet invite deny "$REPLY"
-                else
-                    echo -e "${DColor}(Skipped)${Color_Off}"
-                    echo
-                fi
-                ;;
-            "Invite Revoke")
-                heading "Invite Revoke" "txt" "alt"
-                echo "Revoke a sent invitation."
-                echo
-                echo "Enter the email address to revoke."
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
-                read -r -p "nordvpn meshnet invite revoke "
-                if [[ -n $REPLY ]]; then
-                    echo
-                    nordvpn meshnet invite revoke "$REPLY"
-                else
-                    echo -e "${DColor}(Skipped)${Color_Off}"
-                    echo
-                fi
+            "File Sharing")
+                meshnet_fileshare
                 ;;
             "Restart Service")
                 heading "Restart Service" "txt"
@@ -3125,7 +3315,7 @@ function tools_menu {
                     echo
                 fi
                 echo -e "${EColor}ipleak.net DNS Detection: ${Color_Off}"
-                echo -e "${Color_Off}$( curl --silent https://"$ipleak_session"-"$RANDOM".ipleak.net/dnsdetection/ | jq .ip )"
+                echo -e "${Color_Off}$( timeout 10 curl --silent https://"$ipleak_session"-"$RANDOM".ipleak.net/dnsdetection/ | jq .ip )"
                 echo
                 ;;
             "ipleak.net")
@@ -3555,12 +3745,9 @@ function pause_vpn {
     pseconds=$( echo "scale=0; $pminutes * 60/1" | bc )
     #
     disconnect_vpn "force" "check_ks"
-    if [[ "$exitapplet" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
-        # reload the "Bash Sensors" Linux Mint Cinnamon applet
-        dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
-    fi
-    heading "Pause VPN"
+    reload_applet
     set_vars
+    heading "Pause VPN"
     echo -e "$connectedcl @ $(date)"
     echo
     echo -e "${FColor}Please do not close this window.${Color_Off}"
