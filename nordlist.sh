@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.16.0 on Linux Mint 20.3
-# March 26, 2023
+# Tested with NordVPN Version 3.16.1 on Linux Mint 20.3
+# March 28, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -238,7 +238,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3816 (function main_menu).
+# The Main Menu starts on line 3832 (function main_menu).
 # Configure the first nine main menu items to suit your needs.
 #
 # Enjoy!
@@ -521,6 +521,7 @@ function set_vars {
     #
     # "nordvpn status"
     # When disconnected, $connected is the only variable from nstatus
+    # When meshnet is enabled, the transfer stats will not be zeroed on VPN reconnect.
     connected=$( nstatus_search "Status" | tr '[:upper:]' '[:lower:]' )
     nordhost=$( nstatus_search "Hostname" )
     server=$( echo "$nordhost" | cut -f1 -d'.' )
@@ -1723,7 +1724,7 @@ function obfuscate_setting {
     main_menu
 }
 function meshnet_filter {
-    heading "Filter Peer List" "txt"
+    heading "Peer Filter" "txt"
     echo "Search your peer list by applying filters."
     echo
     echo -e "${H1Color}nordvpn meshnet peer list --filter <value>${Color_Off}"
@@ -1893,17 +1894,21 @@ function meshnet_invite {
     done
 }
 function meshnet_transfers {
-    echo
     if [[ "$1" == "incoming" ]]; then
+        echo -e "${DLColor}"
         nordvpn fileshare list --incoming
+        echo -e "${Color_Off}"
     elif [[ "$1" == "outgoing" ]]; then
+        echo -e "${ULColor}"
         nordvpn fileshare list --outgoing
+        echo -e "${Color_Off}"
     else
+        echo -e "${DLColor}"
         nordvpn fileshare list --incoming
-        echo
+        echo -e "${ULColor}"
         nordvpn fileshare list --outgoing
+        echo -e "${Color_Off}"
     fi
-    echo
 }
 function meshnet_fileshare {
     heading "File Sharing"
@@ -1911,17 +1916,19 @@ function meshnet_fileshare {
     echo "Peers must have file sharing permissions."
     echo "Transfers use the --background flag by default."
     echo
-    submshare=("List Transfers" "List Files" "Send" "Accept" "Cancel" "Exit")
+    submshare=("List Transfers" "List Files" "Send" "Accept" "Cancel" "Online Peers" "Exit")
     select mshare in "${submshare[@]}"
     do
         parent_menu "Meshnet"
         case $mshare in
             "List Transfers")
                 heading "List Transfers" "txt"
+                echo "Current and completed file transfers."
                 meshnet_transfers
                 ;;
             "List Files")
                 heading "List Files" "txt"
+                echo "List all the files within a transfer."
                 meshnet_transfers
                 echo "Enter the transfer id to list the individual files."
                 echo
@@ -1955,7 +1962,7 @@ function meshnet_fileshare {
                 if [[ -n "$meshwhere" ]]; then
                     echo
                     echo "Enter the full paths and filenames, or try dragging the"
-                    echo "files from your file manager to paste the paths."
+                    echo "files from your file manager to this terminal window."
                     echo
                     read -r -p "Files: " meshfiles
                     if [[ -n "$meshfiles" ]]; then
@@ -1990,7 +1997,7 @@ function meshnet_fileshare {
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
-                read -r -p "nordvpn fileshare accept --path $meshnetdir --background "
+                read -r -p "nordvpn fileshare accept --path '$meshnetdir' --background "
                 if [[ -n $REPLY ]]; then
                     echo
                     nordvpn fileshare accept --path "$meshnetdir" --background $REPLY
@@ -2002,6 +2009,7 @@ function meshnet_fileshare {
                 ;;
             "Cancel")
                 heading "Fileshare Cancel" "txt"
+                echo "Cancel a current or pending transfer."
                 meshnet_transfers
                 echo -e "Enter the transfer id to ${DColor}cancel${Color_Off} or specify"
                 echo "individual files with: <id> <file1> <file2>...​"
@@ -2017,6 +2025,12 @@ function meshnet_fileshare {
                     echo -e "${DColor}(Skipped)${Color_Off}"
                     echo
                 fi
+                ;;
+            "Online Peers")
+                heading "nordvpn meshnet peer list --filter online" "txt"
+                echo "List all the peers that are currently online."
+                echo
+                nordvpn meshnet peer list --filter online
                 ;;
             "Exit")
                 main_menu
@@ -3404,6 +3418,7 @@ function set_defaults_ask {
     fi
 }
 function script_info {
+    # display the customization options from the top of the script
     echo
     echo "$0"
     echo
@@ -3778,6 +3793,7 @@ function main_header {
     echo
 }
 function main_disconnect {
+    # disconnect option from the main menu
     heading "Disconnect"
     echo
     if [[ "$rate_prompt" =~ ^[Yy]$ ]]; then
@@ -3965,57 +3981,60 @@ function check_depends {
         echo "  $program"
     done
 }
+function startup_commands {
+    # commands to run when the script first starts
+    set_colors
+    echo
+    if [[ -n $SSH_TTY ]]; then
+        # Check if the script is being run in an ssh session
+        echo -e "${FColor}(The script is running over SSH)${Color_Off}"
+        echo
+        usingssh="1"
+    fi
+    check_depends
+    echo
+    if (( BASH_VERSINFO < 4 )); then
+        echo "Bash Version $BASH_VERSION"
+        echo -e "${WColor}Bash v4.0 or higher is required.${Color_Off}"
+        echo
+        exit 1
+    fi
+    #
+    if (( "$nordvpn_exists" )); then
+        nordvpn --version
+        echo
+    else
+        echo -e "${WColor}The NordVPN Linux client could not be found.${Color_Off}"
+        echo "https://nordvpn.com/download/"
+        echo
+        exit 1
+    fi
+    #
+    if ! systemctl is-active --quiet nordvpnd; then
+        echo -e "${WColor}nordvpnd.service is not active${Color_Off}"
+        echo -e "${EColor}Starting the service... ${Color_Off}"
+        echo "sudo systemctl start nordvpnd.service"
+        sudo systemctl start nordvpnd.service; wait
+        echo
+    fi
+    # Update notice "A new version of NordVPN is available! Please update the application."
+    if nordvpn status | grep -i "update"; then
+        clear -x
+        echo
+        echo -e "${WColor}** A NordVPN update is available **${Color_Off}"
+        echo
+        echo -e "${LColor}Before updating:${Color_Off}"
+        echo "nordvpn set killswitch disabled"
+        echo "nordvpn set autoconnect disabled"
+        echo "nordvpn disconnect"
+        echo
+        echo
+        read -n 1 -s -r -p "Press any key for the menu... "; echo
+        echo
+    fi
+}
 #
-set_colors
-echo
-if [[ -n $SSH_TTY ]]; then
-    # Check if the script is being run in an ssh session
-    echo -e "${FColor}(The script is running over SSH)${Color_Off}"
-    echo
-    usingssh="1"
-fi
-check_depends
-echo
-if (( BASH_VERSINFO < 4 )); then
-    echo "Bash Version $BASH_VERSION"
-    echo -e "${WColor}Bash v4.0 or higher is required.${Color_Off}"
-    echo
-    exit 1
-fi
-#
-if (( "$nordvpn_exists" )); then
-    nordvpn --version
-    echo
-else
-    echo -e "${WColor}The NordVPN Linux client could not be found.${Color_Off}"
-    echo "https://nordvpn.com/download/"
-    echo
-    exit 1
-fi
-#
-if ! systemctl is-active --quiet nordvpnd; then
-    echo -e "${WColor}nordvpnd.service is not active${Color_Off}"
-    echo -e "${EColor}Starting the service... ${Color_Off}"
-    echo "sudo systemctl start nordvpnd.service"
-    sudo systemctl start nordvpnd.service; wait
-    echo
-fi
-# Update notice "A new version of NordVPN is available! Please update the application."
-if nordvpn status | grep -i "update"; then
-    clear -x
-    echo
-    echo -e "${WColor}** A NordVPN update is available **${Color_Off}"
-    echo
-    echo -e "${LColor}Before updating:${Color_Off}"
-    echo "nordvpn set killswitch disabled"
-    echo "nordvpn set autoconnect disabled"
-    echo "nordvpn disconnect"
-    echo
-    echo
-    read -n 1 -s -r -p "Press any key for the menu... "; echo
-    echo
-fi
-#
+startup_commands
 main_menu "start"
 #
 # =====================================================================
