@@ -4,10 +4,11 @@ Tested with Linux Mint only (Debian/Ubuntu base).
 Fully customizable. 
 
 Screenshots:  
-https://i.imgur.com/k9pb5U4.png  
-https://i.imgur.com/uPSgJUR.png  
-https://i.imgur.com/S3djlU5.png  
-https://i.imgur.com/c31ZwqJ.png  
+https://i.imgur.com/iIufh9k.png   
+https://i.imgur.com/VjFa0r2.png   
+https://i.imgur.com/Lm547iD.png   
+https://i.imgur.com/GTOKtwT.png   
+https://i.imgur.com/W8c67Rf.png   
 
 To download:    
 - Click on the green "Code" icon above
