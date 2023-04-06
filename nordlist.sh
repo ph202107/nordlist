@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.1 on Linux Mint 21.1
-# April 5, 2023
+# April 6, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -240,7 +240,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4001 (function main_menu).
+# The Main Menu starts on line 4016 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -533,7 +533,7 @@ function set_vars {
     protocol2=$( nstatus_search "protocol" | tr '[:lower:]' '[:upper:]' )
     transferd=$( nstatus_search "Transfer" "line" | cut -f 2-3 -d' ' )  # download stat with units
     transferu=$( nstatus_search "Transfer" "line" | cut -f 5-6 -d' ' )  # upload stat with units
-    uptime=$( nstatus_search "Uptime" "line" )
+    uptime=$( nstatus_search "Uptime" "line" | cut -f 1-9 -d' ' )
     #
     # "nordvpn settings"
     # $protocol and $obfuscate are not listed when using NordLynx
@@ -863,6 +863,7 @@ function countdown_timer {
 }
 function parent_menu {
     # $1 = $1 or $2 (back) of the calling function - disable upmenu if a return is required
+    # "Main" "Country" "Settings" "Group" "Tools" "Nord API" "Meshnet" "Speed Test"
     #
     if [[ "$REPLY" == "$upmenu" ]]; then
         if [[ "$1" == "back" ]]; then
@@ -2076,8 +2077,13 @@ function meshnet_fileshare {
     done
 }
 function meshnet_menu {
+    # $1 = parent menu name
     heading "Meshnet"
-    parent="Main"
+    if [[ -n "$1" ]]; then
+        parent="$1"
+    else
+        parent="Main"
+    fi
     echo "Using NordLynx, Meshnet lets you access devices over encrypted private"
     echo "  tunnels directly, instead of connecting to a VPN server."
     echo "With Meshnet enabled up to 10 devices using the NordVPN app with the"
@@ -3219,15 +3225,18 @@ function wireguard_gen {
     echo
 }
 function speedtest_iperf3 {
-    # $1 = "Meshnet" - $upmenu will return to the Meshnet menu
-    #
+    # $1 = parent menu name
     heading "iperf3"
     echo
-    if [[ "$1" == "Meshnet" ]]; then
-        parent="Meshnet"
+    if [[ -n "$1" ]]; then
+        parent="$1"
     else
         parent="Speed Test"
     fi
+    echo "Test upload and download transfer speeds between devices."
+    echo "Meshnet Peers, LAN Peers, Remote Peers, etc."
+    echo "Start the server on one device, then run the tests from another."
+    echo
     if ! (( "$iperf3_exists" )); then
         echo -e "${WColor}iperf3 could not be found.${Color_Off}"
         echo "Please install iperf3.  https://iperf.fr/ "
@@ -3235,10 +3244,6 @@ function speedtest_iperf3 {
         echo
         return
     fi
-    echo "Test upload and download transfer speeds between devices."
-    echo "Meshnet Peers, LAN Peers, Remote Peers, etc."
-    echo "Start the server on one device, then run the tests from another."
-    echo
     echo "Enter the default iperf3 server IP Address or Hostname."
     echo "Can leave blank if starting a server."
     echo
@@ -3402,8 +3407,13 @@ function speedtest_menu {
     done
 }
 function tools_menu {
+    # $1 = parent menu name
     heading "Tools"
-    parent="Main"
+    if [[ -n "$1" ]]; then
+        parent="$1"
+    else
+        parent="Main"
+    fi
     if [[ "$connected" == "connected" ]]; then
         main_logo "stats_only"
         PS3=$'\n''Choose an option: '
@@ -3417,13 +3427,19 @@ function tools_menu {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    submtools=( "NordVPN API" "External IP" "Server Load" "WireGuard" "Speed Tests" "Rate VPN Server" "Ping VPN" "Ping Google" "My TraceRoute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipx.ac" "ipinfo.io" "ip2location.io" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
+    submtools=( "NordVPN API" "Speed Tests" "WireGuard" "External IP" "Server Load" "Rate VPN Server" "Ping VPN Server" "Ping Test" "My TraceRoute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipx.ac" "ipinfo.io" "ip2location.io" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
     select tool in "${submtools[@]}"
     do
         parent_menu
         case $tool in
             "NordVPN API")
                 nordapi_menu
+                ;;
+            "Speed Tests")
+                speedtest_menu
+                ;;
+            "WireGuard")
+                wireguard_gen
                 ;;
             "External IP")
                 echo
@@ -3433,21 +3449,15 @@ function tools_menu {
                 echo
                 server_load
                 ;;
-            "WireGuard")
-                wireguard_gen
-                ;;
-            "Speed Tests")
-                speedtest_menu
-                ;;
             "Rate VPN Server")
                 echo
                 rate_server
                 ;;
-            "Ping VPN")
+            "Ping VPN Server")
                 echo
                 ping_host "$nordhost" "show"
                 ;;
-            "Ping Google")
+            "Ping Test")
                 clear -x
                 echo -e "${LColor}"
                 echo "Ping Google DNS 8.8.8.8, 8.8.4.4"
@@ -3671,8 +3681,13 @@ function group_all_menu {
     done
 }
 function favorites_menu {
+    # $1 = parent menu name
     heading "Favorites"
-    parent="Main"
+    if [[ -n "$1" ]]; then
+        parent="$1"
+    else
+        parent="Main"
+    fi
     main_logo "stats_only"
     echo "Keep track of your favorite individual servers by adding them to"
     echo "this list. For example low ping servers or streaming servers."
@@ -3754,7 +3769,7 @@ function favorites_menu {
                 echo -e "Format:  AnyName${H2Color}<underscore>${Color_Off}ActualServerNumber"
                 echo "Examples:  Netflix_$server  Gaming_$server"
                 echo
-                echo -e "${FColor}Default:${Color_Off}  $favname"
+                echo -e "Default:  ${FColor}$favname${Color_Off}"
                 echo
                 read -r -p "Enter the server name or hit 'Enter' for default: " favadd
                 favadd=${favadd:-$favname}
@@ -3807,7 +3822,7 @@ function group_menu {
                 group_connect "P2P"
                 ;;
             "Favorites")
-                favorites_menu
+                favorites_menu "Group"
                 ;;
             "Exit")
                 main_menu
@@ -3864,7 +3879,7 @@ function settings_menu {
                 ipv6_setting
                 ;;
             "Meshnet")
-                meshnet_menu
+                meshnet_menu "Settings"
                 ;;
             "Custom-DNS")
                 customdns_menu
@@ -3885,7 +3900,7 @@ function settings_menu {
                 iptables_menu
                 ;;
             "Tools")
-                tools_menu
+                tools_menu "Settings"
                 ;;
             "Script")
                 script_info
