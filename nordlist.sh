@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.1 on Linux Mint 21.1
-# April 6, 2023
+# April 7, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -240,7 +240,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4016 (function main_menu).
+# The Main Menu starts on line 4021 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -977,9 +977,14 @@ function country_menu {
 }
 function city_menu {
     # all available cities in $xcountry
+    # $1 = parent menu name
     heading "$xcountry"
-    parent="Country"
     echo
+    if [[ -n "$1" ]]; then
+        parent="$1"
+    else
+        parent="Country"
+    fi
     if [[ "$xcountry" == "Sarajevo" ]]; then  # special case
         xcountry="Bosnia_and_Herzegovina"
         echo -e "${H1Color}=== $xcountry ===${Color_Off}"
@@ -4066,12 +4071,12 @@ function main_menu {
             "US_Cities")
                 # city menu for United_States
                 xcountry="United_States"
-                city_menu
+                city_menu "Main"
                 ;;
             "CA_Cities")
                 # city menu for Canada
                 xcountry="Canada"
-                city_menu
+                city_menu "Main"
                 ;;
             "P2P_USA")
                 # force a disconnect and apply default settings
