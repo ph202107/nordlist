@@ -9,7 +9,7 @@
 # the next server. When no servers remain it connects to another city
 # and retrieves a new list.
 #
-# Tested on Linux Mint 20.3
+# Tested on Linux Mint 21.1
 # Requires 'curl' and 'jq'.  eg "sudo apt install curl jq"
 # Make sure the script is executable, eg "chmod +x jd.reconnect.sh"
 #
