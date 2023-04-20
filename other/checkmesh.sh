@@ -9,14 +9,8 @@
 # Services - NordVPN - Access Token - Generate New Token
 logintoken=""
 #
-# To login with username & password (deprecated method)
-# leave "logintoken" blank and fill out the following:
-username="user@email"
-password="pass"
-#
 # Time in seconds to wait before refreshing the peer list again:
 refresh_interval="3600"
-#
 #
 #
 function countdown_timer {
@@ -24,7 +18,9 @@ function countdown_timer {
     #
     echo
     echo "Countdown $1s. Peer Refresh $rcount"
+    echo -e "Type 'R' to resume"
     date
+    echo "Countdown:"
     for ((i="$1"; i>=0; i--))
     do
         days=$(( "$i" / 86400 ))
@@ -33,7 +29,11 @@ function countdown_timer {
         else
             echo -ne "    $(date -u -d "@$i" +%H:%M:%S)\033[0K\r"
         fi
-        sleep 1
+        read -t 1 -n 1 -r -s countinput
+        if [[ "$countinput" =~ ^[Rr]$ ]]; then
+            echo -e "    Stopped\033[0K\r"
+            break
+        fi
     done
     echo
 }
@@ -45,11 +45,7 @@ function check_meshnet {
             echo
             echo "Login Attempt #$lcount"
             date
-            if [[ -n $logintoken ]]; then
-                nordvpn login --token "$logintoken"
-            else
-                nordvpn login --username "$username" --password "$password"
-            fi
+            nordvpn login --token "$logintoken"
             countdown_timer "60"
             check_meshnet
         else
