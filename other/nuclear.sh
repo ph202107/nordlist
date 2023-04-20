@@ -2,7 +2,7 @@
 #
 # Basic script to upgrade, reinstall, or downgrade the NordVPN client.
 #
-# Only tested on Linux Mint 20.3.  The script flushes iptables and
+# Only tested on Linux Mint 21.1.  The script flushes iptables and
 # deletes directories, review carefully before use.  Do not use.
 #
 # Choose the NordVPN app version to install
@@ -20,6 +20,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.15.4"      # 26 Jan 2023 Faster meshnet connections
 #nord_version="nordvpn=3.15.5"      # 20 Feb 2023 Fix for Meshnet connectivity issue
 #nord_version="nordvpn=3.16.0"      # 10 Mar 2023 Additional Meshnet features
+#nord_version="nordvpn=3.16.1"      # 24 Mar 2023 (no changelog)
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -114,7 +115,7 @@ function loginnord {
     else
         echo -e "${LGreen}Starting the service... ${Color_Off}"
         echo "sudo systemctl start nordvpnd.service"
-        sudo systemctl start nordvpnd.service; wait
+        sudo systemctl start nordvpnd.service || exit
     fi
     lbreak "Login"
     if [[ -n $logintoken ]]; then
@@ -122,8 +123,6 @@ function loginnord {
         wait
     else
         nordvpn login
-        #nordvpn login --legacy
-        #nordvpn login --username <username> --password <password>
         echo
         read -n 1 -r -p "Press any key after login is complete... "; echo
     fi
