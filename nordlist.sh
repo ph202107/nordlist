@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.1 on Linux Mint 21.1
-# April 7, 2023
+# April 20, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -43,10 +43,10 @@
 # Other Programs Used
 # ====================
 #
-# wireguard-tools  Settings-Tools-WireGuard    (function wireguard_gen)
-# speedtest-cli    Settings-Tools-Speed Tests  (function speedtest_menu)
-# iperf3           Settings-Tools-Speed Tests  (function speedtest_menu)
-# highlight        Settings-Script             (function script_info)
+# wireguard-tools Settings-Tools-WireGuard   (function wireguard_gen)
+# speedtest-cli   Settings-Tools-Speed Tests (function speedtest_menu)
+# iperf3          Meshnet-Speed Tests        (function speedtest_iperf3)
+# highlight       Settings-Script            (function script_info)
 #
 # "sudo apt install wireguard wireguard-tools speedtest-cli iperf3 highlight"
 #
@@ -116,12 +116,12 @@ wgdir="/home/$USER/Downloads"
 #
 # Specify the absolute path and filename to store a local list of all
 # the NordVPN servers.  Avoids API server timeouts.  Create the list at:
-# Settings - Tools - NordVPN API - All VPN Servers - Update List
+# Tools - NordVPN API - All VPN Servers - Update List
 nordserversfile="/home/$USER/Downloads/nord_allservers.txt"
 #
 # Specify the absolute path and filename to store a local list of your
 # favorite NordVPN servers.  eg. Low ping servers or streaming servers.
-# Create the list at:  Groups - Favorites
+# Create the list in: 'Favorites'
 nordfavoritesfile="/home/$USER/Downloads/nord_favorites.txt"
 #
 # When changing servers disconnect the VPN first, then connect to the
@@ -240,7 +240,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4021 (function main_menu).
+# The Main Menu starts on line 4010 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -818,7 +818,7 @@ function openlink {
     #
     if (( "$usingssh" )); then
         echo
-        echo -e "${FColor}(The script is running over SSH)${Color_Off}"
+        echo -e "$sshi ${FColor}The script is running over SSH${Color_Off}"
         echo
     fi
     if [[ "$2" == "ask" ]] || (( "$usingssh" )); then
@@ -828,9 +828,9 @@ function openlink {
         fi
     fi
     if [[ "$1" =~ ^https?:// ]] && [[ "$newfirefox" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
-        nohup "$(command -v firefox)" --new-window "$1" > /dev/null 2>&1 &
+        nohup "$(command -v firefox)" --new-window "$1" > /dev/null 2>&1 & disown
     else
-        nohup xdg-open "$1" > /dev/null 2>&1 &
+        nohup xdg-open "$1" > /dev/null 2>&1 & disown
     fi
     if [[ "$3" == "exit" ]]; then
         echo
@@ -1084,7 +1084,6 @@ function city_count {
 }
 function host_connect {
     heading "Hostname"
-    parent="Main"
     echo "Connect to specific servers by name."
     echo
     echo "This option may be useful to test multiple servers for"
@@ -1121,7 +1120,6 @@ function host_connect {
     curl --silent "http://api-global.netflix.com/apps/applefuji/config" | grep -E 'geolocation.country|geolocation.status'
     echo
     #
-    # exit
 }
 function random_worldwide {
     # connect to a random city worldwide
@@ -2498,10 +2496,6 @@ function whitelist_setting {
 }
 function login_nogui {
     heading "Login (no GUI)" "txt"
-    echo "For now, users without a GUI can use "
-    echo -e "${LColor}      nordvpn login --legacy${Color_Off}"
-    echo -e "${LColor}      nordvpn login --username <username> --password <password>${Color_Off}"
-    echo
     echo "Also see: Login (token)"
     echo
     echo -e "${EColor}Nord Account login without a GUI ('man nordvpn' Note 2)${Color_Off}"
@@ -2540,7 +2534,7 @@ function account_menu {
     parent="Settings"
     echo
     PS3=$'\n''Choose an Option: '
-    submacct=("Login (browser)" "Login (legacy)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "NordAccount" "Exit")
+    submacct=("Login (browser)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "NordAccount" "Exit")
     select acc in "${submacct[@]}"
     do
         parent_menu
@@ -2548,11 +2542,6 @@ function account_menu {
             "Login (browser)")
                 echo
                 nordvpn login
-                echo
-                ;;
-            "Login (legacy)")
-                echo
-                nordvpn login --legacy
                 echo
                 ;;
             "Login (token)")
@@ -4032,7 +4021,7 @@ function main_menu {
     #
     PS3=$'\n''Choose an option: '
     #
-    mainmenu=( "Vancouver" "Seattle" "Los_Angeles" "Denver" "Atlanta" "US_Cities" "CA_Cities" "P2P_USA" "P2P_Canada" "Discord" "QuickConnect" "Random" "Favorites" "Countries" "Groups" "Settings" "Tools" "Meshnet" "Disconnect" "Exit" )
+    mainmenu=( "Vancouver" "Seattle" "Los_Angeles" "Denver" "Atlanta" "US_Cities" "CA_Cities" "P2P-USA" "P2P-Canada" "Discord" "QuickConnect" "Random" "Favorites" "Countries" "Groups" "Settings" "Tools" "Meshnet" "Disconnect" "Exit" )
     #
     select opt in "${mainmenu[@]}"
     do
@@ -4078,14 +4067,14 @@ function main_menu {
                 xcountry="Canada"
                 city_menu "Main"
                 ;;
-            "P2P_USA")
+            "P2P-USA")
                 # force a disconnect and apply default settings
                 main_header "defaults"
                 nordvpn connect --group p2p United_States
                 status
                 break
                 ;;
-            "P2P_Canada")
+            "P2P-Canada")
                 # force a disconnect and apply default settings
                 main_header "defaults"
                 nordvpn connect --group p2p Canada
@@ -4296,9 +4285,6 @@ start
 #   nordvpn login
 #
 # Nord Account login without a GUI
-#   nordvpn login --legacy
-#   nordvpn login --username <username> --password <password>
-#
 #   nordvpn login --token <token>
 #   To create a token, login to your Nord Account and navigate to:
 #   Services - NordVPN - Access Token - Generate New Token
