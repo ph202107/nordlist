@@ -21,11 +21,13 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.15.5"      # 20 Feb 2023 Fix for Meshnet connectivity issue
 #nord_version="nordvpn=3.16.0"      # 10 Mar 2023 Additional Meshnet features
 #nord_version="nordvpn=3.16.1"      # 24 Mar 2023 (no changelog)
+#nord_version="nordvpn=3.16.2"      # 24 Apr 2023 Legacy logins removed. Meshnet notifications
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
 # Services - NordVPN - Access Token - Generate New Token
 logintoken=""
+expires="Permanent"
 #
 nordchangelog="/usr/share/doc/nordvpn/changelog.gz"
 #
@@ -36,8 +38,6 @@ function default_settings {
     # After installation is complete, these settings will be applied
     #
     #nordvpn set analytics disabled
-    #nordvpn set meshnet enabled; wait
-    #nordvpn set meshnet disabled; wait
     #nordvpn whitelist add subnet 192.168.1.0/24
     #
     #echo; nordvpn connect
@@ -175,6 +175,16 @@ else
     echo "$nord_version"
 fi
 echo
+if [[ -n $logintoken ]]; then
+    echo -e "${LYellow}Login Token:${Color_Off}"
+    echo "$logintoken"
+    if [[ -n $expires ]]; then
+        echo
+        echo -e "${LYellow}Token Expires:${Color_Off}"
+        echo "$expires"
+    fi
+    echo
+fi
 echo
 read -n 1 -r -p "Go nuclear? (y/n) "; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
