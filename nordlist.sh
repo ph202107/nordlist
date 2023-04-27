@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.16.1 on Linux Mint 21.1
-# April 20, 2023
+# Tested with NordVPN Version 3.16.2 on Linux Mint 21.1
+# April 26, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -930,8 +930,8 @@ function create_list {
             readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
             if [[ "$2" == "count" ]]; then return; fi
             rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
-            # Replaced "Bosnia_And_Herzegovina" with "Sarajevo" to help compact the list.
-            countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Sarajevo}")
+            # Shorten "Bosnia_And_Herzegovina" to help compact the list.
+            countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Bosnia-Herz}")
             countrylist+=( "Random" "Exit" )
             ;;
         "city")
@@ -978,18 +978,16 @@ function country_menu {
 function city_menu {
     # all available cities in $xcountry
     # $1 = parent menu name
-    heading "$xcountry"
-    echo
     if [[ -n "$1" ]]; then
         parent="$1"
     else
         parent="Country"
     fi
-    if [[ "$xcountry" == "Sarajevo" ]]; then  # special case
+    if [[ "$xcountry" == "Bosnia-Herz" ]]; then  # special case
         xcountry="Bosnia_and_Herzegovina"
-        echo -e "${H1Color}=== $xcountry ===${Color_Off}"
-        echo
     fi
+    heading "$xcountry"
+    echo
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Cities in $xcountry with Obfuscation support"
         echo
@@ -1238,6 +1236,8 @@ function group_connect {
             fi
             echo "The location must support $1."
             echo "Leave blank to have the app choose automatically."
+            echo
+            echo -e "${FColor}(Enter '$upmenu' to return to the $parent menu)${Color_Off}"
             echo
             read -r -p "Enter the $1 location: " location
             REPLY="$location"
@@ -1764,7 +1764,7 @@ function meshnet_filter {
     echo
     echo -e "${H1Color}nordvpn meshnet peer list --filter <value>${Color_Off}"
     echo
-    echo -e "${FColor}(Enter '$upmenu' to return to the Meshnet menu)${Color_Off}"
+    echo -e "${FColor}(Enter '$upmenu' to return to the $parent menu)${Color_Off}"
     echo
     submpeer=("peer list" "peer refresh" "online" "offline" "internal" "external" "incoming-traffic-allowed" "allows-incoming-traffic" "routing-allowed" "allows-routing" "multiple filters" "Exit")
     select mpeer in "${submpeer[@]}"
