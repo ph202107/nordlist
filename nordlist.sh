@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.2 on Linux Mint 21.1
-# April 26, 2023
+# May 14, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -43,10 +43,10 @@
 # Other Programs Used
 # ====================
 #
-# wireguard-tools Settings-Tools-WireGuard   (function wireguard_gen)
-# speedtest-cli   Settings-Tools-Speed Tests (function speedtest_menu)
-# iperf3          Meshnet-Speed Tests        (function speedtest_iperf3)
-# highlight       Settings-Script            (function script_info)
+# wireguard-tools   Tools-WireGuard         (function wireguard_gen)
+# speedtest-cli     Tools-Speed Tests       (function speedtest_menu)
+# iperf3            Meshnet-Speed Tests     (function speedtest_iperf3)
+# highlight         Settings-Script         (function script_info)
 #
 # "sudo apt install wireguard wireguard-tools speedtest-cli iperf3 highlight"
 #
@@ -240,7 +240,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4010 (function main_menu).
+# The Main Menu starts on line 4020 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -342,16 +342,20 @@ function ascii_custom {
     # Specify ascii_custom in "function main_logo".
     # Any text or variable can be used, single or multiple lines.
     if [[ "$connected" == "connected" ]]; then
-        #figlet NordVPN                         # standard font in mono
-        #figlet NordVPN | lolcat -p 0.8         # standard font colorized
-        #figlet -f slant NordVPN | lolcat       # slant font, colorized
-        #figlet "$city" | lolcat -p 1           # display the city name, more rainbow
-        figlet -f slant "$city" | lolcat       # city in slant font
-        #figlet "$country" | lolcat -p 1.5      # display the country
-        #figlet "$transferd" | lolcat  -p 1     # display the download statistic
-        #
+        if [[ "$nordhost" != *"nordvpn.com"* ]]; then
+            # when routing through meshnet
+            figlet "Mesh Routing" | lolcat
+        else
+            #figlet NordVPN                         # standard font in mono
+            #figlet NordVPN | lolcat -p 0.8         # standard font colorized
+            #figlet -f slant NordVPN | lolcat       # slant font, colorized
+            #figlet "$city" | lolcat -p 1           # display the city name, more rainbow
+            figlet -f slant "$city" | lolcat       # city in slant font
+            #figlet "$country" | lolcat -p 1.5      # display the country
+            #figlet "$transferd" | lolcat  -p 1     # display the download statistic
+        fi
     else
-        figlet NordVPN                          # style when disconnected
+        figlet NordVPN                              # style when disconnected
     fi
 }
 function main_logo {
@@ -766,7 +770,8 @@ function status {
     if [[ "$exitip" =~ ^[Yy]$ ]]; then
         ipinfo_curl
         if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ "$obfuscate" != "enabled" ]] && [[ -n "$extip" ]]; then
-            if [[ "$technology" == "openvpn" ]]; then
+            if [[ "$technology" == "openvpn" ]] || [[ "$nordhost" != *"nordvpn.com"* ]]; then
+                # ping the external IP when using OpenVPN or Meshnet Routing
                 ping_host "$extip" "stats" "External IP"
                 echo
             elif [[ "$server" == *"-"* ]] && [[ "$server" != *"onion"* ]] && [[ "$server" != *"napps"* ]]; then
@@ -828,9 +833,9 @@ function openlink {
         fi
     fi
     if [[ "$1" =~ ^https?:// ]] && [[ "$newfirefox" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
-        nohup "$(command -v firefox)" --new-window "$1" > /dev/null 2>&1 & disown
+        nohup "$(command -v firefox)" --new-window "$1" > /dev/null 2>&1 &
     else
-        nohup xdg-open "$1" > /dev/null 2>&1 & disown
+        nohup xdg-open "$1" > /dev/null 2>&1 &
     fi
     if [[ "$3" == "exit" ]]; then
         echo
@@ -930,8 +935,10 @@ function create_list {
             readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
             if [[ "$2" == "count" ]]; then return; fi
             rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
-            # Shorten "Bosnia_And_Herzegovina" to help compact the list.
+            # Shorten some names to help compact the list.
             countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Bosnia-Herz}")
+            countrylist=("${countrylist[@]/Czech_Republic/Czech_Rep}")
+            countrylist=("${countrylist[@]/North_Macedonia/N_Macedonia}")
             countrylist+=( "Random" "Exit" )
             ;;
         "city")
@@ -983,8 +990,9 @@ function city_menu {
     else
         parent="Country"
     fi
-    if [[ "$xcountry" == "Bosnia-Herz" ]]; then  # special case
-        xcountry="Bosnia_and_Herzegovina"
+    if [[ "$xcountry" == "Bosnia-Herz" ]]; then xcountry="Bosnia_and_Herzegovina"
+    elif [[ "$xcountry" == "Czech_Rep" ]]; then xcountry="Czech_Republic"
+    elif [[ "$xcountry" == "N_Macedonia" ]]; then xcountry="North_Macedonia"
     fi
     heading "$xcountry"
     echo
@@ -1077,8 +1085,10 @@ function city_count {
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Obfuscate is $obfuscatec."
         echo "These locations have Obfuscation support."
-        echo
+    else
+        echo "Dubai United_Arab_Emirates = Obfuscated_Servers only."
     fi
+    echo
 }
 function host_connect {
     heading "Hostname"
@@ -2896,9 +2906,9 @@ function rate_server {
     done
 }
 function server_load {
-    if [[ "$nordhost" == *"onion"* ]]; then
+    if [[ "$nordhost" == *"onion"* ]] || [[ "$nordhost" != *"nordvpn.com"* ]]; then
         echo -e "${LColor}$nordhost${Color_Off}"
-        echo "Unable to check the server load for Onion+VPN servers."
+        echo "Unable to check the server load."
         echo
         return
     fi
