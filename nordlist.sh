@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.2 on Linux Mint 21.1
-# May 14, 2023
+# May 16, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -240,7 +240,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4020 (function main_menu).
+# The Main Menu starts on line 4028 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -342,7 +342,7 @@ function ascii_custom {
     # Specify ascii_custom in "function main_logo".
     # Any text or variable can be used, single or multiple lines.
     if [[ "$connected" == "connected" ]]; then
-        if [[ "$nordhost" != *"nordvpn.com"* ]]; then
+        if (( "$meshrouting" )); then
             # when routing through meshnet
             figlet "Mesh Routing" | lolcat
         else
@@ -362,12 +362,14 @@ function main_logo {
     # the ascii and stats shown above the main_menu and on script exit
     set_vars
     if [[ "$1" != "stats_only" ]]; then
-        #
         # Specify  ascii_static or ascii_custom on the line below.
         ascii_custom
-        #
     fi
-    echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr${Color_Off}"
+    if (( "$meshrouting" )); then
+        echo -e "$connectedcl ${SVColor}$nordhost ${IPColor}$ipaddr${Color_Off}"
+    else
+        echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr${Color_Off}"
+    fi
     echo -e "$techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst$sshi"
     echo -e "$transferc ${UPColor}$uptime${Color_Off}"
     if [[ -n $transferc ]]; then echo; fi
@@ -671,6 +673,12 @@ function set_vars {
         fst=""
     fi
     #
+    if [[ "$connected" == "connected" ]] && [[ "$meshnet" == "enabled" ]] && [[ "$nordhost" != *"nordvpn.com"* ]]; then
+        meshrouting="1"
+    else
+        meshrouting=""
+    fi
+    #
     if (( "$usingssh" )); then
         sshi="${DIColor}[${FIColor}SSH${DIColor}]${Color_Off}"
     else
@@ -770,7 +778,7 @@ function status {
     if [[ "$exitip" =~ ^[Yy]$ ]]; then
         ipinfo_curl
         if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ "$obfuscate" != "enabled" ]] && [[ -n "$extip" ]]; then
-            if [[ "$technology" == "openvpn" ]] || [[ "$nordhost" != *"nordvpn.com"* ]]; then
+            if [[ "$technology" == "openvpn" ]] || (( "$meshrouting" )); then
                 # ping the external IP when using OpenVPN or Meshnet Routing
                 ping_host "$extip" "stats" "External IP"
                 echo
@@ -2106,7 +2114,7 @@ function meshnet_menu {
     echo
     echo -e "$mn Meshnet is $meshnetc."
     echo
-    PS3=$'\n''Choose an Option: '
+    PS3=$'\n''Choose an option: '
     submesh=("Enable/Disable" "Peer List" "Peer Refresh" "Peer Online" "Peer Filter" "Peer Remove" "Peer Incoming" "Peer Routing" "Peer Local" "Peer FileShare" "Peer Connect" "Invitations" "File Sharing" "Speed Tests" "Restart Service" "Support" "Exit")
     select mesh in "${submesh[@]}"
     do
@@ -2341,7 +2349,7 @@ function customdns_menu {
         echo "Current $dns_servers"
     fi
     echo
-    PS3=$'\n''Choose an Option: '
+    PS3=$'\n''Choose an option: '
     # Note submcdns[@] - new entries should keep the same format for the "Test Servers" option
     # eg Name<space>DNS1<space>DNS2
     submcdns=("Nord 103.86.96.100 103.86.99.100" "Nord-TPLite 103.86.96.96 103.86.99.99" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "AdGuard 94.140.14.14 94.140.15.15" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
@@ -2543,7 +2551,7 @@ function account_menu {
     heading "Account"
     parent="Settings"
     echo
-    PS3=$'\n''Choose an Option: '
+    PS3=$'\n''Choose an option: '
     submacct=("Login (browser)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "NordAccount" "Exit")
     select acc in "${submacct[@]}"
     do
@@ -2906,7 +2914,7 @@ function rate_server {
     done
 }
 function server_load {
-    if [[ "$nordhost" == *"onion"* ]] || [[ "$nordhost" != *"nordvpn.com"* ]]; then
+    if [[ "$nordhost" == *"onion"* ]] || (( "$meshrouting" )); then
         echo -e "${LColor}$nordhost${Color_Off}"
         echo "Unable to check the server load."
         echo
@@ -3202,13 +3210,13 @@ function wireguard_gen {
         echo "# $city $country" >> "$wgfull"
         echo "# Server IP: $ipaddr" >> "$wgfull"
         echo >> "$wgfull"
-        echo "[INTERFACE]" >> "$wgfull"
+        echo "[Interface]" >> "$wgfull"
         echo "Address = ${address}/32" >> "$wgfull"
         echo "${privatekey}" >> "$wgfull"
         echo "DNS = 103.86.96.100, 103.86.99.100" >> "$wgfull"  # Regular DNS
         # echo "DNS = 103.86.96.96, 103.86.99.99" >> "$wgfull"  # Threat Protection Lite DNS
         echo >> "$wgfull"
-        echo "[PEER]" >> "$wgfull"
+        echo "[Peer]" >> "$wgfull"
         echo "${endpoint}" >> "$wgfull"
         echo "${publickey}" >> "$wgfull"
         echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgfull"
