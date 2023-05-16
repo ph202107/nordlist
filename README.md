@@ -2,13 +2,7 @@ Unofficial bash script to use with the NordVPN Linux CLI.
 Requires bash version 4 or greater.  
 Tested with Linux Mint only (Debian/Ubuntu base).   
 Fully customizable. 
-
-Screenshots:  
-https://i.imgur.com/iIufh9k.png   
-https://i.imgur.com/VjFa0r2.png   
-https://i.imgur.com/Lm547iD.png   
-https://i.imgur.com/GTOKtwT.png   
-https://i.imgur.com/W8c67Rf.png   
+Screenshots available in "screenshots" folder.  
 
 To download:    
 - Click on the green "Code" icon above
