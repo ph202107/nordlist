@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.16.2 on Linux Mint 21.1
-# May 16, 2023
+# Tested with NordVPN Version 3.16.3 on Linux Mint 21.1
+# June 1, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -12,11 +12,7 @@
 # lot of comments to help fellow newbies customize the script.
 #
 # Screenshots:
-# https://i.imgur.com/iIufh9k.png
-# https://i.imgur.com/VjFa0r2.png
-# https://i.imgur.com/Lm547iD.png
-# https://i.imgur.com/GTOKtwT.png
-# https://i.imgur.com/W8c67Rf.png
+# https://github.com/ph202107/nordlist/tree/main/screenshots
 #
 # https://github.com/ph202107/nordlist
 # /u/pennyhoard20 on reddit
@@ -51,7 +47,8 @@
 # "sudo apt install wireguard wireguard-tools speedtest-cli iperf3 highlight"
 #
 # For VPN On/Off status on the desktop I use the Linux Mint Cinnamon
-# applet "Bash Sensors". Screenshot: https://i.imgur.com/fLOoyiJ.jpg
+# applet "Bash Sensors".  Screenshot:
+# https://github.com/ph202107/nordlist/blob/main/screenshots
 # The config is in the "Notes" at the bottom of the script.
 #
 # =====================================================================
@@ -240,7 +237,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4028 (function main_menu).
+# The Main Menu starts on line 3989 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1298,43 +1295,6 @@ function group_connect {
         echo "No changes made."
         main_menu
     fi
-}
-function obfuscated_temp {
-    heading "Obfuscated"
-    parent="Group"
-    echo "The command 'nordvpn connect --group Obfuscated_Servers' has been"
-    echo "broken since version 3.14.2 released July 2022.  This function is"
-    echo "a temporary replacement for 'group_connect Obfuscated_Servers'"
-    echo
-    echo "Enables the Firewall, Killswitch, Obfuscate, and OpenVPN TCP"
-    echo
-    echo "Obfuscated Server Locations:"
-    echo "Amsterdam Atlanta Chicago Dubai Frankfurt Hong_Kong Istanbul London"
-    echo "Los_Angeles Madrid Miami Milan New_York Paris Singapore Stockholm"
-    echo "Tokyo Toronto Warsaw Zurich"
-    echo
-    if [[ -z $obwhere ]]; then
-        obwhere="Los_Angeles"
-    fi
-    echo -e "Default location: ${EColor}$obwhere${Color_Off}"
-    echo
-    read -r -p "Choose a location or hit 'Enter' for default: " obconnect
-    REPLY="$obconnect"
-    parent_menu
-    obconnect=${obconnect:-$obwhere}
-    # bug in the Nord app - must use all lower case
-    obconnect=$( echo "$obconnect" | tr '[:upper:]' '[:lower:]' )
-    echo
-    if [[ "$firewall" == "disabled" ]]; then nordvpn set firewall enabled; fi
-    if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
-    disconnect_vpn "force"
-    if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; set_vars; fi
-    if [[ "$protocol" == "UDP" ]]; then nordvpn set protocol TCP; fi
-    if [[ "$obfuscate" == "disabled" ]]; then nordvpn set obfuscate enabled; fi
-    echo
-    nordvpn connect "$obconnect"
-    status
-    exit
 }
 function technology_setting {
     # $1 = "back" - ignore fast3, return
@@ -2915,8 +2875,7 @@ function rate_server {
 }
 function server_load {
     if [[ "$nordhost" == *"onion"* ]] || (( "$meshrouting" )); then
-        echo -e "${LColor}$nordhost${Color_Off}"
-        echo "Unable to check the server load."
+        echo -e "${LColor}$nordhost${Color_Off} - Unable to check the server load."
         echo
         return
     fi
@@ -3821,8 +3780,7 @@ function group_menu {
                 group_all_menu
                 ;;
             "Obfuscated")
-                #group_connect "Obfuscated_Servers"
-                obfuscated_temp
+                group_connect "Obfuscated_Servers"
                 ;;
             "Double-VPN")
                 group_connect "Double_VPN"
@@ -3991,14 +3949,17 @@ function main_disconnect {
     # disconnect option from the main menu
     heading "Disconnect"
     echo
-    if [[ "$rate_prompt" =~ ^[Yy]$ ]]; then
-        rate_server
-    fi
-    if [[ "$connected" == "connected" ]] && [[ "$pause_prompt" =~ ^[Yy]$ ]]; then
-        echo
-        read -n 1 -r -p "Pause the VPN? (y/n) "; echo
-        if [[ "$REPLY" =~ ^[Yy]$ ]]; then
-            pause_vpn
+    if [[ "$connected" == "connected" ]] && ! (( "$meshrouting" )); then
+        if [[ "$rate_prompt" =~ ^[Yy]$ ]]; then
+            rate_server
+            echo
+        fi
+        if [[ "$pause_prompt" =~ ^[Yy]$ ]]; then
+            echo
+            read -n 1 -r -p "Pause the VPN? (y/n) "; echo
+            if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+                pause_vpn
+            fi
         fi
     fi
     disconnect_vpn "force" "check_ks"
@@ -4398,7 +4359,7 @@ start
 #
 #       To use the NordVPN icons from https://github.com/ph202107/nordlist/tree/main/icons
 #       Download the icons to your device and modify "PATH_TO_ICON" in the command below.
-#       Green = Connected, Red = Disconnected.  Screenshot:  https://i.imgur.com/fLOoyiJ.jpg
+#       Green = Connected, Red = Disconnected.  Screenshot:  https://github.com/ph202107/nordlist/blob/main/screenshots
 #           Title:  NordVPN
 #           Refresh Interval:  15 seconds or choose
 #           Shell:  bash
