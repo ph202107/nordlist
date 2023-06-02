@@ -9,7 +9,6 @@
 # List available versions with: "apt list -a nordvpn"
 #
 nord_version="nordvpn"              # install the latest version available
-#nord_version="nordvpn=3.13.0"      # 23 May 2022 firewall - filter packets by firewall marks
 #nord_version="nordvpn=3.14.0"      # 01 Jun 2022 CyberSec changed to "Threat Protection Lite"
 #nord_version="nordvpn=3.14.1"      # 13 Jun 2022 Fix for app freezing
 #nord_version="nordvpn=3.14.2"      # 28 Jul 2022 Works on Ubuntu 18.04, Mint 19.3
@@ -20,8 +19,9 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.15.4"      # 26 Jan 2023 Faster meshnet connections
 #nord_version="nordvpn=3.15.5"      # 20 Feb 2023 Fix for Meshnet connectivity issue
 #nord_version="nordvpn=3.16.0"      # 10 Mar 2023 Additional Meshnet features
-#nord_version="nordvpn=3.16.1"      # 24 Mar 2023 (no changelog)
+#nord_version="nordvpn=3.16.1"      # 24 Mar 2023 Fix for OpenVPN on Fedora
 #nord_version="nordvpn=3.16.2"      # 24 Apr 2023 Legacy logins removed. Meshnet notifications
+#nord_version="nordvpn=3.16.3"      # 01 Jun 2023 OpenVPN security upgrade.  
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -37,8 +37,8 @@ function default_settings {
     #
     # After installation is complete, these settings will be applied
     #
-    #nordvpn set analytics disabled
-    #nordvpn whitelist add subnet 192.168.1.0/24
+    nordvpn set analytics disabled
+    nordvpn whitelist add subnet 192.168.1.0/24
     #
     #echo; nordvpn connect
     #
@@ -194,6 +194,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     default_settings
     lbreak "Changelog"
     zcat "$nordchangelog" | head -n 15
+    echo
+    echo -e "${LGreen}https://nordvpn.com/blog/nordvpn-linux-release-notes/${Color_Off}"
 else
     lbreak
     echo -e "${BRed}*** ABORT ***${Color_Off}"
