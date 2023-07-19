@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.3 on Linux Mint 21.1
-# June 1, 2023
+# July 19, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -237,7 +237,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3989 (function main_menu).
+# The Main Menu starts on line 3994 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -706,7 +706,7 @@ function ipinfo_search {
 }
 function ipinfo_curl {
     echo -n "External IP: "
-    readarray -t ipinfo < <( timeout 6 curl --silent ipinfo.io )
+    readarray -t ipinfo < <( timeout 6 curl --insecure --silent ipinfo.io )
     extip=$( ipinfo_search "ip" )
     exthost=$( ipinfo_search "hostname" )
     extorg=$( ipinfo_search "org" )
@@ -1130,7 +1130,7 @@ function host_connect {
     #
     # https://streamtelly.com/check-netflix-region/
     echo "Netflix Region and Status"
-    curl --silent "http://api-global.netflix.com/apps/applefuji/config" | grep -E 'geolocation.country|geolocation.status'
+    curl --insecure --silent "http://api-global.netflix.com/apps/applefuji/config" | grep -E 'geolocation.country|geolocation.status'
     echo
     #
 }
@@ -1168,11 +1168,11 @@ function killswitch_enable {
 }
 function killswitch_groups {
     if [[ "$killswitch" == "disabled" ]]; then
-        if [[ "$exitkillswitch" =~ ^[Yy]$ ]]; then
-            echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
-            killswitch_enable
-        elif [[ "$fast5" =~ ^[Yy]$ ]]; then
+        if [[ "$fast5" =~ ^[Yy]$ ]]; then
             echo -e "${FColor}[F]ast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
+            killswitch_enable
+        elif [[ "$exitkillswitch" =~ ^[Yy]$ ]]; then
+            echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
             killswitch_enable
         else
             if [[ "$firewall" == "disabled" ]]; then
@@ -2880,7 +2880,7 @@ function server_load {
         return
     fi
     echo -ne "$nordhost load = "
-    sload=$(timeout 10 curl --silent https://api.nordvpn.com/server/stats/"$nordhost" | jq .percent)
+    sload=$(timeout 10 curl --insecure --silent --insecure https://api.nordvpn.com/server/stats/"$nordhost" | jq .percent)
     if [[ -z $sload ]]; then
         echo "Request timed out."
     elif (( sload <= 30 )); then
@@ -2906,7 +2906,7 @@ function allservers_menu {
             echo "Retrieving the list of NordVPN servers..."
             echo "Choose 'Update List' to save a local copy of the server list."
             echo
-            readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
+            readarray -t allnordservers < <( curl --insecure --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
         fi
     fi
     echo "Server Count: ${#allnordservers[@]}"
@@ -2984,7 +2984,7 @@ function allservers_menu {
                     if [[ -f "$nordserversfile" ]]; then
                         echo "Retrieving the list of NordVPN servers..."
                         echo
-                        readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
+                        readarray -t allnordservers < <( curl --insecure --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
                     fi
                     if (( ${#allnordservers[@]} < 1000 )); then
                         echo
@@ -3044,26 +3044,26 @@ function nordapi_menu {
                 ;;
             "Host Server Info")
                 heading "Server $nordhost Info" "txt" "alt"
-                curl --silent https://api.nordvpn.com/server | jq '.[] | select(.domain == "'"$nordhost"'")'
+                curl --insecure --silent https://api.nordvpn.com/server | jq '.[] | select(.domain == "'"$nordhost"'")'
                 ;;
             "Top 15 Recommended")
                 heading "Top 15 Recommended" "txt" "alt"
-                curl --silent "https://api.nordvpn.com/v1/servers/recommendations" | jq --raw-output 'limit(15;.[]) | "  Server: \(.name)\nHostname: \(.hostname)\nLocation: \(.locations[0].country.name) - \(.locations[0].country.city.name)\n    Load: \(.load)\n"'
+                curl --insecure --silent "https://api.nordvpn.com/v1/servers/recommendations" | jq --raw-output 'limit(15;.[]) | "  Server: \(.name)\nHostname: \(.hostname)\nLocation: \(.locations[0].country.name) - \(.locations[0].country.city.name)\n    Load: \(.load)\n"'
                 ;;
             "Top 15 By Country")
                 heading "Top 15 by Country Code" "txt" "alt"
-                curl --silent "https://api.nordvpn.com/v1/servers/countries" | jq --raw-output '.[] | [.id, .name] | @tsv'
+                curl --insecure --silent "https://api.nordvpn.com/v1/servers/countries" | jq --raw-output '.[] | [.id, .name] | @tsv'
                 echo
                 read -r -p "Enter the Country Code number: " ccode
                 echo
                 echo -e "${H2Color}SERVER: ${H1Color}%LOAD${Color_Off}"
                 echo
-                curl --silent "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$ccode&\[servers_groups\]\[identifier\]=legacy_standard" | jq --raw-output --slurp ' .[] | sort_by(.load) | limit(15;.[]) | [.hostname, .load] | "\(.[0]): \(.[1])"'
+                curl --insecure --silent "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$ccode&\[servers_groups\]\[identifier\]=legacy_standard" | jq --raw-output --slurp ' .[] | sort_by(.load) | limit(15;.[]) | [.hostname, .load] | "\(.[0]): \(.[1])"'
                 echo
                 ;;
             "#Servers per Country")
                 heading "Number of Servers per Country" "txt" "alt"
-                curl --silent https://api.nordvpn.com/server | jq --raw-output '. as $parent | [.[].country] | sort | unique | .[] as $country | ($parent | map(select(.country == $country)) | length) as $count |  [$country, $count] |  "\(.[0]): \(.[1])"'
+                curl --insecure --silent https://api.nordvpn.com/server | jq --raw-output '. as $parent | [.[].country] | sort | unique | .[] as $country | ($parent | map(select(.country == $country)) | length) as $count |  [$country, $count] |  "\(.[0]): \(.[1])"'
                 echo
                 ;;
             "All VPN Servers")
@@ -3195,6 +3195,15 @@ function wireguard_gen {
     fi
     echo
 }
+function speedtest_ip {
+    if [[ -z $iperfserver ]]; then
+        heading "Set the Remote Server" "txt"
+        echo "Enter the remote server IP address or hostname."
+        echo
+        read -r -p "iperf3 Server: " iperfserver
+        echo
+    fi
+}
 function speedtest_iperf3 {
     # $1 = parent menu name
     heading "iperf3"
@@ -3215,30 +3224,32 @@ function speedtest_iperf3 {
         echo
         return
     fi
-    echo "Enter the default iperf3 server IP Address or Hostname."
+    echo "Enter the remote server IP address or hostname."
     echo "Can leave blank if starting a server."
     echo
-    read -r -p "Default Server: " default_iperf
+    read -r -p "iperf3 Server: " iperfserver
     echo
     PS3=$'\n''Select a test: '
-    submiprf=( "Start Server" "Send & Receive" "Send" "Receive" "Set Default" "Ping Server" "Exit" )
+    submiprf=( "Start a Server" "Set Remote Server" "Send & Receive" "Send" "Receive" "Ping Server" "Exit" )
     select iprf in "${submiprf[@]}"
     do
         parent_menu
         case $iprf in
-            "Start Server")
-                heading "iperf3 Server" "txt"
+            "Start a Server")
+                heading "Start an iperf3 Server" "txt"
                 echo -e "${FColor}(CTRL-C to quit)${Color_Off}"
                 echo
                 iperf3 -s
                 echo
                 ;;
+            "Set Remote Server")
+                iperfserver=""
+                speedtest_ip
+                ;;
             "Send & Receive")
                 # see "iperf3 --help" for test options
-                heading "iperf3 Send & Receive" "txt"
-                read -r -p "iperf3 server IP/Hostname [$default_iperf]: " iperfserver
-                iperfserver=${iperfserver:-$default_iperf}
-                echo
+                speedtest_ip
+                heading "Send & Receive" "txt"
                 echo -e "${ULColor}Send to $iperfserver${Color_Off}"
                 echo
                 iperf3 -c "$iperfserver"
@@ -3249,35 +3260,25 @@ function speedtest_iperf3 {
                 echo
                 ;;
             "Send")
-                heading "iperf3 Send" "txt"
-                read -r -p "iperf3 server IP/Hostname [$default_iperf]: " iperfserver
-                iperfserver=${iperfserver:-$default_iperf}
-                echo
+                speedtest_ip
+                heading "Send" "txt"
                 echo -e "${ULColor}Send to $iperfserver${Color_Off}"
                 echo
                 iperf3 -c "$iperfserver"
                 echo
                 ;;
             "Receive")
-                heading "iperf3 Receive" "txt"
-                read -r -p "iperf3 server IP/Hostname [$default_iperf]: " iperfserver
-                iperfserver=${iperfserver:-$default_iperf}
-                echo
+                speedtest_ip
+                heading "Receive" "txt"
                 echo -e "${DLColor}Receive from $iperfserver${Color_Off}"
                 echo
                 iperf3 -c "$iperfserver" -R
                 echo
                 ;;
-            "Set Default")
-                heading "Set the Default Server" "txt"
-                echo "Enter the default iperf3 server IP Address or Hostname."
-                echo
-                read -r -p "Default Server: " default_iperf
-                echo
-                ;;
             "Ping Server")
-                heading "Ping the Default Server" "txt"
-                ping_host "$default_iperf" "show"
+                speedtest_ip
+                heading "Ping the iperf3 Server" "txt"
+                ping_host "$iperfserver" "show"
                 ;;
             "Exit")
                 main_menu
@@ -3333,6 +3334,7 @@ function speedtest_menu {
                 if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]]; then
                     if [[ "$obfuscate" == "enabled" ]]; then
                         echo -e "$ob - Unable to ping Obfuscated Servers"
+                        echo
                     else
                         echo -e "$technologydc - Server IP will not respond to ping."
                         echo "Attempt to ping your external IP instead."
@@ -3398,7 +3400,7 @@ function tools_menu {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    submtools=( "NordVPN API" "Speed Tests" "WireGuard" "External IP" "Server Load" "Rate VPN Server" "Ping VPN Server" "Ping Test" "My TraceRoute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipx.ac" "ipinfo.io" "ip2location.io" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
+    submtools=( "NordVPN API" "Speed Tests" "WireGuard" "External IP" "Server Load" "Rate VPN Server" "Ping VPN Server" "Ping Test" "My TraceRoute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipx.ac" "ipinfo.io" "ip2location.io" "ipaddress.my" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
     select tool in "${submtools[@]}"
     do
         parent_menu
@@ -3470,7 +3472,7 @@ function tools_menu {
                     echo
                 fi
                 echo -e "${EColor}ipleak.net DNS Detection: ${Color_Off}"
-                echo -e "${Color_Off}$( timeout 10 curl --silent https://"$ipleak_session"-"$RANDOM".ipleak.net/dnsdetection/ | jq .ip )"
+                echo -e "${Color_Off}$( timeout 10 curl --insecure --silent https://"$ipleak_session"-"$RANDOM".ipleak.net/dnsdetection/ | jq .ip )"
                 echo
                 ;;
             "ipleak.net")
@@ -3493,6 +3495,9 @@ function tools_menu {
                 ;;
             "ip2location.io")
                 openlink "https://www.ip2location.io/"
+                ;;
+            "ipaddress.my")
+                openlink "https://www.ipaddress.my/"
                 ;;
             "locatejs.com")
                 openlink "https://locatejs.com/"
@@ -3603,7 +3608,7 @@ function quick_connect {
         bestserver=""
     else
         echo -n "Getting the recommended server... "
-        bestserver="$(timeout 10 curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
+        bestserver="$(timeout 10 curl --insecure --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
         echo
     fi
     echo
@@ -4333,6 +4338,7 @@ start
 #   https://redd.it/povx2x
 #
 # NordVPN Linux GUI
+#   https://github.com/imatefx/nordvpn-gui
 #   https://github.com/GoBig87/NordVpnLinuxGUI
 #   https://github.com/morpheusthewhite/nordpy
 #   https://github.com/JimR21/nordvpn-linux-gui
