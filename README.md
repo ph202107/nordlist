@@ -1,3 +1,5 @@
+![Screenshot](https://github.com/ph202107/nordlist/blob/main/screenshots/1-main.menu.png)
+
 Unofficial bash script to use with the NordVPN Linux CLI.  
 Requires bash version 4 or greater.  
 Tested with Linux Mint only (Debian/Ubuntu base).   
