@@ -21,7 +21,9 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.16.0"      # 10 Mar 2023 Additional Meshnet features
 #nord_version="nordvpn=3.16.1"      # 24 Mar 2023 Fix for OpenVPN on Fedora
 #nord_version="nordvpn=3.16.2"      # 24 Apr 2023 Legacy logins removed. Meshnet notifications
-#nord_version="nordvpn=3.16.3"      # 01 Jun 2023 OpenVPN security upgrade.  
+#nord_version="nordvpn=3.16.3"      # 01 Jun 2023 OpenVPN security upgrade.
+#nord_version="nordvpn=3.16.4"      # 31 Jul 2023 Fix Port/subnet whitelist. Meshnet transfers
+#nord_version="nordvpn=3.16.5"      # 02 Aug 2023 Fix for GOCOVERDIR error in 3.16.4
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -37,12 +39,9 @@ function default_settings {
     #
     # After installation is complete, these settings will be applied
     #
-    nordvpn set analytics disabled
-    nordvpn whitelist add subnet 192.168.1.0/24
+    #nordvpn set analytics disabled
+    #nordvpn whitelist add subnet 192.168.1.0/24
     #
-    #echo; nordvpn connect
-    #
-    wait
 }
 function lbreak {
     # break up wall of text
@@ -151,6 +150,12 @@ function flushtables {
     #
     sudo iptables -S
 }
+function changelog {
+    lbreak "Changelog"
+    zcat "$nordchangelog" | head -n 15
+    echo
+    echo -e "${LGreen}https://nordvpn.com/blog/nordvpn-linux-release-notes/${Color_Off}"
+}
 #
 LYellow='\033[0;93m'
 LGreen='\033[0;92m'
@@ -192,10 +197,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     installnord
     loginnord
     default_settings
-    lbreak "Changelog"
-    zcat "$nordchangelog" | head -n 15
-    echo
-    echo -e "${LGreen}https://nordvpn.com/blog/nordvpn-linux-release-notes/${Color_Off}"
+    changelog
 else
     lbreak
     echo -e "${BRed}*** ABORT ***${Color_Off}"
