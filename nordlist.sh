@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.5 on Linux Mint 21.1
-# August 2, 2023
+# August 4, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -237,7 +237,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 3994 (function main_menu).
+# The Main Menu starts on line 4030 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1653,7 +1653,8 @@ function tplite_setting {
 function notify_setting {
     heading "Notify"
     echo
-    echo "Send OS notifications when the VPN status changes."
+    echo "Send OS notifications when the VPN status changes"
+    echo "and on Meshnet file transfer events."
     echo
     change_setting "notify"
 }
@@ -1932,7 +1933,7 @@ function meshnet_fileshare {
     echo "Peers must have file sharing permissions."
     echo "Transfers use the --background flag by default."
     echo
-    submshare=("List Transfers" "List Files" "Send" "Accept" "Cancel" "Online Peers" "Exit")
+    submshare=("List Transfers" "List Files" "Send" "Accept" "Auto-Accept" "Cancel" "Notify" "Online Peers"  "Exit")
     select mshare in "${submshare[@]}"
     do
         parent_menu
@@ -2023,6 +2024,33 @@ function meshnet_fileshare {
                     echo
                 fi
                 ;;
+            "Auto-Accept")
+                heading "Fileshare Auto-Accept" "txt"
+                echo "Automatically accept file transfers from a specific peer without"
+                echo "receiving a file transfer request."
+                echo
+                echo -e "${WColor}Note:${Color_Off} Automatic file transfers will download to"
+                echo "\$XDG_DOWNLOAD_DIR ($XDG_DOWNLOAD_DIR) or \$HOME/Downloads ($HOME/Downloads)"
+                echo
+                echo "Usage: nordvpn meshnet peer auto-accept [options] [public_key|hostname|ip]"
+                echo
+                echo "Options:"
+                echo "  enable - Automatically accept file transfers from this peer."
+                echo "  disable - Do not automatically accept file transfers from this peer."
+                echo
+                echo "Enter 'enable' or 'disable' and the public_key, hostname, or IP"
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "nordvpn meshnet peer auto-accept "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    nordvpn meshnet peer auto-accept $REPLY
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
+                ;;
             "Cancel")
                 heading "Fileshare Cancel" "txt"
                 echo "Cancel a current or pending transfer."
@@ -2042,8 +2070,16 @@ function meshnet_fileshare {
                     echo
                 fi
                 ;;
+            "Notify")
+                heading "Notify" "txt"
+                echo "Send OS notifications for Meshnet file transfer events."
+                echo "Accept or Decline file transfers directly from the notification."
+                echo
+                change_setting "notify" "back"
+                parent="Meshnet"
+                ;;
             "Online Peers")
-                heading "nordvpn meshnet peer list --filter online" "txt"
+                heading "Online Peers" "txt"
                 echo "List all the peers that are currently online."
                 echo
                 nordvpn meshnet peer list --filter online
@@ -2867,8 +2903,8 @@ function rate_server {
             break
         else
             echo; echo
-            echo -e "${WColor}** Please choose a number from 1 to 5"
-            echo -e "('Enter' or 'x' to exit)${Color_Off}"
+            echo -e "${WColor}** Please choose a number from 1 to 5${Color_Off}"
+            echo "('Enter' or 'x' to exit)"
         fi
         echo
     done
