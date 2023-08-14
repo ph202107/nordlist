@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.5 on Linux Mint 21.1
-# August 4, 2023
+# August 14, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -237,7 +237,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4030 (function main_menu).
+# The Main Menu starts on line 4038 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -386,7 +386,7 @@ function heading {
             echo -e "${H1Color}=== $1 ===${Color_Off}"
         fi
         echo
-        COLUMNS=$menuwidth
+        COLUMNS="$menuwidth"
         return
     fi
     # This ASCII displays after a menu selection is made.
@@ -403,7 +403,7 @@ function heading {
         echo -e "${H1Color}=== $1 ===${Color_Off}"
         echo
     fi
-    COLUMNS=$menuwidth
+    COLUMNS="$menuwidth"
 }
 function set_colors {
     #
@@ -2759,7 +2759,7 @@ function iptables_status {
     echo -e "${LColor}sudo iptables -S${Color_Off}"
     sudo iptables -S
     echo
-    COLUMNS=$menuwidth
+    COLUMNS="$menuwidth"
 }
 function iptables_menu {
     heading "IPTables"
@@ -2948,6 +2948,7 @@ function allservers_menu {
     echo "Server Count: ${#allnordservers[@]}"
     echo
     PS3=$'\n''Choose an option: '
+    COLUMNS="$menuwidth"
     submallvpn=( "List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Update List" )
     if [[ -f "$nordserversfile" ]]; then
         submallvpn+=( "Edit File" )
@@ -3069,6 +3070,7 @@ function nordapi_menu {
     echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
     echo
     PS3=$'\n''API Call: '
+    COLUMNS="$menuwidth"
     submapi=("Host Server Load" "Host Server Info" "Top 15 Recommended" "Top 15 By Country" "#Servers per Country" "All VPN Servers" "All Cities" "Change Host" "Connect" "Exit")
     select napi in "${submapi[@]}"
     do
@@ -3266,7 +3268,7 @@ function speedtest_iperf3 {
     read -r -p "iperf3 Server: " iperfserver
     echo
     PS3=$'\n''Select a test: '
-    submiprf=( "Start a Server" "Set Remote Server" "Send & Receive" "Send" "Receive" "Ping Server" "Exit" )
+    submiprf=( "Start a Server" "Set Remote Server" "Send & Receive" "Send" "Receive" "Ping Server" "Meshnet Peers" "Exit" )
     select iprf in "${submiprf[@]}"
     do
         parent_menu
@@ -3315,6 +3317,12 @@ function speedtest_iperf3 {
                 speedtest_ip
                 heading "Ping the iperf3 Server" "txt"
                 ping_host "$iperfserver" "show"
+                ;;
+            "Meshnet Peers")
+                heading "Online Peers" "txt"
+                echo "List all the Meshnet peers that are currently online."
+                echo
+                nordvpn meshnet peer list --filter online
                 ;;
             "Exit")
                 main_menu
@@ -3728,18 +3736,16 @@ function favorites_menu {
             favoritelist+=( "Add Current Server" )
         fi
     fi
-    favoritelist+=( "Add Server" "Edit File" "Settings Menu" "Exit" )
+    favoritelist+=( "Add Server" "Edit File" "Exit" )
     numfavorites=${#favoritelist[@]}
     PS3=$'\n''Connect to Server: '
+    COLUMNS="$menuwidth"
     select xfavorite in "${favoritelist[@]}"
     do
         parent_menu
         case $xfavorite in
             "Exit")
                 main_menu
-                ;;
-            "Settings Menu")
-                settings_menu
                 ;;
             "Edit File")
                 heading "Edit File" "txt"
@@ -3753,18 +3759,16 @@ function favorites_menu {
                 ;;
             "Add Server")
                 heading "Add Server" "txt"
-                echo -e "Must use only one ${H2Color}<underscore>${Color_Off} in total."
-                echo
                 echo -e "Format:  AnyName${H2Color}<underscore>${Color_Off}ActualServerNumber"
                 echo "Examples:  Netflix_us8247  Gaming_ca1672"
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
-                read -r -p "Enter the server name: "
+                read -r -p "Enter the full server name and number: "
                 if [[ -n $REPLY ]]; then
                     echo "$REPLY" >> "$nordfavoritesfile"
                     echo
-                    echo -e "Added $REPLY to ${LColor}$nordfavoritesfile${Color_Off}"
+                    echo -e "Added ${FColor}$REPLY${Color_Off} to ${LColor}$nordfavoritesfile${Color_Off}"
                     echo
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
@@ -3776,28 +3780,32 @@ function favorites_menu {
                 favname="$(echo "$city" | tr -d ' _')_$server"
                 #
                 heading "Add $server to Favorites" "txt"
-                echo "Change the server name?"
-                echo
                 echo -e "Format:  AnyName${H2Color}<underscore>${Color_Off}ActualServerNumber"
                 echo "Examples:  Netflix_$server  Gaming_$server"
+                echo -e "Note: The ${EColor}_$server${Color_Off} part will be added automatically."
                 echo
-                echo -e "Default:  ${FColor}$favname${Color_Off}"
+                echo -e "Default: ${FColor}$favname${Color_Off}"
                 echo
                 read -r -p "Enter the server name or hit 'Enter' for default: " favadd
                 favadd=${favadd:-$favname}
+                if [[ "$favadd" != *"$server"* ]]; then
+                    favadd="${favadd}_${server}"
+                fi
                 echo "$favadd" >> "$nordfavoritesfile"
                 echo
-                echo -e "Added $favadd to ${LColor}$nordfavoritesfile${Color_Off}"
+                echo -e "Added ${FColor}$favadd${Color_Off} to ${LColor}$nordfavoritesfile${Color_Off}"
                 echo
                 favorites_menu
                 ;;
             *)
                 if (( 1 <= REPLY )) && (( REPLY <= numfavorites )); then
-                    heading "$(echo "$xfavorite" | cut -f1 -d'_')"
+                    # to handle more than one <underscore> in the entry
+                    # reverse the text so the first field is the server and the rest is heading
+                    heading "$( echo "$xfavorite" | rev | cut -f2- -d'_' | rev )"
                     disconnect_vpn
                     echo "Connect to $xfavorite"
                     echo
-                    nordvpn connect "$(echo "$xfavorite" | cut -f2 -d'_')"
+                    nordvpn connect "$( echo "$xfavorite" | rev | cut -f1 -d'_' | rev )"
                     status
                     exit
                 else
@@ -4023,7 +4031,7 @@ function main_menu {
     #
     clear -x
     main_logo
-    COLUMNS=$menuwidth
+    COLUMNS="$menuwidth"
     parent="Main"
     #
     # =====================================================================
