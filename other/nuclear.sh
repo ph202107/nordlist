@@ -152,6 +152,8 @@ function flushtables {
 }
 function changelog {
     lbreak "Changelog"
+    echo -e "${LGreen}$nordchangelog${Color_Off}"
+    echo
     zcat "$nordchangelog" | head -n 15
     echo
     echo -e "${LGreen}https://nordvpn.com/blog/nordvpn-linux-release-notes/${Color_Off}"
