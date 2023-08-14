@@ -18,8 +18,8 @@ function countdown_timer {
     #
     echo
     echo "Countdown $1s. Peer Refresh $rcount"
-    echo -e "Type 'R' to resume"
     date
+    echo -e "Type 'R' to resume"
     echo "Countdown:"
     for ((i="$1"; i>=0; i--))
     do
@@ -93,4 +93,15 @@ clear -x
 echo
 echo "/// Meshnet Monitor ///"
 echo
+if [[ -z $logintoken ]]; then
+    echo "No login token provided."
+    echo
+    read -n 1 -r -p "Continue? (y/n) "; echo
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Exit"
+        echo
+        exit
+    fi
+fi
 check_meshnet
