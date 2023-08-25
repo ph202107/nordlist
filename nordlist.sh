@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.5 on Linux Mint 21.1
-# August 14, 2023
+# August 24, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -169,6 +169,7 @@ pingcount="3"
 # Leave blank to have the menu width change with the window size.
 menuwidth="80"
 #
+# Choosing 'Exit' in a submenu will take you to the main menu.
 # Entering this value while in a submenu will return you to the default
 # parent menu.  To avoid conflicts avoid using any number other than
 # zero, or the letters y,n,c,e,s.    eg. upmenu="0" or upmenu="b"
@@ -237,7 +238,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4038 (function main_menu).
+# The Main Menu starts on line 4050 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1741,7 +1742,7 @@ function meshnet_filter {
     parent="Meshnet"
     echo "Search your peer list by applying filters."
     echo
-    echo -e "${H1Color}nordvpn meshnet peer list --filter <value>${Color_Off}"
+    echo "nordvpn meshnet peer list --filter <value>"
     echo
     echo -e "${FColor}(Enter '$upmenu' to return to the $parent menu)${Color_Off}"
     echo
@@ -1807,7 +1808,7 @@ function meshnet_invite {
                 heading "Invite List" "txt" "alt"
                 echo "Display the list of all sent and received meshnet invitations."
                 echo
-                echo -e "${H2Color}nordvpn meshnet invite list${Color_Off}"
+                echo "nordvpn meshnet invite list"
                 echo
                 nordvpn meshnet invite list
                 ;;
@@ -1975,7 +1976,7 @@ function meshnet_fileshare {
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
                 echo
-                read -r -p "Enter the public_key, hostname, or IP: " meshwhere
+                read -r -p "Enter the recipient public_key, hostname, or IP: " meshwhere
                 if [[ -n "$meshwhere" ]]; then
                     echo
                     echo "Enter the full paths and filenames, or try dragging the"
@@ -2031,12 +2032,6 @@ function meshnet_fileshare {
                 echo
                 echo -e "${WColor}Note:${Color_Off} Automatic file transfers will download to"
                 echo "\$XDG_DOWNLOAD_DIR ($XDG_DOWNLOAD_DIR) or \$HOME/Downloads ($HOME/Downloads)"
-                echo
-                echo "Usage: nordvpn meshnet peer auto-accept [options] [public_key|hostname|ip]"
-                echo
-                echo "Options:"
-                echo "  enable - Automatically accept file transfers from this peer."
-                echo "  disable - Do not automatically accept file transfers from this peer."
                 echo
                 echo "Enter 'enable' or 'disable' and the public_key, hostname, or IP"
                 echo
@@ -2126,7 +2121,7 @@ function meshnet_menu {
                 heading "Peer List" "txt"
                 echo "List all the peers in your meshnet."
                 echo
-                echo -e "${H1Color}nordvpn meshnet peer list${Color_Off}"
+                echo "nordvpn meshnet peer list"
                 echo
                 nordvpn meshnet peer list
                 ;;
@@ -2134,7 +2129,7 @@ function meshnet_menu {
                 heading "Peer Refresh" "txt"
                 echo "Refresh the meshnet in case it was not updated automatically."
                 echo
-                echo -e "${H1Color}nordvpn meshnet peer refresh${Color_Off}"
+                echo "nordvpn meshnet peer refresh"
                 echo
                 nordvpn meshnet peer refresh
                 ;;
@@ -2142,7 +2137,7 @@ function meshnet_menu {
                 heading "Peer Online" "txt"
                 echo "List all the peers that are currently online."
                 echo
-                echo -e "${H1Color}nordvpn meshnet peer list --filter online${Color_Off}"
+                echo "nordvpn meshnet peer list --filter online"
                 echo
                 nordvpn meshnet peer list --filter online
                 ;;
@@ -2171,12 +2166,6 @@ function meshnet_menu {
                 echo "Peers under the same account are automatically added to the meshnet."
                 echo "Allow or Deny a meshnet peer's incoming traffic to this device."
                 echo
-                echo "Usage: nordvpn meshnet peer incoming [options] [public_key|hostname|ip]"
-                echo
-                echo "Options:"
-                echo "  allow - Allows a meshnet peer to send traffic to this device."
-                echo "  deny  - Denies a meshnet peer to send traffic to this device."
-                echo
                 echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
@@ -2193,12 +2182,6 @@ function meshnet_menu {
             "Peer Routing")
                 heading "Peer Routing" "txt"
                 echo "Allow or Deny a meshnet peer routing traffic through this device."
-                echo
-                echo "Usage: nordvpn meshnet peer routing [options] [public_key|hostname|ip]"
-                echo
-                echo "Options:"
-                echo "  allow - Allows a meshnet peer to route traffic through this device."
-                echo "  deny  - Denies a meshnet peer to route traffic through this device."
                 echo
                 echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
                 echo
@@ -2218,12 +2201,6 @@ function meshnet_menu {
                 echo "Allow or Deny access to your local network when a peer is"
                 echo "routing traffic through this device."
                 echo
-                echo "Usage: nordvpn meshnet peer local [options] [public_key|hostname|ip]"
-                echo
-                echo "Options:"
-                echo "  allow - Allows the peer access to the local network when routing"
-                echo "  deny  - Denies the peer access to the local network when routing"
-                echo
                 echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
@@ -2240,12 +2217,6 @@ function meshnet_menu {
             "Peer FileShare")
                 heading "Peer FileShare" "txt"
                 echo "Allow or Deny file sharing with a peer."
-                echo
-                echo "Usage: nordvpn meshnet peer fileshare [options] [public_key|hostname|ip]"
-                echo
-                echo "Options:"
-                echo "  allow - Allow file sharing with this peer"
-                echo "  deny  - Do not allow file sharing with this peer"
                 echo
                 echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
                 echo
@@ -2296,8 +2267,8 @@ function meshnet_menu {
                 ;;
             "Restart Service")
                 heading "Restart Service" "txt"
-                echo "The peer list may not populate if the nordvpn service"
-                echo "was started without network access."
+                echo "Restarting the service may help resolve problems with populating"
+                echo "the peer list or with excessively slow transfer speeds."
                 echo
                 read -n 1 -r -p "Disconnect the VPN and restart the nordvpn service? (y/n) "; echo
                 echo
@@ -2508,6 +2479,59 @@ function whitelist_setting {
     fi
     main_menu
 }
+function login_check {
+    echo
+    if nordvpn account | grep -q -i "not logged in"; then
+        echo -e "${WColor}** You are not logged in. **${Color_Off}"
+        echo
+        read -n 1 -r -p "Log in with a token? (y/n) "; echo
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            login_token
+            nordvpn account
+            echo
+            return
+        fi
+        read -n 1 -r -p "Log in with the web browser? (y/n) "; echo
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            nordvpn login
+            echo
+            echo "Provide the Callback URL if necessary or"
+            echo "just hit Enter after login is complete."
+            echo
+            read -r -p "Callback URL: "; echo
+            echo
+            if [[ -n $REPLY ]]; then
+                nordvpn login --callback "$REPLY"
+                echo
+            fi
+        fi
+    else
+        echo -e "${EColor}You are logged in.${Color_Off}"
+        echo
+    fi
+    nordvpn account
+    echo
+}
+function login_token {
+    heading "Login (token)" "txt"
+    echo "To create a token, login to your Nord Account and navigate to:"
+    echo "Services - NordVPN - Access Token - Generate New Token"
+    echo
+    openlink "https://my.nordaccount.com/" "ask"
+    echo
+    echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+    echo
+    read -r -p "Enter the login token: " logintoken
+    if [[ -z $logintoken ]]; then
+        echo -e "${DColor}(Skipped)${Color_Off}"
+    else
+        echo
+        nordvpn login --token "$logintoken"
+    fi
+    echo
+}
 function login_nogui {
     heading "Login (no GUI)" "txt"
     echo "Also see: Login (token)"
@@ -2533,11 +2557,11 @@ function logout_nord {
     # https://github.com/NordSecurity/nordvpn-linux/issues/8
     #
     if nordvpn logout --help | grep -q -i "persist-token"; then
-        echo -e "${EColor}nordvpn logout --persist-token${Color_Off}"
+        echo "nordvpn logout --persist-token"
         echo
         nordvpn logout --persist-token
     else
-        echo -e "${EColor}nordvpn logout${Color_Off}"
+        echo "nordvpn logout"
         echo
         nordvpn logout
     fi
@@ -2548,33 +2572,21 @@ function account_menu {
     parent="Settings"
     echo
     PS3=$'\n''Choose an option: '
-    submacct=("Login (browser)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "NordAccount" "Exit")
+    submacct=("Login Check" "Login (browser)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "NordAccount" "Exit")
     select acc in "${submacct[@]}"
     do
         parent_menu
         case $acc in
+            "Login Check")
+                login_check
+                ;;
             "Login (browser)")
                 echo
                 nordvpn login
                 echo
                 ;;
             "Login (token)")
-                heading "Login (token)" "txt"
-                echo "To create a token, login to your Nord Account and navigate to:"
-                echo "Services - NordVPN - Access Token - Generate New Token"
-                echo
-                openlink "https://my.nordaccount.com/" "ask"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
-                read -r -p "Enter the login token: " logintoken
-                if [[ -z $logintoken ]]; then
-                    echo -e "${DColor}(Skipped)${Color_Off}"
-                else
-                    echo
-                    nordvpn login --token "$logintoken"
-                fi
-                echo
+                login_token
                 ;;
             "Login (no GUI)")
                 login_nogui
@@ -3319,7 +3331,7 @@ function speedtest_iperf3 {
                 ping_host "$iperfserver" "show"
                 ;;
             "Meshnet Peers")
-                heading "Online Peers" "txt"
+                heading "Meshnet Peers" "txt"
                 echo "List all the Meshnet peers that are currently online."
                 echo
                 nordvpn meshnet peer list --filter online
@@ -4232,6 +4244,10 @@ function start {
         sudo systemctl start nordvpnd.service || exit
         echo
     fi
+    #
+    # Check if you are logged in.  This will cause a delay every time the script starts.
+    #login_check
+    #
     if nordvpn status | grep -i "update"; then
         # "A new version of NordVPN is available! Please update the application."
         clear -x
