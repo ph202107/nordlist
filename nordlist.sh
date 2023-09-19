@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.16.5 on Linux Mint 21.1
-# August 24, 2023
+# Tested with NordVPN Version 3.16.6 on Linux Mint 21.1
+# September 19, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -111,6 +111,10 @@ meshnetdir="/home/$USER/Downloads"
 # Use the absolute path, no trailing slash (/)
 wgdir="/home/$USER/Downloads"
 #
+# Specify the absolute path and filename to save a copy of the
+# nordvpnd.service logs.  Create the file in: Settings - Logs
+nordlogfile="/home/$USER/Downloads/nord_logs.txt"
+#
 # Specify the absolute path and filename to store a local list of all
 # the NordVPN servers.  Avoids API server timeouts.  Create the list at:
 # Tools - NordVPN API - All VPN Servers - Update List
@@ -189,7 +193,8 @@ upmenu="0"
 fast1="n"
 #
 # Automatically change these settings without prompting:  Firewall,
-# Routing, Analytics, KillSwitch, TPLite, Notify, AutoConnect, IPv6
+# Routing, Analytics, KillSwitch, TPLite, Notify, AutoConnect, IPv6,
+# LAN Discovery
 fast2="n"
 #
 # Automatically change these settings which also disconnect the VPN:
@@ -228,32 +233,32 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Change the text and indicator colors in "function set_colors"
 #
 # =====================================================================
-# Whitelist & Default Settings
+# Allowlist & Default Settings
 # =============================
 #
-# Add your whitelist commands to "function whitelist_commands"
+# Add your allowlist commands to "function allowlist_commands"
 # Set up a default NordVPN config in "function set_defaults"
 #
 # =====================================================================
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4050 (function main_menu).
+# The Main Menu starts on line 4122 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
 #
 # ==End================================================================
 #
-function whitelist_commands {
-    # Add your whitelist configuration commands here.
+function allowlist_commands {
+    # Add your allowlist configuration commands here.
     # Enter one command per line.
-    # whitelist_start (keep this line)
+    # allowlist_start (keep this line)
     #
-    #nordvpn whitelist remove all
-    #nordvpn whitelist add subnet 192.168.1.0/24
+    #nordvpn allowlist remove all
+    #nordvpn allowlist add subnet 192.168.1.0/24
     #
-    # whitelist_end (keep this line)
+    # allowlist_end (keep this line)
     echo
 }
 function set_defaults {
@@ -368,10 +373,10 @@ function main_logo {
     else
         echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr${Color_Off}"
     fi
-    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst$sshi"
+    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$ld$al$fst$sshi"
     echo -e "$transferc ${UPColor}$uptime${Color_Off}"
     if [[ -n $transferc ]]; then echo; fi
-    # all indicators: $techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst$sshi
+    # all indicators: $techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$ld$al$fst$sshi
 }
 function heading {
     # $1 = heading
@@ -556,7 +561,8 @@ function set_vars {
     meshnet=$( nsettings_search "Meshnet" | tr -d '\n' )
     customdns=$( nsettings_search "DNS" )                                       # disabled or not=disabled
     dns_servers=$( nsettings_search "DNS" "line" | tr '[:lower:]' '[:upper:]' ) # Server IPs, includes "DNS: "
-    whitelist=$( printf '%s\n' "${nsettings[@]}" | grep -A100 -i "whitelist" )
+    landiscovery=$( nsettings_search "Discover" )
+    allowlist=$( printf '%s\n' "${nsettings[@]}" | grep -A100 -i "allowlist" )
     #
     # Prefer common spelling.
     if [[ "$technology" == "openvpn" ]]; then technologyd="OpenVPN"
@@ -659,10 +665,18 @@ function set_vars {
         dns="${EIColor}[DNS]${Color_Off}"
     fi
     #
-    if [[ -n "${whitelist[*]}" ]]; then # not empty
-        wl="${EIColor}[WL]${Color_Off}"
+    if [[ "$landiscovery" == "enabled" ]]; then
+        ld="${EIColor}[LD]${Color_Off}"
+        landiscoveryc="${EColor}$landiscovery${Color_Off}"
     else
-        wl="${DIColor}[WL]${Color_Off}"
+        ld="${DIColor}[LD]${Color_Off}"
+        landiscoveryc="${DColor}$landiscovery${Color_Off}"
+    fi
+    #
+    if [[ -n "${allowlist[*]}" ]]; then # not empty
+        al="${EIColor}[AL]${Color_Off}"
+    else
+        al="${DIColor}[AL]${Color_Off}"
     fi
     #
     if [[ ${allfast[*]} =~ [Yy] ]]; then
@@ -1275,7 +1289,7 @@ function group_connect {
                 echo
             fi
         else
-            technology_setting "back" "no_heading"
+            technology_setting "back"
             if [[ "$obfuscate" == "enabled" ]]; then
                 nordvpn set obfuscate disabled; wait
                 echo
@@ -1298,11 +1312,10 @@ function group_connect {
     fi
 }
 function technology_setting {
-    # $1 = "back" - ignore fast3, return
-    # $2 = "no_heading" - skip the heading
+    # $1 = "back" - skip the heading, ignore fast3, return
     #
     parent="Settings"
-    if [[ "$2" != "no_heading" ]]; then
+    if [[ "$1" != "back" ]]; then
         heading "Technology"
         echo
         disconnect_warning
@@ -1474,6 +1487,9 @@ function change_setting {
             ;;
         "meshnet")
             chgname="Meshnet"; chgvar="$meshnet"; chgind="$mn"
+            ;;
+        "lan-discovery")
+            chgname="LAN Discovery"; chgvar="$landiscovery"; chgind="$ld"
             ;;
         *)
             echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo
@@ -1678,7 +1694,25 @@ function ipv6_setting {
     heading "IPv6"
     echo "Enable or disable NordVPN IPv6 support."
     echo
+    echo "Also refer to: https://support.nordvpn.com/1047409212"
+    echo
     change_setting "ipv6"
+}
+function landiscovery_setting {
+    heading "LAN Discovery"
+    echo
+    echo "Access your local network while connected to a VPN, routing traffic"
+    echo "through a Meshnet device, or with the Kill Switch enabled."
+    echo
+    echo "Automatically allow traffic from these subnets:"
+    echo "192.168.0.0/16  172.16.0.0/12  10.0.0.0/8  169.254.0.0/16"
+    echo
+    if [[ -n "${allowlist[*]}" ]]; then
+        echo -e "$al Note: Enabling local network discovery will remove any"
+        echo "manually added private subnets from the allowlist."
+        echo
+    fi
+    change_setting "lan-discovery"
 }
 function obfuscate_setting {
     # not available when using NordLynx
@@ -1691,11 +1725,10 @@ function obfuscate_setting {
         echo "Obfuscation is not available when using $technologyd."
         echo "Change Technology to OpenVPN to use Obfuscation."
         echo
-        read -n 1 -r -p "Go to the 'Technology' setting and return? (y/n) "; echo
+        read -n 1 -r -p "Go to the 'Technology' setting? (y/n) "; echo
         parent_menu
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            technology_setting "back"
-            obfuscate_setting
+            technology_setting
         else
             main_menu
         fi
@@ -2362,7 +2395,7 @@ function customdns_menu {
             "Specify or Default")
                 echo
                 echo "Enter the DNS server IPs or hit 'Enter' for default."
-                echo -e "Default: ${LColor}$dnsdesc ($default_dns)${Color_Off}"
+                echo -e "Default: ${FColor}$dnsdesc ($default_dns)${Color_Off}"
                 echo
                 read -r -p "Up to 3 DNS server IPs: " dns3srvrs
                 dns3srvrs=${dns3srvrs:-$default_dns}
@@ -2423,25 +2456,30 @@ function customdns_menu {
         set_vars
     done
 }
-function whitelist_setting {
+function allowlist_setting {
     # $1 = "back" - return
     #
-    heading "Whitelist"
+    heading "Allowlist"
     parent="Settings"
-    echo "Restore a default whitelist after installation, using 'Reset' or"
+    echo "Restore a default allowlist after installation, using 'Reset' or"
     echo "making other changes. Edit the script to modify the function."
     echo
+    if [[ "$landiscovery" == "enabled" ]]; then
+        echo -e "$ld Note: Allowlisting a private subnet is not available while"
+        echo -e "local network discovery is enabled."
+        echo
+    fi
     echo -e "${EColor}Current Settings:${Color_Off}"
-    if [[ -n "${whitelist[*]}" ]]; then
-        echo -ne "$wl "
-        printf '%s\n' "${whitelist[@]}"
+    if [[ -n "${allowlist[*]}" ]]; then
+        echo -ne "$al "
+        printf '%s\n' "${allowlist[@]}"
     else
-        echo -e "$wl No whitelist entries."
+        echo -e "$al No allowlist entries."
     fi
     echo
-    echo -e "${LColor}function whitelist_commands${Color_Off}"
-    startline=$(grep -m1 -n "whitelist_start" "$0" | cut -f1 -d':')
-    endline=$(( $(grep -m1 -n "whitelist_end" "$0" | cut -f1 -d':') - 1 ))
+    echo -e "${LColor}function allowlist_commands${Color_Off}"
+    startline=$(grep -m1 -n "allowlist_start" "$0" | cut -f1 -d':')
+    endline=$(( $(grep -m1 -n "allowlist_end" "$0" | cut -f1 -d':') - 1 ))
     numlines=$(( endline - startline ))
     if (( "$highlight_exists" )); then
         highlight -l -O xterm256 "$0" | head -n "$endline" | tail -n "$numlines"
@@ -2449,29 +2487,29 @@ function whitelist_setting {
         cat -n "$0" | head -n "$endline" | tail -n "$numlines"
     fi
     echo
-    echo -e "Type ${WColor}C${Color_Off} to clear the current whitelist."
+    echo -e "Type ${WColor}C${Color_Off} to clear the current allowlist."
     echo -e "Type ${FIColor}E${Color_Off} to edit the script."
     echo
-    read -n 1 -r -p "Apply your default whitelist settings? (y/n/C/E) "; echo
+    read -n 1 -r -p "Apply your default allowlist settings? (y/n/C/E) "; echo
     parent_menu "$1"
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        whitelist_commands
+        allowlist_commands
         set_vars
     elif [[ $REPLY =~ ^[Cc]$ ]]; then
-        nordvpn whitelist remove all
+        nordvpn allowlist remove all
         set_vars
     elif [[ $REPLY =~ ^[Ee]$ ]]; then
-        echo -e "Modify ${LColor}function whitelist_commands${Color_Off} starting on ${FColor}line $(( startline + 1 ))${Color_Off}"
+        echo -e "Modify ${LColor}function allowlist_commands${Color_Off} starting on ${FColor}line $(( startline + 1 ))${Color_Off}"
         echo
         openlink "$0" "noask" "exit"
     else
         echo "No changes made."
     fi
-    if [[ -n "${whitelist[*]}" ]]; then
+    if [[ -n "${allowlist[*]}" ]]; then
         echo
-        echo -ne "$wl "
-        printf '%s\n' "${whitelist[@]}"
+        echo -ne "$al "
+        printf '%s\n' "${allowlist[@]}"
     fi
     if [[ "$1" == "back" ]]; then
         echo
@@ -2480,7 +2518,6 @@ function whitelist_setting {
     main_menu
 }
 function login_check {
-    echo
     if nordvpn account | grep -q -i "not logged in"; then
         echo -e "${WColor}** You are not logged in. **${Color_Off}"
         echo
@@ -2488,31 +2525,19 @@ function login_check {
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             login_token
-            nordvpn account
-            echo
             return
         fi
         read -n 1 -r -p "Log in with the web browser? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            nordvpn login
-            echo
-            echo "Provide the Callback URL if necessary or"
-            echo "just hit Enter after login is complete."
-            echo
-            read -r -p "Callback URL: "; echo
-            echo
-            if [[ -n $REPLY ]]; then
-                nordvpn login --callback "$REPLY"
-                echo
-            fi
+            login_browser
         fi
     else
         echo -e "${EColor}You are logged in.${Color_Off}"
         echo
+        nordvpn account
+        echo
     fi
-    nordvpn account
-    echo
 }
 function login_token {
     heading "Login (token)" "txt"
@@ -2530,6 +2555,26 @@ function login_token {
         echo
         nordvpn login --token "$logintoken"
     fi
+    echo
+    nordvpn account
+    echo
+}
+function login_browser {
+    heading "Login (browser)" "txt"
+    nordvpn login
+    echo
+    echo "Provide the Callback URL if necessary or"
+    echo "just hit Enter after login is complete."
+    echo
+    read -r -p "Callback URL: " callbackurl
+    if [[ -z $callbackurl ]]; then
+        echo -e "${DColor}(Skipped)${Color_Off}"
+    else
+        echo
+        nordvpn login --callback "$callbackurl"
+    fi
+    echo
+    nordvpn account
     echo
 }
 function login_nogui {
@@ -2566,6 +2611,7 @@ function logout_nord {
         nordvpn logout
     fi
     wait
+    echo
 }
 function account_menu {
     heading "Account"
@@ -2578,12 +2624,11 @@ function account_menu {
         parent_menu
         case $acc in
             "Login Check")
+                echo
                 login_check
                 ;;
             "Login (browser)")
-                echo
-                nordvpn login
-                echo
+                login_browser
                 ;;
             "Login (token)")
                 login_token
@@ -2596,7 +2641,6 @@ function account_menu {
                 disconnect_vpn "force" "check_ks"
                 logout_nord
                 set_vars
-                echo
                 ;;
             "Account Info")
                 echo
@@ -2713,7 +2757,7 @@ function reset_app {
     echo "nordvpn set killswitch disabled"
     echo "nordvpn disconnect"
     echo "nordvpn logout"
-    echo "nordvpn whitelist remove all"
+    echo "nordvpn allowlist remove all"
     echo "nordvpn set defaults"
     echo "Restart nordvpn services"
     echo "nordvpn login"
@@ -2730,8 +2774,7 @@ function reset_app {
         fi
         disconnect_vpn "force"
         logout_nord
-        echo
-        nordvpn whitelist remove all; wait
+        nordvpn allowlist remove all; wait
         echo
         nordvpn set defaults; wait
         echo
@@ -2740,7 +2783,7 @@ function reset_app {
         echo "  /var/lib/nordvpn/data/settings.dat"
         echo
         echo -e "${WColor}** Reminder **${Color_Off}"
-        echo -e "${LColor}Reconfigure the Whitelist and other settings.${Color_Off}"
+        echo -e "${LColor}Reconfigure the allowlist and other settings.${Color_Off}"
         echo
         read -n 1 -s -r -p "Press any key to restart the service..."; echo
         echo
@@ -2761,11 +2804,12 @@ function iptables_status {
     echo -e "$rt Routing is $routingc."
     echo -e "$ks The Kill Switch is $killswitchc."
     echo -e "$mn Meshnet is $meshnetc."
-    if [[ -n "${whitelist[*]}" ]]; then
-        echo -ne "$wl "
-        printf '%s\n' "${whitelist[@]}"
+    echo -e "$ld LAN Discovery is $landiscoveryc."
+    if [[ -n "${allowlist[*]}" ]]; then
+        echo -ne "$al "
+        printf '%s\n' "${allowlist[@]}"
     else
-        echo -e "$wl No whitelist entries."
+        echo -e "$al No allowlist entries."
     fi
     echo
     echo -e "${LColor}sudo iptables -S${Color_Off}"
@@ -2785,7 +2829,7 @@ function iptables_menu {
     echo "  - Commands require 'sudo'"
     echo
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "Whitelist" "Flush IPTables" "Restart Service" "Ping Google" "Disconnect" "Exit")
+    submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "LAN Discovery" "Allowlist" "Flush IPTables" "Restart Service" "Ping Google" "Disconnect" "Exit")
     select ipt in "${submipt[@]}"
     do
         parent_menu
@@ -2814,9 +2858,14 @@ function iptables_menu {
                 change_setting "meshnet" "back"
                 iptables_status
                 ;;
-            "Whitelist")
+            "LAN Discovery")
                 echo
-                whitelist_setting "back"
+                change_setting "lan-discovery" "back"
+                iptables_status
+                ;;
+            "Allowlist")
+                echo
+                allowlist_setting "back"
                 iptables_status
                 ;;
             "Flush IPTables")
@@ -2860,7 +2909,8 @@ function iptables_menu {
                 ;;
             "Restart Service")
                 echo
-                echo -e "${WColor}Disconnect the VPN and restart nordvpn services.${Color_Off}"
+                echo -e "${WColor}Disconnect the VPN and restart nordvpn service.${Color_Off}"
+                echo "Restarting the service should recreate the Nord iptables rules."
                 echo
                 read -n 1 -r -p "Proceed? (y/n) "; echo
                 echo
@@ -2898,6 +2948,19 @@ function iptables_menu {
                 ;;
         esac
     done
+}
+function service_logs {
+    heading "Service Logs"
+    echo
+    echo -e "Generate log file: ${LColor}$nordlogfile${Color_Off}"
+    echo
+    read -n 1 -r -p "Proceed? (y/n) "; echo
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        journalctl -u nordvpnd > "$nordlogfile"
+        openlink "$nordlogfile" "ask"
+    fi
+    settings_menu
 }
 function rate_server {
     while true
@@ -3436,13 +3499,8 @@ function speedtest_menu {
     done
 }
 function tools_menu {
-    # $1 = parent menu name
     heading "Tools"
-    if [[ -n "$1" ]]; then
-        parent="$1"
-    else
-        parent="Main"
-    fi
+    parent="Main"
     if [[ "$connected" == "connected" ]]; then
         main_logo "stats_only"
         PS3=$'\n''Choose an option: '
@@ -3608,11 +3666,11 @@ function set_defaults_ask {
     parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         set_defaults
-        heading "Set Defaults: ${H2Color}Whitelist${H1Color}" "txt"
-        read -n 1 -r -p "Go to the Whitelist setting? (y/n) "; echo
+        heading "Set Defaults: ${H2Color}Allowlist${H1Color}" "txt"
+        read -n 1 -r -p "Go to the Allowlist setting? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            whitelist_setting "back"
+            allowlist_setting "back"
         fi
         heading "Set Defaults: ${H2Color}CustomDNS${H1Color}" "txt"
         read -n 1 -r -p "Go to the CustomDNS setting? (y/n) "; echo
@@ -3740,6 +3798,8 @@ function favorites_menu {
         fi
     fi
     readarray -t favoritelist < <( sort < "$nordfavoritesfile" )
+    rfavorite=$( printf '%s\n' "${favoritelist[ RANDOM % ${#favoritelist[@]} ]}" )
+    favoritelist+=( "Random" )
     if [[ "$connected" == "connected" ]]; then
         if grep -q "$server" "$nordfavoritesfile"; then
             echo -e "The Current Server is in the list:  ${FColor}$( grep "$server" "$nordfavoritesfile" )${Color_Off}"
@@ -3809,6 +3869,15 @@ function favorites_menu {
                 echo
                 favorites_menu
                 ;;
+            "Random")
+                heading "Random"
+                disconnect_vpn
+                echo "Connect to $rfavorite"
+                echo
+                nordvpn connect "$( echo "$rfavorite" | rev | cut -f1 -d'_' | rev )"
+                status
+                exit
+                ;;
             *)
                 if (( 1 <= REPLY )) && (( REPLY <= numfavorites )); then
                     # to handle more than one <underscore> in the entry
@@ -3868,10 +3937,10 @@ function settings_menu {
     heading "Settings"
     parent="Main"
     echo
-    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$wl$fst$sshi"
+    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$ld$al$fst$sshi"
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "Whitelist" "Account" "Restart" "Reset" "IPTables" "Tools" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN Discovery" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
@@ -3915,8 +3984,11 @@ function settings_menu {
             "Custom-DNS")
                 customdns_menu
                 ;;
-            "Whitelist")
-                whitelist_setting
+            "LAN Discovery")
+                landiscovery_setting
+                ;;
+            "Allowlist")
+                allowlist_setting
                 ;;
             "Account")
                 account_menu
@@ -3930,8 +4002,8 @@ function settings_menu {
             "IPTables")
                 iptables_menu
                 ;;
-            "Tools")
-                tools_menu "Settings"
+            "Logs")
+                service_logs
                 ;;
             "Script")
                 script_info
@@ -4061,7 +4133,7 @@ function main_menu {
     #
     PS3=$'\n''Choose an option: '
     #
-    mainmenu=( "Vancouver" "Seattle" "Los_Angeles" "Denver" "Atlanta" "US_Cities" "CA_Cities" "P2P-USA" "P2P-Canada" "Discord" "QuickConnect" "Random" "Favorites" "Countries" "Groups" "Settings" "Tools" "Meshnet" "Disconnect" "Exit" )
+    mainmenu=( "Vancouver" "Seattle" "Chicago" "Denver" "Atlanta" "US_Cities" "CA_Cities" "P2P-USA" "P2P-Canada" "Discord" "QuickConnect" "Random" "Favorites" "Countries" "Groups" "Settings" "Tools" "Meshnet" "Disconnect" "Exit" )
     #
     select opt in "${mainmenu[@]}"
     do
@@ -4079,9 +4151,9 @@ function main_menu {
                 status
                 break
                 ;;
-            "Los_Angeles")
+            "Chicago")
                 main_header
-                nordvpn connect Los_Angeles
+                nordvpn connect Chicago
                 status
                 break
                 ;;
