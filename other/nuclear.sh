@@ -9,8 +9,6 @@
 # List available versions with: "apt list -a nordvpn"
 #
 nord_version="nordvpn"              # install the latest version available
-#nord_version="nordvpn=3.14.0"      # 01 Jun 2022 CyberSec changed to "Threat Protection Lite"
-#nord_version="nordvpn=3.14.1"      # 13 Jun 2022 Fix for app freezing
 #nord_version="nordvpn=3.14.2"      # 28 Jul 2022 Works on Ubuntu 18.04, Mint 19.3
 #nord_version="nordvpn=3.15.0"      # 17 Oct 2022 Added login token, routing, fwmark, analytics
 #nord_version="nordvpn=3.15.1"      # 28 Nov 2022 Fix for older distros. Changes to "nordvpn status"
@@ -24,6 +22,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.16.3"      # 01 Jun 2023 OpenVPN security upgrade.
 #nord_version="nordvpn=3.16.4"      # 31 Jul 2023 Fix Port/subnet whitelist. Meshnet transfers
 #nord_version="nordvpn=3.16.5"      # 02 Aug 2023 Fix for GOCOVERDIR error in 3.16.4
+#nord_version="nordvpn=3.16.6"      # 19 Sep 2023 LAN Discovery added. Whitelist is now Allowlist
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -116,15 +115,26 @@ function loginnord {
         echo "sudo systemctl start nordvpnd.service"
         sudo systemctl start nordvpnd.service || exit
     fi
-    lbreak "Login"
     if [[ -n $logintoken ]]; then
+        lbreak "Login (token)"
         nordvpn login --token "$logintoken"
         wait
     else
+        lbreak "Login (browser)"
         nordvpn login
         echo
-        read -n 1 -r -p "Press any key after login is complete... "; echo
+        echo "Provide the Callback URL if necessary or"
+        echo "just hit Enter after login is complete."
+        echo
+        read -r -p "Callback URL: "; echo
+        echo
+        if [[ -n $REPLY ]]; then
+            nordvpn login --callback "$REPLY"
+            echo
+        fi
     fi
+    lbreak "Account"
+    nordvpn account
 }
 function flushtables {
     sudo iptables -S
@@ -182,16 +192,16 @@ else
     echo "$nord_version"
 fi
 echo
+echo -e "${LYellow}Login Token:${Color_Off}"
 if [[ -n $logintoken ]]; then
-    echo -e "${LYellow}Login Token:${Color_Off}"
     echo "$logintoken"
-    if [[ -n $expires ]]; then
-        echo
-        echo -e "${LYellow}Token Expires:${Color_Off}"
-        echo "$expires"
-    fi
     echo
+    echo -e "${LYellow}Token Expires:${Color_Off}"
+    echo "$expires"
+else
+    echo "No token. Log in with web browser."
 fi
+echo
 echo
 read -n 1 -r -p "Go nuclear? (y/n) "; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
