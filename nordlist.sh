@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.6 on Linux Mint 21.1
-# September 19, 2023
+# September 27, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -243,7 +243,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4122 (function main_menu).
+# The Main Menu starts on line 4157 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -277,6 +277,7 @@ function set_defaults {
     # - NordLynx is UDP only
     # - Obfuscate requires OpenVPN
     # - TPLite disables CustomDNS and vice versa
+    # - LAN Discovery will remove private subnets from Allowlist
     #
     # For each setting uncomment one of the two choices (or neither).
     #
@@ -320,6 +321,9 @@ function set_defaults {
     #
     #if [[ "$customdns" == "disabled" ]]; then nordvpn set dns $default_dns; fi
     if [[ "$customdns" != "disabled" ]]; then nordvpn set dns disabled; fi
+    #
+    #if [[ "$landiscovery" == "disabled" ]]; then nordvpn set lan-discovery enabled; fi
+    #if [[ "$landiscovery" == "enabled" ]]; then nordvpn set lan-discovery disabled; fi
     #
     echo
 }
@@ -1708,8 +1712,8 @@ function landiscovery_setting {
     echo "192.168.0.0/16  172.16.0.0/12  10.0.0.0/8  169.254.0.0/16"
     echo
     if [[ -n "${allowlist[*]}" ]]; then
-        echo -e "$al Note: Enabling local network discovery will remove any"
-        echo "manually added private subnets from the allowlist."
+        echo -e "$al Note: Enabling LAN Discovery will remove any manually-added"
+        echo "     private subnets from the allowlist."
         echo
     fi
     change_setting "lan-discovery"
@@ -2466,7 +2470,7 @@ function allowlist_setting {
     echo
     if [[ "$landiscovery" == "enabled" ]]; then
         echo -e "$ld Note: Allowlisting a private subnet is not available while"
-        echo -e "local network discovery is enabled."
+        echo -e "     LAN discovery is enabled."
         echo
     fi
     echo -e "${EColor}Current Settings:${Color_Off}"
@@ -2957,6 +2961,8 @@ function service_logs {
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "journalctl -u nordvpnd > $nordlogfile"
+        echo
         journalctl -u nordvpnd > "$nordlogfile"
         openlink "$nordlogfile" "ask"
     fi
@@ -3217,6 +3223,30 @@ function change_host {
     echo "(Does not affect 'Rate VPN Server')"
     echo
 }
+function wireguard_ks {
+    # Optional Linux iptables Kill Switch for WireGuard config files. (untested)
+    # https://unix.stackexchange.com/questions/733430/does-wireguard-postup-predown-really-work-as-a-kill-switch
+    # https://www.man7.org/linux/man-pages/man8/wg-quick.8.html
+    # https://www.ivpn.net/knowledgebase/linux/linux-wireguard-kill-switch/
+    # Allowlist LAN ip4 and ip6.  /u/sellibitze on reddit
+    #   https://old.reddit.com/r/WireGuard/comments/ekdi8w/wireguard_kill_switch_blocks_connection_to_nas/fda0ikp/
+    #
+    echo
+    read -n 1 -r -p "Add a Linux iptables Kill Switch? (untested) (y/n) "; echo
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    #
+cat << "EOF" >> "$wgfull"
+PostUp = iptables -I OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT
+PostUp = iptables -I OUTPUT -d 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16 -j ACCEPT
+PostUp = ip6tables -I OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL ! -d fc00::/7 -j REJECT
+PreDown = iptables -D OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT
+PreDown = iptables -D OUTPUT -d 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16 -j ACCEPT
+PreDown = ip6tables -D OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL ! -d fc00::/7 -j REJECT
+EOF
+    #
+    fi
+}
 function wireguard_gen {
     # Based on Tomba's NordLynx2WireGuard script
     # https://github.com/TomBayne/tombas-script-repo
@@ -3224,7 +3254,8 @@ function wireguard_gen {
     parent="Tools"
     echo "Generate a WireGuard config file from your currently active"
     echo "NordLynx connection.  Requires WireGuard/WireGuard-Tools."
-    echo "Commands require sudo.  Note: Keep your Private Key secure."
+    echo "Commands require sudo.  Optional iptables Kill Switch for use"
+    echo "on Linux systems only.  Note: Keep your Private Key secure."
     echo
     set_vars
     wgcity=$( echo "$city" | tr -d ' ' )
@@ -3278,21 +3309,25 @@ function wireguard_gen {
         publickey=$(sudo wg showconf nordlynx | grep 'PublicKey = .*')
         endpoint=$(sudo wg showconf nordlynx | grep 'Endpoint = .*')
         #
-        echo "# $server.nordvpn.com" > "$wgfull"
+        echo "# $server.nordvpn.com $ipaddr" > "$wgfull"
         echo "# $city $country" >> "$wgfull"
-        echo "# Server IP: $ipaddr" >> "$wgfull"
         echo >> "$wgfull"
         echo "[Interface]" >> "$wgfull"
         echo "Address = ${address}/32" >> "$wgfull"
         echo "${privatekey}" >> "$wgfull"
+        #
         echo "DNS = 103.86.96.100, 103.86.99.100" >> "$wgfull"  # Regular DNS
         # echo "DNS = 103.86.96.96, 103.86.99.99" >> "$wgfull"  # Threat Protection Lite DNS
+        #
+        wireguard_ks    # Prompt to add Linux iptables Kill Switch
+        #
         echo >> "$wgfull"
         echo "[Peer]" >> "$wgfull"
         echo "${endpoint}" >> "$wgfull"
         echo "${publickey}" >> "$wgfull"
         echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgfull"
         echo "PersistentKeepalive = 25" >> "$wgfull"
+        #
         echo
         echo -e "${EColor}Completed \u2705${Color_Off}" # unicode checkmark
         echo
@@ -4053,7 +4088,7 @@ function pause_vpn {
     echo
     echo -e "${FColor}Please do not close this window.${Color_Off}"
     echo
-    echo -e "Will connect to ${EColor}$pwhere${Color_Off} after $pminutes minutes."
+    echo -e "Will connect to ${EColor}$pwhere${Color_Off} after ${EColor}$pminutes${Color_Off} minutes."
     echo
     countdown_timer "$pseconds"
     heading "Reconnect"
