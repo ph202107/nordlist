@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.16.6 on Linux Mint 21.1
-# September 27, 2023
+# October 2, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -243,7 +243,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4157 (function main_menu).
+# The Main Menu starts on line 4158 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1122,8 +1122,7 @@ function host_connect {
     echo "latency, load, throughput, app compatibility, etc."
     echo -e "Modify ${LColor}function host_connect${Color_Off} to add test commands."
     echo
-    echo "A list of servers can be found in:"
-    echo "Settings - Tools - NordVPN API"
+    echo "A list of servers can be found in:  Tools - NordVPN API"
     echo
     echo -e "${FColor}(Leave blank to quit)${Color_Off}"
     echo
@@ -1206,7 +1205,6 @@ function group_connect {
     # $1 = Nord group name
     #
     parent="Group"
-    location=""
     case "$1" in
         "Obfuscated_Servers")
             heading "Obfuscated"
@@ -1226,6 +1224,7 @@ function group_connect {
             echo "Onion over VPN is a privacy solution that sends your "
             echo "internet traffic through a VPN server and then"
             echo "through the Onion network."
+            location=""
             ;;
         "P2P")
             heading "Peer to Peer"
@@ -3833,8 +3832,10 @@ function favorites_menu {
         fi
     fi
     readarray -t favoritelist < <( sort < "$nordfavoritesfile" )
-    rfavorite=$( printf '%s\n' "${favoritelist[ RANDOM % ${#favoritelist[@]} ]}" )
-    favoritelist+=( "Random" )
+    if (( "${#favoritelist[@]}" > 1 )); then
+        rfavorite=$( printf '%s\n' "${favoritelist[ RANDOM % ${#favoritelist[@]} ]}" )
+        favoritelist+=( "Random" )
+    fi
     if [[ "$connected" == "connected" ]]; then
         if grep -q "$server" "$nordfavoritesfile"; then
             echo -e "The Current Server is in the list:  ${FColor}$( grep "$server" "$nordfavoritesfile" )${Color_Off}"
