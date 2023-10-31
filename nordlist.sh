@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.16.6 on Linux Mint 21.1
-# October 2, 2023
+# Tested with NordVPN Version 3.16.7 on Linux Mint 21.1
+# October 31, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -214,8 +214,8 @@ fast5="n"
 fast6="n"       # "y" or "n"
 fast6p="UDP"    # specify the protocol.  fast6p="UDP" or fast6p="TCP"
 #
-# After choosing a country, automatically connect to the city if
-# there is only one choice.
+# When choosing a country from the 'Countries' menu, immediately
+# connect to that country instead of choosing a city.
 fast7="n"
 #
 # By default the [F] indicator will be set when any of the 'fast'
@@ -243,7 +243,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4158 (function main_menu).
+# The Main Menu starts on line 4154 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -253,12 +253,12 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 function allowlist_commands {
     # Add your allowlist configuration commands here.
     # Enter one command per line.
-    # allowlist_start (keep this line)
+    # allowlist_start (keep this line as-is)
     #
     #nordvpn allowlist remove all
     #nordvpn allowlist add subnet 192.168.1.0/24
     #
-    # allowlist_end (keep this line)
+    # allowlist_end (keep this line as-is)
     echo
 }
 function set_defaults {
@@ -985,7 +985,6 @@ function country_menu {
     heading "Countries"
     parent="Main"
     create_list "country"
-    numcountries=${#countrylist[@]}
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Countries with Obfuscation support"
         echo
@@ -999,16 +998,17 @@ function country_menu {
         elif [[ "$xcountry" == "Random" ]]; then
             xcountry="$rcountry"
             city_menu
-        elif (( 1 <= REPLY )) && (( REPLY <= numcountries )); then
+        elif (( 1 <= REPLY )) && (( REPLY <= ${#countrylist[@]} )); then
             city_menu
         else
-            invalid_option "$numcountries" "$parent"
+            invalid_option "${#countrylist[@]}" "$parent"
         fi
     done
 }
 function city_menu {
     # all available cities in $xcountry
-    # $1 = parent menu name
+    # $1 = parent menu name, disables fast7
+    #
     if [[ -n "$1" ]]; then
         parent="$1"
     else
@@ -1020,23 +1020,19 @@ function city_menu {
     fi
     heading "$xcountry"
     echo
-    if [[ "$obfuscate" == "enabled" ]]; then
-        echo -e "$ob Cities in $xcountry with Obfuscation support"
+    if [[ "$fast7" =~ ^[Yy]$ ]] && [[ -z "$1" ]]; then
+        echo -e "${FColor}[F]ast7 is enabled. Connect to the country instead of choosing a city.${Color_Off}"
         echo
-    fi
-    create_list "city"
-    numcities=${#citylist[@]}
-    if [[ "$numcities" == "2" ]] && [[ "$fast7" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}[F]ast7 is enabled.${Color_Off}"
-        echo
-        echo "Only one available city in $xcountry."
-        echo
-        echo -e "Connect to ${LColor}${citylist[0]}${Color_Off}."
-        echo
+        echo -e "Connect to ${LColor}$xcountry${Color_Off}."
         disconnect_vpn
         nordvpn connect "$xcountry"
         status
         exit
+    fi
+    create_list "city"
+    if [[ "$obfuscate" == "enabled" ]]; then
+        echo -e "$ob Cities in $xcountry with Obfuscation support"
+        echo
     fi
     PS3=$'\n''Connect to City: '
     select xcity in "${citylist[@]}"
@@ -1065,7 +1061,7 @@ function city_menu {
                 exit
                 ;;
             *)
-                if (( 1 <= REPLY )) && (( REPLY <= numcities )); then
+                if (( 1 <= REPLY )) && (( REPLY <= ${#citylist[@]} )); then
                     heading "$xcity"
                     disconnect_vpn
                     echo "Connect to $xcity $xcountry"
@@ -1074,7 +1070,7 @@ function city_menu {
                     status
                     exit
                 else
-                    invalid_option "$numcities" "$parent"
+                    invalid_option "${#citylist[@]}" "$parent"
                 fi
                 ;;
         esac
@@ -1697,7 +1693,9 @@ function ipv6_setting {
     heading "IPv6"
     echo "Enable or disable NordVPN IPv6 support."
     echo
-    echo "Also refer to: https://support.nordvpn.com/1047409212"
+    echo "Also refer to:"
+    echo "https://support.nordvpn.com/1047409212"
+    echo "https://forums.linuxmint.com/viewtopic.php?p=2387296#p2387296"
     echo
     change_setting "ipv6"
 }
@@ -3777,7 +3775,6 @@ function group_all_menu {
     heading "All Groups"
     parent="Group"
     create_list "group"
-    numgroups=${#grouplist[@]}
     echo "Groups that are available with"
     echo
     echo -e "Technology: $technologydc"
@@ -3791,7 +3788,7 @@ function group_all_menu {
         parent_menu
         if [[ "$xgroup" == "Exit" ]]; then
             main_menu
-        elif (( 1 <= REPLY )) && (( REPLY <= numgroups )); then
+        elif (( 1 <= REPLY )) && (( REPLY <= ${#grouplist[@]} )); then
             heading "$xgroup"
             disconnect_vpn
             echo "Connect to the $xgroup group."
@@ -3800,7 +3797,7 @@ function group_all_menu {
             status
             exit
         else
-            invalid_option "$numgroups" "$parent"
+            invalid_option "${#grouplist[@]}" "$parent"
         fi
     done
 }
@@ -3845,7 +3842,6 @@ function favorites_menu {
         fi
     fi
     favoritelist+=( "Add Server" "Edit File" "Exit" )
-    numfavorites=${#favoritelist[@]}
     PS3=$'\n''Connect to Server: '
     COLUMNS="$menuwidth"
     select xfavorite in "${favoritelist[@]}"
@@ -3915,7 +3911,7 @@ function favorites_menu {
                 exit
                 ;;
             *)
-                if (( 1 <= REPLY )) && (( REPLY <= numfavorites )); then
+                if (( 1 <= REPLY )) && (( REPLY <= ${#favoritelist[@]} )); then
                     # to handle more than one <underscore> in the entry
                     # reverse the text so the first field is the server and the rest is heading
                     heading "$( echo "$xfavorite" | rev | cut -f2- -d'_' | rev )"
@@ -3926,7 +3922,7 @@ function favorites_menu {
                     status
                     exit
                 else
-                    invalid_option "$numfavorites" "$parent"
+                    invalid_option "${#favoritelist[@]}" "$parent"
                 fi
                 ;;
         esac
