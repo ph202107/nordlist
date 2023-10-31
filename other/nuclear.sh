@@ -23,6 +23,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.16.4"      # 31 Jul 2023 Fix Port/subnet whitelist. Meshnet transfers
 #nord_version="nordvpn=3.16.5"      # 02 Aug 2023 Fix for GOCOVERDIR error in 3.16.4
 #nord_version="nordvpn=3.16.6"      # 19 Sep 2023 LAN Discovery added. Whitelist is now Allowlist
+#nord_version="nordvpn=3.16.7"      # 31 Oct 2023 Improved help, fixed Meshnet high CPU
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -39,7 +40,7 @@ function default_settings {
     # After installation is complete, these settings will be applied
     #
     #nordvpn set analytics disabled
-    #nordvpn whitelist add subnet 192.168.1.0/24
+    #nordvpn allowlist add subnet 192.168.1.0/24
     #
 }
 function lbreak {
