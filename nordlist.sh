@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.16.7 on Linux Mint 21.1
-# October 31, 2023
+# Tested with NordVPN Version 3.16.8 on Linux Mint 21.1
+# November 14, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -58,7 +58,7 @@
 #   These functions will ask for a sudo password:
 #   - function restart_service
 #   - function iptables_status
-#   - function iptables_menu "Flush IPTables"
+#   - function iptables_flush
 #   - function wireguard_gen
 #   - function customdns_menu "Flush DNS Cache"
 #
@@ -243,7 +243,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4154 (function main_menu).
+# The Main Menu starts on line 4152 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -774,9 +774,7 @@ function status {
             fi
         fi
         if [[ "$exitping" =~ ^[Yy]$ ]]; then
-            if [[ "$obfuscate" == "enabled" ]]; then
-                echo -e "$ob - Unable to ping Obfuscated Servers"
-            elif [[ "$technology" == "openvpn" ]]; then
+            if [[ "$technology" == "openvpn" ]]; then
                 echo -ne "$technologydc - Ping the External IP"
                 if [[ ! "$exitip" =~ ^[Yy]$ ]]; then
                     echo -ne " (Set ${FColor}exitip=\"y\"${Color_Off} to enable)"
@@ -793,7 +791,7 @@ function status {
     fi
     if [[ "$exitip" =~ ^[Yy]$ ]]; then
         ipinfo_curl
-        if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ "$obfuscate" != "enabled" ]] && [[ -n "$extip" ]]; then
+        if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ -n "$extip" ]]; then
             if [[ "$technology" == "openvpn" ]] || (( "$meshrouting" )); then
                 # ping the external IP when using OpenVPN or Meshnet Routing
                 ping_host "$extip" "stats" "External IP"
@@ -2619,7 +2617,7 @@ function account_menu {
     parent="Settings"
     echo
     PS3=$'\n''Choose an option: '
-    submacct=("Login Check" "Login (browser)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Nord Version" "Changelog" "Nord Manual" "Support" "NordAccount" "Exit")
+    submacct=("Login Check" "Login (browser)" "Login (token)" "Login (no GUI)" "Logout" "Account Info" "Register" "Changelog" "Nord Version" "Nord Manual" "Nord GitHub" "Nord Repo" "Support" "NordAccount" "Exit")
     select acc in "${submacct[@]}"
     do
         parent_menu
@@ -2662,10 +2660,6 @@ function account_menu {
                     nordvpn register
                 fi
                 ;;
-            "Nord Version")
-                echo
-                nordvpn --version
-                ;;
             "Changelog")
                 #zcat "$nordchangelog"
                 #zless +G "$nordchangelog"
@@ -2675,9 +2669,21 @@ function account_menu {
                 openlink "https://nordvpn.com/blog/nordvpn-linux-release-notes" "ask"
                 # https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
                 ;;
+            "Nord Version")
+                echo
+                nordvpn --version
+                ;;
             "Nord Manual")
                 echo
                 man nordvpn
+                ;;
+            "Nord GitHub")
+                echo
+                openlink "https://github.com/NordSecurity/nordvpn-linux" "ask"
+                ;;
+            "Nord Repo")
+                echo
+                openlink "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main" "ask"
                 ;;
             "Support")
                 heading "Support" "txt"
@@ -2752,7 +2758,7 @@ function reset_app {
     parent="Settings"
     echo
     echo "Reset the NordVPN app to default settings."
-    echo "Requires NordVPN username/password to reconnect."
+    echo "Requires NordVPN Account login to reconnect."
     echo -e "${WColor}"
     echo "Send commands:"
     echo "nordvpn set killswitch disabled"
@@ -2790,9 +2796,7 @@ function reset_app {
         echo
         restart_service "back"
         echo
-        nordvpn login
-        echo
-        read -n 1 -r -p "Press any key after login is complete... "; echo
+        login_check
         echo
         set_defaults_ask
     fi
@@ -2818,6 +2822,47 @@ function iptables_status {
     echo
     COLUMNS="$menuwidth"
 }
+function iptables_flush {
+    echo
+    echo -e "${WColor}Flush the IPTables and clear all of your Firewall rules.${Color_Off}"
+    echo
+    read -n 1 -r -p "Proceed? (y/n) "; echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo
+        echo "No changes made."
+        echo
+        return
+    fi
+    # https://www.cyberciti.biz/tips/linux-iptables-how-to-flush-all-rules.html
+    echo
+    echo -e "${LColor}IPTables Before:${Color_Off}"
+    sudo iptables -S
+    echo
+    echo -e "${WColor}Flushing the IPTables${Color_Off}"
+    # Accept all traffic first to avoid ssh lockdown
+    sudo iptables -P INPUT ACCEPT
+    sudo iptables -P FORWARD ACCEPT
+    sudo iptables -P OUTPUT ACCEPT
+    # Flush All Iptables Chains/Firewall rules
+    sudo iptables -F
+    # Delete all Iptables Chains
+    sudo iptables -X
+    # Flush all counters
+    sudo iptables -Z
+    # Flush and delete all nat and  mangle
+    sudo iptables -t nat -F
+    sudo iptables -t nat -X
+    sudo iptables -t mangle -F
+    sudo iptables -t mangle -X
+    sudo iptables -t raw -F
+    sudo iptables -t raw -X
+    echo
+    echo -e "${EColor}IPTables After:${Color_Off}"
+    sudo iptables -S
+    echo
+    echo -e "${FColor}Restart the service and reconnect to recreate the iptables rules.${Color_Off}"
+    echo
+}
 function iptables_menu {
     heading "IPTables"
     parent="Settings"
@@ -2826,7 +2871,7 @@ function iptables_menu {
     echo
     echo -e "${WColor}** WARNING **${Color_Off}"
     echo "  - This will CLEAR all of your Firewall rules"
-    echo "  - Review 'function iptables_menu' before use"
+    echo "  - Review 'function iptables_flush' before use"
     echo "  - Commands require 'sudo'"
     echo
     PS3=$'\n''Choose an option: '
@@ -2870,48 +2915,14 @@ function iptables_menu {
                 iptables_status
                 ;;
             "Flush IPTables")
-                echo
-                echo -e "${WColor}Flush the IPTables and clear all of your Firewall rules.${Color_Off}"
-                echo
-                read -n 1 -r -p "Proceed? (y/n) "; echo
-                if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    echo
-                    echo -e "${LColor}IPTables Before:${Color_Off}"
-                    sudo iptables -S
-                    echo
-                    echo -e "${WColor}Flushing the IPTables${Color_Off}"
-                    # https://www.cyberciti.biz/tips/linux-iptables-how-to-flush-all-rules.html
-                    # Accept all traffic first to avoid ssh lockdown
-                    sudo iptables -P INPUT ACCEPT
-                    sudo iptables -P FORWARD ACCEPT
-                    sudo iptables -P OUTPUT ACCEPT
-                    # Flush All Iptables Chains/Firewall rules
-                    sudo iptables -F
-                    # Delete all Iptables Chains
-                    sudo iptables -X
-                    # Flush all counters
-                    sudo iptables -Z
-                    # Flush and delete all nat and  mangle
-                    sudo iptables -t nat -F
-                    sudo iptables -t nat -X
-                    sudo iptables -t mangle -F
-                    sudo iptables -t mangle -X
-                    sudo iptables -t raw -F
-                    sudo iptables -t raw -X
-                    echo
-                    echo -e "${EColor}IPTables After:${Color_Off}"
-                    sudo iptables -S
-                    echo
-                else
-                    echo
-                    echo "No changes made."
-                    echo
-                fi
+                iptables_flush
                 ;;
             "Restart Service")
                 echo
-                echo -e "${WColor}Disconnect the VPN and restart nordvpn service.${Color_Off}"
-                echo "Restarting the service should recreate the Nord iptables rules."
+                echo "Restart the servive and reconnect the VPN to recreate the"
+                echo "Nord iptables rules."
+                echo
+                echo -e "${WColor}Disconnect the VPN and restart the nordvpn service.${Color_Off}"
                 echo
                 read -n 1 -r -p "Proceed? (y/n) "; echo
                 echo
@@ -3483,17 +3494,12 @@ function speedtest_menu {
                     echo
                 fi
                 if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]]; then
-                    if [[ "$obfuscate" == "enabled" ]]; then
-                        echo -e "$ob - Unable to ping Obfuscated Servers"
-                        echo
-                    else
-                        echo -e "$technologydc - Server IP will not respond to ping."
-                        echo "Attempt to ping your external IP instead."
-                        echo
-                        ipinfo_curl
-                        if [[ -n "$extip" ]]; then
-                            ping_host "$extip" "show"
-                        fi
+                    echo -e "$technologydc - Server IP will not respond to ping."
+                    echo "Attempt to ping your external IP instead."
+                    echo
+                    ipinfo_curl
+                    if [[ -n "$extip" ]]; then
+                        ping_host "$extip" "show"
                     fi
                 else
                     ping_host "$nordhost" "show"
@@ -3802,13 +3808,8 @@ function group_all_menu {
     done
 }
 function favorites_menu {
-    # $1 = parent menu name
     heading "Favorites"
-    if [[ -n "$1" ]]; then
-        parent="$1"
-    else
-        parent="Main"
-    fi
+    parent="Main"
     main_logo "stats_only"
     echo "Keep track of your favorite individual servers by adding them to"
     echo "this list. For example low ping servers or streaming servers."
@@ -3933,7 +3934,7 @@ function group_menu {
     parent="Main"
     echo
     PS3=$'\n''Choose a Group: '
-    submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Favorites" "Exit")
+    submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Exit")
     select grp in "${submgroups[@]}"
     do
         parent_menu
@@ -3952,9 +3953,6 @@ function group_menu {
                 ;;
             "P2P")
                 group_connect "P2P"
-                ;;
-            "Favorites")
-                favorites_menu "Group"
                 ;;
             "Exit")
                 main_menu
@@ -4358,11 +4356,6 @@ function start {
         echo
         echo -e "${WColor}** A NordVPN update is available **${Color_Off}"
         echo
-        echo -e "${LColor}Before updating:${Color_Off}"
-        echo "nordvpn set killswitch disabled"
-        echo "nordvpn set autoconnect disabled"
-        echo "nordvpn disconnect"
-        echo
         echo
         read -n 1 -s -r -p "Press any key for the menu... "; echo
         echo
@@ -4487,6 +4480,7 @@ start
 #
 # Disable IPv6
 #   https://support.nordvpn.com/Connectivity/Linux/1047409212/How-to-disable-IPv6-on-Linux.htm
+#   https://forums.linuxmint.com/viewtopic.php?p=2387296#p2387296
 #   Blocked by default:  https://nordvpn.com/blog/nordvpn-implements-ipv6-leak-protection
 #   May 2022 - IPv6 capable servers:  us9591 us9592 uk1875 uk1876
 #
