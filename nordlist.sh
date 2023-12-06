@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.16.8 on Linux Mint 21.1
-# November 14, 2023
+# Tested with NordVPN Version 3.16.9 on Linux Mint 21.1
+# December 6, 2023
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -47,9 +47,10 @@
 # "sudo apt install wireguard wireguard-tools speedtest-cli iperf3 highlight"
 #
 # For VPN On/Off status on the desktop I use the Linux Mint Cinnamon
-# applet "Bash Sensors".  Screenshot:
-# https://github.com/ph202107/nordlist/blob/main/screenshots
-# The config is in the "Notes" at the bottom of the script.
+# applet "Bash Sensors".  Highly recommended for Cinnamon DE users.
+# Screenshot: https://github.com/ph202107/nordlist/blob/main/screenshots
+# When the status icon is clicked, it will launch this script in a new
+# terminal. The config is in the "Notes" at the bottom of the script.
 #
 # =====================================================================
 # Sudo Usage
@@ -243,7 +244,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4152 (function main_menu).
+# The Main Menu starts on line 4125 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1769,6 +1770,24 @@ function obfuscate_setting {
     fi
     main_menu
 }
+function meshnet_prompt {
+    # $1 = "allow" - prompt allow/deny
+    # $1 = "enable" - prompt enable/disable
+    # $1 = "IP" - prompt for the public_key|hostname|IP
+    echo
+    if [[ "$1" == "allow" ]]; then
+        echo -e "Enter '${EColor}allow${Color_Off}' or '${DColor}deny${Color_Off}' and the public_key, hostname, or IP"
+        echo
+    elif [[ "$1" == "enable" ]]; then
+        echo -e "Enter '${EColor}enable${Color_Off}' or '${DColor}disable${Color_Off}' and the public_key, hostname, or IP"
+        echo
+    elif [[ "$1" == "IP" ]]; then
+        echo "Enter the public_key, hostname, or IP address."
+        echo
+    fi
+    echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+    echo
+}
 function meshnet_filter {
     heading "Peer Filter" "txt"
     parent="Meshnet"
@@ -1795,9 +1814,7 @@ function meshnet_filter {
                 echo "internal                  external"
                 echo "incoming-traffic-allowed  allows-incoming-traffic"
                 echo "routing-allowed           allows-routing"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt
                 read -r -p "nordvpn meshnet peer list --filter "
                 if [[ -n $REPLY ]]; then
                     heading "$REPLY" "txt"
@@ -1859,9 +1876,7 @@ function meshnet_invite {
                 echo "      Allow the peer access to the local network when routing. (default: false)"
                 echo "  --allow-peer-send-files"
                 echo "      Allow the peer to send you files. (default: false)"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt
                 read -r -p "nordvpn meshnet invite send "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -1886,9 +1901,7 @@ function meshnet_invite {
                 echo "      Allow the peer access to the local network when routing. (default: false)"
                 echo "  --allow-peer-send-files"
                 echo "      Allow the peer to send you files. (default: false)"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt
                 read -r -p "nordvpn meshnet invite accept "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -1903,9 +1916,7 @@ function meshnet_invite {
                 echo "Deny an invitation to join the inviter's mesh network."
                 echo
                 echo "Enter the email address to deny."
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt
                 read -r -p "nordvpn meshnet invite deny "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -1920,9 +1931,7 @@ function meshnet_invite {
                 echo "Revoke a sent invitation."
                 echo
                 echo "Enter the email address to revoke."
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt
                 read -r -p "nordvpn meshnet invite revoke "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -1981,9 +1990,7 @@ function meshnet_fileshare {
                 echo "List all the files within a transfer."
                 meshnet_transfers
                 echo "Enter the transfer id to list the individual files."
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt
                 read -r -p "nordvpn fileshare list "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -2005,9 +2012,7 @@ function meshnet_fileshare {
                 echo "Transfers will fail if there is a space in the path. (File not found)"
                 echo "Workaround: Copy the output command and paste it in a new terminal window."
                 #
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt
                 read -r -p "Enter the recipient public_key, hostname, or IP: " meshwhere
                 if [[ -n "$meshwhere" ]]; then
                     echo
@@ -2044,9 +2049,7 @@ function meshnet_fileshare {
                 meshnet_transfers "incoming"
                 echo -e "Enter the transfer id to ${EColor}accept${Color_Off} or specify"
                 echo "individual files with: <id> <file1> <file2>...​"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt
                 read -r -p "nordvpn fileshare accept --path '$meshnetdir' --background "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -2064,11 +2067,7 @@ function meshnet_fileshare {
                 echo
                 echo -e "${WColor}Note:${Color_Off} Automatic file transfers will download to"
                 echo "\$XDG_DOWNLOAD_DIR ($XDG_DOWNLOAD_DIR) or \$HOME/Downloads ($HOME/Downloads)"
-                echo
-                echo "Enter 'enable' or 'disable' and the public_key, hostname, or IP"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt "enable"
                 read -r -p "nordvpn meshnet peer auto-accept "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -2084,9 +2083,7 @@ function meshnet_fileshare {
                 meshnet_transfers
                 echo -e "Enter the transfer id to ${DColor}cancel${Color_Off} or specify"
                 echo "individual files with: <id> <file1> <file2>...​"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt
                 read -r -p "nordvpn fileshare cancel "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -2179,11 +2176,7 @@ function meshnet_menu {
             "Peer Remove")
                 heading "Peer Remove" "txt"
                 echo "Remove a peer from the meshnet."
-                echo
-                echo "Enter the public_key, hostname, or IP address."
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt "IP"
                 read -r -p "nordvpn meshnet peer remove "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -2197,11 +2190,7 @@ function meshnet_menu {
                 heading "Peer Incoming" "txt"
                 echo "Peers under the same account are automatically added to the meshnet."
                 echo "Allow or Deny a meshnet peer's incoming traffic to this device."
-                echo
-                echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt "allow"
                 read -r -p "nordvpn meshnet peer incoming "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -2214,11 +2203,7 @@ function meshnet_menu {
             "Peer Routing")
                 heading "Peer Routing" "txt"
                 echo "Allow or Deny a meshnet peer routing traffic through this device."
-                echo
-                echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt "allow"
                 read -r -p "nordvpn meshnet peer routing "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -2232,11 +2217,7 @@ function meshnet_menu {
                 heading "Peer Local" "txt"
                 echo "Allow or Deny access to your local network when a peer is"
                 echo "routing traffic through this device."
-                echo
-                echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt "allow"
                 read -r -p "nordvpn meshnet peer local "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -2249,11 +2230,7 @@ function meshnet_menu {
             "Peer FileShare")
                 heading "Peer FileShare" "txt"
                 echo "Allow or Deny file sharing with a peer."
-                echo
-                echo "Enter 'allow' or 'deny' and the public_key, hostname, or IP"
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt "allow"
                 read -r -p "nordvpn meshnet peer fileshare "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -2270,15 +2247,11 @@ function meshnet_menu {
                 echo
                 echo "You can route your traffic through one device at a time"
                 echo "and only while using the NordLynx connection protocol."
-                echo
                 if [[ "$technology" != "nordlynx" ]]; then
-                    echo -e "Currently using $technologydc."
                     echo
+                    echo -e "Currently using $technologydc."
                 fi
-                echo "Enter the public_key, hostname, or IP address."
-                echo
-                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
-                echo
+                meshnet_prompt "IP"
                 read -r -p "nordvpn meshnet peer connect "
                 if [[ -n $REPLY ]]; then
                     echo
@@ -2430,7 +2403,7 @@ function customdns_menu {
                 read -r -p "Hit 'Enter' for [$default_dnshost]: " testhost
                 testhost=${testhost:-$default_dnshost}
                 echo
-                echo -e "${EColor}dig @<DNS> $testhost${Color_Off}"
+                echo -e "${EColor}timeout 5 dig @<DNS> $testhost${Color_Off}"
                 for i in "${submcdns[@]}"
                 do
                     dnsheader=$( echo "$i" | cut -f1 -d' ' )
@@ -2541,7 +2514,7 @@ function login_check {
 function login_token {
     heading "Login (token)" "txt"
     echo "To create a token, login to your Nord Account and navigate to:"
-    echo "Services - NordVPN - Access Token - Generate New Token"
+    echo "Services - NordVPN - Manual Setup - Generate New Token"
     echo
     openlink "https://my.nordaccount.com/" "ask"
     echo
@@ -2698,8 +2671,8 @@ function account_menu {
                 echo -e "${H2Color}Privacy Policy${Color_Off}"
                 echo "https://my.nordaccount.com/legal/privacy-policy/"
                 echo
-                echo -e "${H2Color}Warrant Canary (bottom of page)${Color_Off}"
-                echo "https://nordvpn.com/security-efforts/"
+                echo -e "${H2Color}Warrant Canary${Color_Off}"
+                echo "https://nordvpn.com/blog/nordvpn-introduces-a-warrant-canary/"
                 echo
                 echo -e "${H2Color}Bug Bounty${Color_Off}"
                 echo "https://hackerone.com/nordsecurity?type=team"
@@ -2919,7 +2892,7 @@ function iptables_menu {
                 ;;
             "Restart Service")
                 echo
-                echo "Restart the servive and reconnect the VPN to recreate the"
+                echo "Restart the service and reconnect the VPN to recreate the"
                 echo "Nord iptables rules."
                 echo
                 echo -e "${WColor}Disconnect the VPN and restart the nordvpn service.${Color_Off}"
@@ -2969,7 +2942,7 @@ function service_logs {
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "journalctl -u nordvpnd > $nordlogfile"
+        echo "journalctl -u nordvpnd > '$nordlogfile'"
         echo
         journalctl -u nordvpnd > "$nordlogfile"
         openlink "$nordlogfile" "ask"
@@ -4428,7 +4401,7 @@ start
 # Nord Account login without a GUI
 #   nordvpn login --token <token>
 #   To create a token, login to your Nord Account and navigate to:
-#   Services - NordVPN - Access Token - Generate New Token
+#   Services - NordVPN - Manual Setup - Generate New Token
 #
 #   'man nordvpn' Note 2
 #   SSH = in the SSH session connected to the device
