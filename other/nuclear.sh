@@ -9,25 +9,27 @@
 # List available versions with: "apt list -a nordvpn"
 #
 nord_version="nordvpn"              # install the latest version available
-#nord_version="nordvpn=3.14.2"      # 28 Jul 2022 Works on Ubuntu 18.04, Mint 19.3
-#nord_version="nordvpn=3.15.0"      # 17 Oct 2022 Added login token, routing, fwmark, analytics
+#nord_version="nordvpn=3.14.2"      # 29 Jul 2022 Works on Ubuntu 18.04, Mint 19.3
+#nord_version="nordvpn=3.15.0"      # 18 Oct 2022 Added login token, routing, fwmark, analytics
 #nord_version="nordvpn=3.15.1"      # 28 Nov 2022 Fix for older distros. Changes to "nordvpn status"
 #nord_version="nordvpn=3.15.2"      # 06 Dec 2022 Fix for meshnet unavailable
-#nord_version="nordvpn=3.15.3"      # 28 Dec 2022 Fix for crash after suspend
+#nord_version="nordvpn=3.15.3"      # 29 Dec 2022 Fix for crash after suspend
 #nord_version="nordvpn=3.15.4"      # 26 Jan 2023 Faster meshnet connections
 #nord_version="nordvpn=3.15.5"      # 20 Feb 2023 Fix for Meshnet connectivity issue
-#nord_version="nordvpn=3.16.0"      # 10 Mar 2023 Additional Meshnet features
-#nord_version="nordvpn=3.16.1"      # 24 Mar 2023 Fix for OpenVPN on Fedora
-#nord_version="nordvpn=3.16.2"      # 24 Apr 2023 Legacy logins removed. Meshnet notifications
+#nord_version="nordvpn=3.16.0"      # 13 Mar 2023 Additional Meshnet features
+#nord_version="nordvpn=3.16.1"      # 28 Mar 2023 Fix for OpenVPN on Fedora
+#nord_version="nordvpn=3.16.2"      # 26 Apr 2023 Legacy logins removed. Meshnet notifications
 #nord_version="nordvpn=3.16.3"      # 01 Jun 2023 OpenVPN security upgrade.
 #nord_version="nordvpn=3.16.4"      # 31 Jul 2023 Fix Port/subnet whitelist. Meshnet transfers
 #nord_version="nordvpn=3.16.5"      # 02 Aug 2023 Fix for GOCOVERDIR error in 3.16.4
-#nord_version="nordvpn=3.16.6"      # 19 Sep 2023 LAN Discovery added. Whitelist is now Allowlist
+#nord_version="nordvpn=3.16.6"      # 18 Sep 2023 LAN Discovery added. Whitelist is now Allowlist
 #nord_version="nordvpn=3.16.7"      # 31 Oct 2023 Improved help, fixed Meshnet high CPU
+#nord_version="nordvpn=3.16.8"      # 14 Nov 2023 Improved Meshnet speeds
+#nord_version="nordvpn=3.16.9"      # 06 Dec 2023 Minor tweaks and fixes
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
-# Services - NordVPN - Access Token - Generate New Token
+# Services - NordVPN - Manual Setup - Generate New Token
 logintoken=""
 expires="Permanent"
 #
