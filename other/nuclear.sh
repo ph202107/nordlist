@@ -37,7 +37,7 @@ nordchangelog="/usr/share/doc/nordvpn/changelog.gz"
 #
 #
 function default_settings {
-    lbreak "Apply Default Settings"
+    linebreak "Apply Default Settings"
     #
     # After installation is complete, these settings will be applied
     #
@@ -45,85 +45,94 @@ function default_settings {
     #nordvpn allowlist add subnet 192.168.1.0/24
     #
 }
-function lbreak {
+function linecolor {
+    # echo a colored line of text
+    # $1=color  $2=text
+    case $1 in
+        "green")   echo -e "\033[0;92m$2\033[0m";;  # light green
+        "yellow")  echo -e "\033[0;93m$2\033[0m";;  # light yellow
+        "cyan")    echo -e "\033[0;96m$2\033[0m";;  # light cyan
+        "red")     echo -e "\033[1;31m$2\033[0m";;  # bold red
+    esac
+}
+function linebreak {
     # break up wall of text
     echo
-    echo -e "${LYellow}==========================="
-    echo -e "$1${Color_Off}"
+    linecolor "yellow" "==========================="
+    linecolor "yellow" "$1"
     echo
 }
 function trashnord {
-    lbreak "Password"
+    linebreak "Password"
     sudo echo "OK"
-    lbreak "Quit Nord & Stop Service"
+    linebreak "Quit Nord & Stop Service"
     nordvpn set killswitch disabled
     nordvpn disconnect
     if nordvpn logout --help | grep -q -i "persist-token"; then
-        echo -e "${LGreen}(nordvpn logout --persist-token)${Color_Off}"
+        linecolor "cyan" "nordvpn logout --persist-token"
         nordvpn logout --persist-token
     else
-        echo -e "${LGreen}(nordvpn logout)${Color_Off}"
+        linecolor "cyan" "nordvpn logout"
         nordvpn logout
     fi
     wait
     sudo systemctl stop nordvpnd.service
     sudo systemctl stop nordvpn.service
     wait
-    lbreak "Flush iptables"
+    linebreak "Flush iptables"
     flushtables
-    lbreak "Purge nordvpn"
+    linebreak "Purge nordvpn"
     sudo apt autoremove --purge nordvpn -y
-    lbreak "Remove Folders"
-    # ======================================
-    sudo rm -rf -v /var/lib/nordvpn
-    sudo rm -rf -v /var/run/nordvpn
+    linebreak "Remove Folders"
+    # =================================================================
+    sudo rm -rf -v "/var/lib/nordvpn"
+    sudo rm -rf -v "/var/run/nordvpn"
     rm -rf -v "/home/$USER/.config/nordvpn"
-    # ======================================
+    # =================================================================
 }
 function installnord {
-    lbreak "Add Repo"
+    linebreak "Add Repo"
     if [[ -e /etc/apt/sources.list.d/nordvpn.list ]]; then
-        echo -e "${LGreen}NordVPN repository found.${Color_Off}"
+        linecolor "green" "NordVPN repository found."
     else
-        echo -e "${LGreen}Adding the NordVPN repository.${Color_Off}"
+        linecolor "green" "Adding the NordVPN repository."
         echo
         cd "/home/$USER/Downloads" || exit
         wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
         echo
         sudo apt install "/home/$USER/Downloads/nordvpn-release_1.0.0_all.deb" -y
-        # or: sudo dpkg -i "/home/$USER/Downloads/nordvpn-release_1.0.0_all.deb" -y
     fi
-    lbreak "Apt Update"
+    linebreak "Apt Update"
     sudo apt update
-    lbreak "Install $nord_version"
+    linebreak "Install $nord_version"
     sudo apt install $nord_version -y
     wait
 }
 function loginnord {
-    lbreak "Check Group"
+    linebreak "Check Group"
     if id -nG "$USER" | grep -qw "nordvpn"; then
-        echo -e "${LGreen}$USER belongs to the 'nordvpn' group${Color_Off}"
+        linecolor "green" "$USER belongs to the 'nordvpn' group"
     else
         # for first-time installation (might also require reboot)
-        echo -e "${BRed}$USER does not belong to the 'nordvpn' group${Color_Off}"
-        echo -e "${LGreen}sudo usermod -aG nordvpn $USER ${Color_Off}"
+        linecolor "red" "$USER does not belong to the 'nordvpn' group"
+        linecolor "cyan" "Trying: sudo usermod -aG nordvpn $USER"
         sudo usermod -aG nordvpn "$USER"
-        echo "(May need to logout or reboot)"
+        linecolor "yellow" "(May need to logout or reboot)"
     fi
-    lbreak "Check Service"
+    linebreak "Check Service"
     if systemctl is-active --quiet nordvpnd; then
-        echo -e "${LGreen}nordvpnd.service is active${Color_Off}"
+        linecolor "green" "nordvpnd.service is active"
     else
-        echo -e "${LGreen}Starting the service... ${Color_Off}"
-        echo "sudo systemctl start nordvpnd.service"
+        linecolor "green" "Starting the service..."
+        linecolor "cyan" "Trying: sudo systemctl start nordvpnd.service"
         sudo systemctl start nordvpnd.service || exit
     fi
     if [[ -n $logintoken ]]; then
-        lbreak "Login (token)"
+        linebreak "Login (token)"
         nordvpn login --token "$logintoken"
         wait
     else
-        lbreak "Login (browser)"
+        linebreak "Login (browser)"
         nordvpn login
         echo
         echo "Provide the Callback URL if necessary or"
@@ -132,16 +141,17 @@ function loginnord {
         read -r -p "Callback URL: "; echo
         echo
         if [[ -n $REPLY ]]; then
+            linecolor "cyan" "nordvpn login --callback '$REPLY'"
             nordvpn login --callback "$REPLY"
             echo
         fi
     fi
-    lbreak "Account"
+    linebreak "Account"
     nordvpn account
 }
 function flushtables {
     sudo iptables -S
-    echo -e "${BRed}** Flush **${Color_Off}"
+    linecolor "red" "*** Flush ***"
     # https://www.cyberciti.biz/tips/linux-iptables-how-to-flush-all-rules.html
     # Accept all traffic first to avoid ssh lockdown
     sudo iptables -P INPUT ACCEPT
@@ -164,42 +174,37 @@ function flushtables {
     sudo iptables -S
 }
 function changelog {
-    lbreak "Changelog"
-    echo -e "${LGreen}$nordchangelog${Color_Off}"
+    linebreak "Changelog"
+    linecolor "green" "$nordchangelog"
     echo
     zcat "$nordchangelog" | head -n 15
     echo
-    echo -e "${LGreen}https://nordvpn.com/blog/nordvpn-linux-release-notes/${Color_Off}"
+    linecolor "green" "https://nordvpn.com/blog/nordvpn-linux-release-notes/"
 }
 #
-LYellow='\033[0;93m'
-LGreen='\033[0;92m'
-BRed='\033[1;31m'
-Color_Off='\033[0m'
-#
 clear -x
-echo -e "${BRed}"
+echo
 if command -v figlet &> /dev/null; then
-    figlet -f slant NUCLEAR
+    linecolor "red" "$(figlet -f slant NUCLEAR)"
 else
-    echo "///  NUCLEAR   ///"
+    linecolor "red" "///  NUCLEAR   ///"
 fi
-echo -e "${Color_Off}"
-echo -e "${LGreen}Currently installed:${Color_Off}"
+echo
+linecolor "green" "Currently installed:"
 nordvpn --version
 echo
-echo -e "${LGreen}Version to install:${Color_Off}"
+linecolor "green" "Version to install:"
 if [[ "$nord_version" == "nordvpn" ]]; then
     echo "$nord_version  (latest available)"
 else
     echo "$nord_version"
 fi
 echo
-echo -e "${LYellow}Login Token:${Color_Off}"
+linecolor "yellow" "Login Token:"
 if [[ -n $logintoken ]]; then
     echo "$logintoken"
     echo
-    echo -e "${LYellow}Token Expires:${Color_Off}"
+    linecolor "yellow" "Token Expires:"
     echo "$expires"
 else
     echo "No token. Log in with web browser."
@@ -207,6 +212,7 @@ fi
 echo
 echo
 read -n 1 -r -p "Go nuclear? (y/n) "; echo
+echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     trashnord
     installnord
@@ -214,17 +220,17 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     default_settings
     changelog
 else
-    lbreak
-    echo -e "${BRed}*** ABORT ***${Color_Off}"
+    linebreak
+    linecolor "red" "*** ABORT ***"
     echo
 fi
-lbreak "nordvpn settings"
+linebreak "nordvpn settings"
 nordvpn settings
-lbreak "nordvpn status"
+linebreak "nordvpn status"
 nordvpn status
-lbreak "\n${LGreen}Completed \u2705" # unicode checkmark
+linebreak "\n$(linecolor "green" "Completed \u2705")" # unicode checkmark
 nordvpn --version
-lbreak
+linebreak
 #
 # Alternate install method:
 #  sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
