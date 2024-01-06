@@ -1,14 +1,15 @@
 ![Screenshot](https://github.com/ph202107/nordlist/blob/main/screenshots/1-main.menu.png)
 
 Unofficial bash script to use with the NordVPN Linux CLI.  
-Requires bash version 4 or greater.  
-Tested with Linux Mint only (Debian/Ubuntu base).   
-Fully customizable.     
+Tested on Linux Mint with gnome-terminal and Bash v5.   
+Should work fine on Ubuntu but is not tested with other distros.  
+Fully customizable.  
 Screenshots available in "screenshots" folder.  
+This script was made for personal use, there is no affiliation with NordVPN.
 
 To download:
 - https://github.com/ph202107/nordlist/archive/refs/heads/main.zip
-- Or: Click on the green "Code" icon above and choose "Download Zip" 
+- Or click on the green "Code" icon above and choose "Download Zip"
 - Extract "nordlist.sh"  
 
 Then:   
