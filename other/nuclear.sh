@@ -26,6 +26,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.16.7"      # 31 Oct 2023 Improved help, fixed Meshnet high CPU
 #nord_version="nordvpn=3.16.8"      # 14 Nov 2023 Improved Meshnet speeds
 #nord_version="nordvpn=3.16.9"      # 06 Dec 2023 Minor tweaks and fixes
+#nord_version="nordvpn=3.17.0"      # 16 Jan 2024 Meshnet peer rename, clear transfer history
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -33,7 +34,7 @@ nord_version="nordvpn"              # install the latest version available
 logintoken=""
 expires="Permanent"
 #
-nordchangelog="/usr/share/doc/nordvpn/changelog.gz"
+nordchangelog="/usr/share/doc/nordvpn/changelog.Debian.gz"
 #
 #
 function default_settings {
