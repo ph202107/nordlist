@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.17.0 on Linux Mint 21.1
-# January 16, 2024
+# Tested with NordVPN Version 3.17.1 on Linux Mint 21.3
+# February 12, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -30,7 +30,8 @@
 # 3) To generate ASCII images and to use NordVPN API functions
 #       these small programs are required
 #       eg. "sudo apt install figlet lolcat curl jq"
-# 4) At the terminal type "nordlist.sh"
+# 4) At the terminal run "nordlist.sh"
+#       (Or "./nordlist.sh" from the directory if it's not in $PATH)
 #
 # =====================================================================
 # Other Programs Used
@@ -89,7 +90,7 @@ torwhere=""
 # When obfuscate is enabled, the location must support obfuscation.
 acwhere=""
 #
-# Specify your Custom DNS servers with a description.
+# Specify your Custom-DNS servers with a description.
 # Can specify up to 3 IP addresses separated by a space.
 default_dns="103.86.96.100 103.86.99.100"; dnsdesc="Nord"
 #
@@ -164,9 +165,13 @@ exitload="n"
 # Requires 'curl'.  Connects to ipinfo.io.
 exitip="n"
 #
-# Reload the "Bash-Sensors" applet when the script exits.  "y" or "n"
-# This setting only for the Cinnamon DE with "Bash Sensors" installed.
-exitapplet="n"
+# Reload the "Bash Sensors" Cinnamon applet when the script exits.
+# Only for the Cinnamon DE with "Bash Sensors" installed. "y" or "n"
+exitappletb="n"
+#
+# Reload the "Network Manager" Cinnamon applet when the script exits.
+# This removes duplicate "nordlynx" entries from the applet. "y" or "n"
+exitappletn="n"
 #
 # Open http links in a new Firefox window.  "y" or "n"
 # Choose "n" to use the default browser or method.
@@ -201,7 +206,7 @@ fast1="n"
 #
 # Automatically change these settings without prompting:  Firewall,
 # Routing, Analytics, KillSwitch, TPLite, Notify, AutoConnect, IPv6,
-# LAN Discovery
+# LAN-Discovery
 fast2="n"
 #
 # Automatically change these settings which also disconnect the VPN:
@@ -250,7 +255,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4218 (function main_menu).
+# The Main Menu starts on line 4239 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -284,7 +289,7 @@ function set_defaults {
     # - NordLynx is UDP only
     # - Obfuscate requires OpenVPN
     # - TPLite disables CustomDNS and vice versa
-    # - LAN Discovery will remove private subnets from Allowlist
+    # - LAN-Discovery will remove private subnets from Allowlist
     #
     # For each setting uncomment one of the two choices (or neither).
     #
@@ -821,9 +826,17 @@ function status {
     echo
 }
 function reload_applet {
-    # reload the "Bash Sensors" Linux Mint Cinnamon applet
-    if [[ "$exitapplet" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
+    # reload Cinnamon Desktop applets
+    #
+    if (( "$usingssh" )); then return; fi
+    if [[ "$exitappletb" =~ ^[Yy]$ ]]; then
+        # reload 'bash-sensors@pkkk'
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+        wait
+    fi
+    if [[ "$exitappletn" =~ ^[Yy]$ ]]; then
+        # reload 'network@cinnamon.org' (to remove extra 'nordlynx' entries)
+        dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'network@cinnamon.org' string:'APPLET'
         wait
     fi
 }
@@ -1471,7 +1484,9 @@ function change_setting {
     # $1 = Nord command
     # $2 = "back" - ignore fast2, return
     #
-    parent="Settings"
+    if [[ "$2" != "back" ]]; then
+        parent="Settings"
+    fi
     chgloc=""
     case "$1" in
         "firewall")
@@ -1502,7 +1517,7 @@ function change_setting {
             chgname="Meshnet"; chgvar="$meshnet"; chgind="$mn"
             ;;
         "lan-discovery")
-            chgname="LAN Discovery"; chgvar="$landiscovery"; chgind="$ld"
+            chgname="LAN-Discovery"; chgvar="$landiscovery"; chgind="$ld"
             ;;
         *)
             echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo
@@ -1669,15 +1684,15 @@ function killswitch_setting {
 }
 function tplite_setting {
     heading "TPLite"
-    echo "Threat Protection Lite is a feature protecting you"
-    echo "from ads, unsafe connections, and malicious sites."
-    echo "Previously known as 'CyberSec'."
+    echo "Threat Protection Lite is a feature protecting you from ads, unsafe"
+    echo "connections, and malicious sites. Previously known as CyberSec."
+    echo "Uses the Nord Threat Protection Lite DNS 103.86.96.96 103.86.99.99"
     echo
-    echo -e "Enabling TPLite disables Custom DNS $dns"
     if [[ "$customdns" != "disabled" ]]; then
-        echo "Current $dns_servers"
+        echo -e "$dns Note: Enabling TPLite disables Custom-DNS"
+        echo "      Current $dns_servers"
+        echo
     fi
-    echo
     change_setting "threatprotectionlite"
 }
 function notify_setting {
@@ -1708,22 +1723,23 @@ function ipv6_setting {
     echo "Enable or disable NordVPN IPv6 support."
     echo
     echo "Also refer to:"
-    echo "https://support.nordvpn.com/1047409212"
-    echo "https://forums.linuxmint.com/viewtopic.php?p=2387296#p2387296"
+    echo "https://support.nordvpn.com/hc/en-us/articles/20164669224337"
+    # echo "https://forums.linuxmint.com/viewtopic.php?p=2387296#p2387296"
+    # using grub entries may cause connection error in 3.17.1  https://github.com/NordSecurity/nordvpn-linux/issues/243
     echo
     change_setting "ipv6"
 }
 function landiscovery_setting {
-    heading "LAN Discovery"
+    heading "LAN-Discovery"
     echo
-    echo "Access your local network while connected to a VPN, routing traffic"
-    echo "through a Meshnet device, or with the Kill Switch enabled."
+    echo "Access printers, TVs, and other devices on your LAN while connected to"
+    echo "the VPN, using Meshnet traffic routing, or with the Kill Switch enabled."
     echo
     echo "Automatically allow traffic from these subnets:"
     echo "192.168.0.0/16  172.16.0.0/12  10.0.0.0/8  169.254.0.0/16"
     echo
     if [[ -n "${allowlist[*]}" ]]; then
-        echo -e "$al Note: Enabling LAN Discovery will remove any manually-added"
+        echo -e "$al Note: Enabling LAN-Discovery will remove any manually-added"
         echo "     private subnets from the allowlist."
         echo
     fi
@@ -2056,7 +2072,7 @@ function meshnet_fileshare {
                 echo "Workaround: Copy the output command and paste it in a new terminal window."
                 #
                 meshnet_prompt
-                read -r -p "Enter the recipient hostname|nickname>|IP|pubkey: " meshwhere
+                read -r -p "Enter the recipient hostname|nickname|IP|pubkey: " meshwhere
                 if [[ -n "$meshwhere" ]]; then
                     echo
                     echo "Enter the full paths and filenames, or try dragging the"
@@ -2143,7 +2159,6 @@ function meshnet_fileshare {
                 echo "Accept or Decline file transfers directly from the notification."
                 echo
                 change_setting "notify" "back"
-                parent="Meshnet"
                 ;;
             "Online Peers")
                 heading "Online Peers" "txt"
@@ -2385,21 +2400,23 @@ function customdns_menu {
     parent="Settings"
     echo "The NordVPN app automatically uses NordVPN DNS servers"
     echo "to prevent DNS leaks. (103.86.96.100 and 103.86.99.100)"
-    echo "You can specify your own Custom DNS servers instead."
+    echo "You can specify your own Custom-DNS servers instead."
     echo
-    echo -e "Enabling Custom DNS disables TPLite $tp"
-    echo
+    if [[ "$tplite" == "enabled" ]]; then
+        echo -e "$tp Note: Enabling Custom-DNS disables TPLite"
+        echo
+    fi
     if [[ "$customdns" == "disabled" ]]; then
-        echo -e "$dns Custom DNS is ${DColor}disabled${Color_Off}."
+        echo -e "$dns Custom-DNS is ${DColor}disabled${Color_Off}."
     else
-        echo -e "$dns Custom DNS is ${EColor}enabled${Color_Off}."
+        echo -e "$dns Custom-DNS is ${EColor}enabled${Color_Off}."
         echo "Current $dns_servers"
     fi
     echo
     PS3=$'\n''Choose an option: '
     # Note submcdns[@] - new entries should keep the same format for the "Test Servers" option
     # eg Name<space>DNS1<space>DNS2
-    submcdns=("Nord 103.86.96.100 103.86.99.100" "Nord-TPLite 103.86.96.96 103.86.99.99" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "AdGuard 94.140.14.14 94.140.15.15" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom DNS" "Flush DNS Cache" "Test Servers" "Exit")
+    submcdns=("Nord 103.86.96.100 103.86.99.100" "Nord-TPLite 103.86.96.96 103.86.99.99" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "AdGuard 94.140.14.14 94.140.15.15" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom-DNS" "Flush DNS Cache" "Test Servers" "Exit")
     select cdns in "${submcdns[@]}"
     do
         parent_menu
@@ -2450,7 +2467,7 @@ function customdns_menu {
                 # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1 8.8.8.8"
                 nordvpn set dns $dns3srvrs
                 ;;
-            "Disable Custom DNS")
+            "Disable Custom-DNS")
                 echo
                 nordvpn set dns disabled; wait
                 echo
@@ -2511,7 +2528,7 @@ function allowlist_setting {
     echo
     if [[ "$landiscovery" == "enabled" ]]; then
         echo -e "$ld Note: Allowlisting a private subnet is not available while"
-        echo -e "     LAN discovery is enabled."
+        echo -e "     LAN-Discovery is enabled."
         echo
     fi
     echo -e "${EColor}Current Settings:${Color_Off}"
@@ -2711,7 +2728,7 @@ function account_menu {
                 #zless +G "$nordchangelog"
                 # version numbers are not in order (latest release != last entry)
                 echo
-                zless -p"$( nordvpn --version | cut -f3 -d' ' )" "$nordchangelog"
+                zless -p"\($(nordvpn --version | cut -f3 -d' ')\)" "$nordchangelog"
                 openlink "https://nordvpn.com/blog/nordvpn-linux-release-notes" "ask"
                 # https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
                 ;;
@@ -2855,7 +2872,7 @@ function iptables_status {
     echo -e "$rt Routing is $routingc."
     echo -e "$ks The Kill Switch is $killswitchc."
     echo -e "$mn Meshnet is $meshnetc."
-    echo -e "$ld LAN Discovery is $landiscoveryc."
+    echo -e "$ld LAN-Discovery is $landiscoveryc."
     if [[ -n "${allowlist[*]}" ]]; then
         echo -ne "$al "
         printf '%s\n' "${allowlist[@]}"
@@ -2921,7 +2938,7 @@ function iptables_menu {
     echo "  - Commands require 'sudo'"
     echo
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "LAN Discovery" "Allowlist" "Flush IPTables" "Restart Service" "Ping Google" "Disconnect" "Exit")
+    submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "LAN-Discovery" "Allowlist" "Flush IPTables" "Restart Service" "Ping Google" "Disconnect" "Exit")
     select ipt in "${submipt[@]}"
     do
         parent_menu
@@ -2950,7 +2967,7 @@ function iptables_menu {
                 change_setting "meshnet" "back"
                 iptables_status
                 ;;
-            "LAN Discovery")
+            "LAN-Discovery")
                 echo
                 change_setting "lan-discovery" "back"
                 iptables_status
@@ -3788,7 +3805,7 @@ function script_info {
     echo "$0"
     echo
     startline=$(grep -m1 -n "Customization" "$0" | cut -f1 -d':')
-    endline=$(grep -m1 -n "End" "$0" | cut -f1 -d':')
+    endline=$(grep -m1 -n "=End=" "$0" | cut -f1 -d':')
     numlines=$(( endline - startline + 2 ))
     if (( "$highlight_exists" )); then
         highlight -l -O xterm256 "$0" | head -n "$endline" | tail -n "$numlines"
@@ -3953,7 +3970,12 @@ function favorites_menu {
                 echo
                 echo -e "Default: ${FColor}$favname${Color_Off}"
                 echo
-                read -r -p "Enter the server name or hit 'Enter' for default: " favadd
+                echo -e "${FColor}(Hit 'Enter' for default or '$upmenu' to quit)${Color_Off}"
+                echo
+                read -r -p "Enter the server name: " favadd
+                if [[ "$favadd" = "$upmenu" ]]; then
+                    favorites_menu
+                fi
                 favadd=${favadd:-$favname}
                 if [[ "$favadd" != *"$server"* ]]; then
                     favadd="${favadd}_${server}"
@@ -4032,7 +4054,7 @@ function settings_menu {
     echo -e "$techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$ld$al$fst$sshi"
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN Discovery" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
@@ -4076,7 +4098,7 @@ function settings_menu {
             "Custom-DNS")
                 customdns_menu
                 ;;
-            "LAN Discovery")
+            "LAN-Discovery")
                 landiscovery_setting
                 ;;
             "Allowlist")
@@ -4144,7 +4166,7 @@ function pause_vpn {
     echo -e "$connectedcl @ $(date)"
     echo
     if [[ "$killswitch" == "enabled" ]]; then
-        echo -e "${WColor}Note:${Color_Off} $ks The Kill Switch is $killswitchc."
+        echo -e "${WColor}Note:${Color_Off} $ks the Kill Switch is $killswitchc."
         echo
     fi
     echo -e "${FColor}Please do not close this window.${Color_Off}"
@@ -4184,7 +4206,6 @@ function main_disconnect {
             echo
         fi
         if [[ "$pause_prompt" =~ ^[Yy]$ ]]; then
-            echo
             read -n 1 -r -p "Pause the VPN? (y/n) "; echo
             if [[ "$REPLY" =~ ^[Yy]$ ]]; then
                 pause_vpn
