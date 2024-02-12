@@ -2,7 +2,7 @@
 #
 # Basic script to upgrade, reinstall, or downgrade the NordVPN client.
 #
-# Only tested on Linux Mint 21.1.  The script flushes iptables and
+# Only tested on Linux Mint 21.3.  The script flushes iptables and
 # deletes directories, review carefully before use.  Do not use.
 #
 # Choose the NordVPN app version to install
@@ -27,6 +27,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.16.8"      # 14 Nov 2023 Improved Meshnet speeds
 #nord_version="nordvpn=3.16.9"      # 06 Dec 2023 Minor tweaks and fixes
 #nord_version="nordvpn=3.17.0"      # 16 Jan 2024 Meshnet peer rename, clear transfer history
+#nord_version="nordvpn=3.17.1"      # 12 Feb 2024 /etc/resolv.conf DNS fix, bug fixes
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -42,7 +43,6 @@ function default_settings {
     #
     # After installation is complete, these settings will be applied
     #
-    #nordvpn set analytics disabled
     #nordvpn allowlist add subnet 192.168.1.0/24
     #
 }
@@ -184,11 +184,12 @@ function changelog {
 }
 #
 clear -x
-echo
 if command -v figlet &> /dev/null; then
     linecolor "red" "$(figlet -f slant NUCLEAR)"
 else
+    echo
     linecolor "red" "///  NUCLEAR   ///"
+    echo
 fi
 echo
 linecolor "green" "Currently installed:"
@@ -211,10 +212,15 @@ else
     echo "No token. Log in with web browser."
 fi
 echo
+echo -e "Type $(linecolor "green" "E") to edit the script."
 echo
-read -n 1 -r -p "Go nuclear? (y/n) "; echo
 echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+read -n 1 -r -p "Go nuclear? (y/n/E) "; echo
+echo
+if [[ $REPLY =~ ^[Ee]$ ]]; then
+    nano "$0"
+    exit
+elif [[ $REPLY =~ ^[Yy]$ ]]; then
     trashnord
     installnord
     loginnord
