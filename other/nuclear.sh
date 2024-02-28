@@ -28,6 +28,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.16.9"      # 06 Dec 2023 Minor tweaks and fixes
 #nord_version="nordvpn=3.17.0"      # 16 Jan 2024 Meshnet peer rename, clear transfer history
 #nord_version="nordvpn=3.17.1"      # 12 Feb 2024 /etc/resolv.conf DNS fix, bug fixes
+#nord_version="nordvpn=3.17.2"      # 14 Feb 2024 bug fix for IPv6 issue in 3.17.1
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
