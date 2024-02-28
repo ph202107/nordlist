@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.17.1 on Linux Mint 21.3
-# February 12, 2024
+# Tested with NordVPN Version 3.17.2 on Linux Mint 21.3
+# February 28, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -255,7 +255,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4239 (function main_menu).
+# The Main Menu starts on line 4235 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1724,8 +1724,7 @@ function ipv6_setting {
     echo
     echo "Also refer to:"
     echo "https://support.nordvpn.com/hc/en-us/articles/20164669224337"
-    # echo "https://forums.linuxmint.com/viewtopic.php?p=2387296#p2387296"
-    # using grub entries may cause connection error in 3.17.1  https://github.com/NordSecurity/nordvpn-linux/issues/243
+    echo "https://forums.linuxmint.com/viewtopic.php?p=2387296#p2387296"
     echo
     change_setting "ipv6"
 }
@@ -2724,13 +2723,9 @@ function account_menu {
                 fi
                 ;;
             "Changelog")
-                #zcat "$nordchangelog"
-                #zless +G "$nordchangelog"
-                # version numbers are not in order (latest release != last entry)
                 echo
                 zless -p"\($(nordvpn --version | cut -f3 -d' ')\)" "$nordchangelog"
                 openlink "https://nordvpn.com/blog/nordvpn-linux-release-notes" "ask"
-                # https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
                 ;;
             "Nord Version")
                 echo
@@ -2765,8 +2760,8 @@ function account_menu {
                 echo -e "${H2Color}Privacy Policy${Color_Off}"
                 echo "https://my.nordaccount.com/legal/privacy-policy/"
                 echo
-                echo -e "${H2Color}Warrant Canary${Color_Off}"
-                echo "https://nordvpn.com/blog/nordvpn-introduces-a-warrant-canary/"
+                echo -e "${H2Color}Transparency Reports${Color_Off}"
+                echo "https://nordvpn.com/blog/nordvpn-introduces-transparency-reports/"
                 echo
                 echo -e "${H2Color}Bug Bounty${Color_Off}"
                 echo "https://hackerone.com/nordsecurity?type=team"
@@ -2982,12 +2977,10 @@ function iptables_menu {
                 ;;
             "Restart Service")
                 echo
-                echo "Restart the service and reconnect the VPN to recreate the"
-                echo "Nord iptables rules."
+                echo "Recreate the Nord iptables rules by restarting the service"
+                echo "and reconnecting the VPN."
                 echo
-                echo -e "${WColor}Disconnect the VPN and restart the nordvpn service.${Color_Off}"
-                echo
-                read -n 1 -r -p "Proceed? (y/n) "; echo
+                read -n 1 -r -p "Disconnect the VPN and restart the service? (y/n) "; echo
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     if [[ "$autoconnect" == "enabled" ]]; then
@@ -3139,7 +3132,7 @@ function allservers_menu {
                 echo "SOCKS Servers: $( printf '%s\n' "${allnordservers[@]}" | grep -c -i "socks" )"
                 echo
                 echo "Proxy names and locations are available online:"
-                echo -e "${EColor}https://support.nordvpn.com/1087802472${Color_Off}"
+                echo -e "${EColor}https://support.nordvpn.com/hc/en-us/articles/20195967385745${Color_Off}"
                 echo
                 ;;
             "Search")
@@ -3628,7 +3621,7 @@ function tools_menu {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
-    submtools=( "NordVPN API" "Speed Tests" "WireGuard" "External IP" "Server Load" "Rate VPN Server" "Ping VPN Server" "Ping Test" "My TraceRoute" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipinfo.io" "ipregistry.co" "ip2location.io" "ipaddress.my" "ipx.ac" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
+    submtools=( "NordVPN API" "Speed Tests" "WireGuard" "External IP" "Server Load" "Rate VPN Server" "Ping VPN Server" "Ping Test" "My TraceRoute" "Nord DNS Test" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipinfo.io" "ipregistry.co" "ip2location.io" "ipaddress.my" "ipx.ac" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
     select tool in "${submtools[@]}"
     do
         parent_menu
@@ -3682,6 +3675,9 @@ function tools_menu {
                 target=${target:-$nordhost}
                 echo
                 mtr "$target"
+                ;;
+            "Nord DNS Test")
+                openlink "https://nordvpn.com/dns-leak-test/"
                 ;;
             "ipleak cli")
                 # https://airvpn.org/forums/topic/14737-api/
@@ -4145,7 +4141,7 @@ function pause_vpn {
     echo
     echo "Reconnect to any City, Country, Server, or Group."
     echo; echo
-    echo -e "Complete this command or hit 'Enter' for ${EColor}$pcity${Color_Off}"
+    echo -e "Complete this command or hit 'Enter' for ${FColor}$pcity${Color_Off}"
     echo
     read -r -p "nordvpn connect " pwhere
     if [[ -z "$pwhere" ]]; then
