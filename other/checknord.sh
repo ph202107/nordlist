@@ -2,13 +2,13 @@
 #
 # Check that the NordVPN account is logged in, the VPN is connected,
 # and that meshnet is enabled. Check continuously at timed intervals
-# and run a command at each interval.
+# and run commands at each interval.
 #
 # This script was written in response to issues I was having with a
 # remote PC, while meshnet was the only connection method to that PC.
 #
-# Add your VPN connection command in 'function check_connect'.
-# Add a command to run every interval in 'function interval_command'.
+# Add the VPN connection command in 'function check_connect'
+# Add commands to run at every interval in 'function interval_commands'
 #
 # To create a login token, visit https://my.nordaccount.com/
 # Services - NordVPN - Manual Setup - Generate New Token
@@ -21,10 +21,87 @@ refresh_interval="3600"
 max_attempts="10"
 #
 #
+function check_login {
+    #
+    if [[ -z $logintoken ]]; then
+        echo "No login token. Exit."
+        echo
+        exit
+    fi
+    if nordvpn account | grep -i "not logged in"; then
+        logincount=$(( logincount + 1 ))
+        if (( logincount <= max_attempts )); then
+            echo
+            echo "Login Attempt #$logincount"
+            date
+            nordvpn login --token "$logintoken"
+            countdown_timer "60"
+            check_nord
+        else
+            echo
+            echo "Too many login attempts ($logincount).  Quitting"
+            date
+            echo
+            exit
+        fi
+    fi
+}
+function check_connect {
+    #
+    connectstatus=$(nordvpn status | grep -i "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')
+    #
+    if [[ "$connectstatus" != "connected" ]]; then
+        connectcount=$(( connectcount + 1 ))
+        if (( connectcount <= max_attempts )); then
+            echo
+            echo "Connect Attempt #$connectcount"
+            date
+            # =========================================================
+            nordvpn connect --group P2P United_States
+            # =========================================================
+            countdown_timer "60"
+            check_nord
+        else
+            echo
+            echo "Too many connect attempts ($connectcount).  Quitting"
+            date
+            echo
+            exit
+        fi
+    fi
+}
+function check_meshnet {
+    #
+    meshnetstatus=$( nordvpn settings | grep -i "Meshnet" | cut -f2 -d' ' | tr -d '\n' )
+    #
+    if [[ "$meshnetstatus" != "enabled" ]]; then
+        enablecount=$(( enablecount + 1 ))
+        if (( enablecount <= max_attempts )); then
+            echo
+            echo "Enable Meshnet Attempt #$enablecount"
+            date
+            nordvpn set meshnet enabled
+            countdown_timer "60"
+            check_nord
+        else
+            echo
+            echo "Too many enable attempts ($enablecount).  Quitting"
+            date
+            echo
+            exit
+        fi
+    fi
+}
+function interval_commands {
+    # these commands run once per cycle after other checks have passed
+    # =================================================================
+    nordvpn meshnet peer refresh
+    # =================================================================
+}
 function countdown_timer {
     # $1 = time in seconds
     echo
-    echo "Countdown $1s. Cycle $icount"
+    echo "Countdown $1s. Cycle $intervalcount"
     date
     echo -e "Type 'R' to resume"
     echo "Countdown:"
@@ -44,111 +121,27 @@ function countdown_timer {
     done
     echo
 }
-function check_login {
-    #
-    if nordvpn account | grep -i "not logged in"; then
-        lcount=$(( lcount + 1 ))
-        if (( lcount <= max_attempts )); then
-            echo
-            echo "Login Attempt #$lcount"
-            date
-            nordvpn login --token "$logintoken"
-            countdown_timer "60"
-            check_nord
-        else
-            echo
-            echo "Too many login attempts ($lcount).  Quitting"
-            date
-            echo
-            exit
-        fi
-    fi
-}
-function check_connect {
-    #
-    connectstatus=$(nordvpn status | grep -i "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')
-    #
-    if [[ "$connectstatus" != "connected" ]]; then
-        ccount=$(( ccount + 1 ))
-        if (( ccount <= max_attempts )); then
-            echo
-            echo "Connect Attempt #$ccount"
-            date
-            #
-            nordvpn connect --group P2P United_States
-            #
-            countdown_timer "60"
-            check_nord
-        else
-            echo
-            echo "Too many connect attempts ($ccount).  Quitting"
-            date
-            echo
-            exit
-        fi
-    fi
-}
-function check_meshnet {
-    #
-    meshnet=$( nordvpn settings | grep -i "Meshnet" | cut -f2 -d' ' | tr -d '\n' )
-    #
-    if [[ "$meshnet" != "enabled" ]]; then
-        ecount=$(( ecount + 1 ))
-        if (( ecount <= max_attempts )); then
-            echo
-            echo "Enable Meshnet Attempt #$ecount"
-            date
-            nordvpn set meshnet enabled
-            countdown_timer "60"
-            check_nord
-        else
-            echo
-            echo "Too many enable attempts ($ecount).  Quitting"
-            date
-            echo
-            exit
-        fi
-    fi
-}
-function interval_command {
-    # This command runs once per cycle
-    #
-    nordvpn meshnet peer refresh
-    #
-}
 function check_nord {
-    # comment-out unneded functinos
+    # comment-out functions that are not needed
     #
     check_login
     check_connect
     check_meshnet
-    interval_command
+    interval_commands
     #
-    icount=$(( icount + 1 ))
+    intervalcount=$(( intervalcount + 1 ))
     countdown_timer "$refresh_interval"
     check_nord
 }
 #
-lcount="0"      # login count
-ccount="0"      # connect count
-ecount="0"      # enable meshnet count
-icount="0"      # interval cycle count
+logincount="0"      # login attempts
+connectcount="0"    # connect attempts
+enablecount="0"     # enable meshnet attempts
+intervalcount="0"   # interval cycle count
 #
 echo -e '\033]2;'Nord_Monitor'\007'  # window title
 clear -x
 echo
 echo "/// NordVPN Monitor ///"
 echo
-if [[ -z $logintoken ]]; then
-    echo "No login token provided."
-    echo
-    read -n 1 -r -p "Continue? (y/n) "; echo
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Exit"
-        echo
-        exit
-    fi
-fi
-#
 check_nord
