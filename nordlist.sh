@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.17.2 on Linux Mint 21.3
-# February 28, 2024
+# March 11, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -81,9 +81,14 @@ dblwhere=""
 #
 # Specify your Onion_Over_VPN location. (Optional)
 # Typically Netherlands and Switzerland are available (~3 servers total)
-# Recommend leaving this blank to let the app choose the best server.
 # eg. torwhere="Netherlands" or torwhere="Switzerland"
 torwhere=""
+#
+# Specify your Dedicated_IP location. (Optional)
+# If you have a Dedicated IP you can specify your server, eg. "ca1692"
+# Otherwise you can connect to the server group in a supported region.
+# eg. dediwhere="Tokyo" or dediwhere="Johannesburg"
+dediwhere=""
 #
 # Specify your Auto-Connect location. (Optional)
 # eg. acwhere="Australia" or acwhere="Sydney"
@@ -119,10 +124,10 @@ wgdir="/home/$USER/Downloads"
 # nordvpnd.service logs.  Create the file in: Settings - Logs
 nordlogfile="/home/$USER/Downloads/nord_logs.txt"
 #
-# Specify the absolute path and filename to store a local list of all
-# the NordVPN servers.  Avoids API server timeouts.  Create the list at:
-# Tools - NordVPN API - All VPN Servers - Update List
-nordserversfile="/home/$USER/Downloads/nord_allservers.txt"
+# Specify the absolute path and filename to store a .json of all the
+# NordVPN servers (about 20MB). Avoids API server timeouts.  Create the
+# list at:  Tools - NordVPN API - All VPN Servers
+nordserversfile="/home/$USER/Downloads/nord_allservers.json"
 #
 # Specify the absolute path and filename to store a local list of your
 # favorite NordVPN servers.  eg. Low ping servers or streaming servers.
@@ -159,7 +164,7 @@ exitping="n"
 #
 # Query the server load when the script exits.  "y" or "n"
 # Requires 'curl' and 'jq'.
-exitload="n"
+# exitload="n"  (currently broken)
 #
 # Show your external IP address when the script exits.  "y" or "n"
 # Requires 'curl'.  Connects to ipinfo.io.
@@ -180,8 +185,8 @@ newfirefox="n"
 # Specify the number of pings to send when pinging a destination.
 pingcount="3"
 #
-# Set 'menuwidth' to your terminal width or lower.
-# Lowering the value will compact the menus horizontally.
+# Set 'menuwidth' to your terminal width or lower to compact the menus
+# horizontally. ("Countries" and "Favorites" excluded.)
 # Leave blank to have the menu width change with the window size.
 menuwidth="80"
 #
@@ -237,6 +242,15 @@ fast7="n"
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
 # =====================================================================
+# Virtual Servers
+# ================
+#
+# Countries listed here will be labelled as (Virtual).
+# Source: https://nordvpn.com/blog/new-nordvpn-virtual-servers/
+# This list is subject to change and must be updated manually.
+nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" "Belize" "Bermuda" "Bhutan" "Bolivia" "Brunei" "Cambodia" "Cayman_Islands" "Dominican_Republic" "Ecuador" "Egypt" "El_Salvador" "Ghana" "Greenland" "Guam" "Guatemala" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Kazakhstan" "Kenya" "Laos" "Lebanon" "Lichtenstein" "Malta" "Monaco" "Mongolia" "Montenegro" "Morocco" "Myanmar" "Nepal" "Nigeria" "Pakistan" "Panama" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Puerto_Rico" "Sri_Lanka" "Trinidad_and_Tobago" "Uruguay" "Uzbekistan" "Venezuela" )
+#
+# =====================================================================
 # Visual Options
 # ===============
 #
@@ -255,7 +269,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4235 (function main_menu).
+# The Main Menu starts on line 4346 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -332,7 +346,7 @@ function set_defaults {
     #if [[ "$meshnet" == "enabled" ]]; then nordvpn set meshnet disabled; fi
     #
     #if [[ "$customdns" == "disabled" ]]; then nordvpn set dns $default_dns; fi
-    if [[ "$customdns" != "disabled" ]]; then nordvpn set dns disabled; fi
+    #if [[ "$customdns" != "disabled" ]]; then nordvpn set dns disabled; fi
     #
     #if [[ "$landiscovery" == "disabled" ]]; then nordvpn set lan-discovery enabled; fi
     #if [[ "$landiscovery" == "enabled" ]]; then nordvpn set lan-discovery disabled; fi
@@ -398,7 +412,7 @@ function main_logo {
 }
 function heading {
     # $1 = heading
-    # $2 = "txt" - use regular text
+    # $2 = "txt" - use regular text instead of figlet
     # $3 = "alt" - use alternate color for regular text
     #
     clear -x
@@ -413,19 +427,22 @@ function heading {
         COLUMNS="$menuwidth"
         return
     fi
-    # This ASCII displays after a menu selection is made. Longer names use a smaller font to prevent wrapping.
-    # Assumes 80 column terminal. Wide terminals can use figlet with '-t' or '-w'.
-    #
-    if (( ${#1} <= 14 )); then      # 14 characters or less
-        figlet -f slant "$1" | lolcat -p 1000
-    elif (( ${#1} <= 18 )); then    # 15 to 18 characters
-        figlet -f small "$1" | lolcat -p 1000
-    else                            # more than 18 characters
+    # This ASCII displays after a menu selection is made.
+    # Check the current terminal width, and the width required for 'slant' or 'small' ascii fonts.
+    if (( "$(tput cols)" > "$(wc -L <<< "$(figlet -w 999 -f slant "$1")")" )); then
+        figlet -w "$(tput cols)" -f slant "$1" | lolcat -p 1000
+    elif (( "$(tput cols)" > "$(wc -L <<< "$(figlet -w 999 -f small "$1")")" )); then
+        figlet -w "$(tput cols)" -f small "$1" | lolcat -p 1000
+    else
         echo
         echo -e "${H1Color}=== $1 ===${Color_Off}"
         echo
     fi
-    COLUMNS="$menuwidth"
+    if [[ "$1" == "Countries" ]] || [[ "$1" == "Favorites" ]]; then
+        return
+    else
+        COLUMNS="$menuwidth"
+    fi
 }
 function set_colors {
     #
@@ -505,7 +522,7 @@ function set_colors {
     COColor=${Color_Off}    # Country name
     SVColor=${Color_Off}    # Server name
     IPColor=${Color_Off}    # IP address
-    FVColor=${LCyan}        # (Favorite) label
+    FVColor=${LCyan}        # Favorite|Dedicated-IP|Virtual label
     DLColor=${Green}        # Download stat
     ULColor=${Yellow}       # Upload stat
     UPColor=${Cyan}         # Uptime stat
@@ -714,8 +731,12 @@ function set_vars {
         meshrouting=""
     fi
     #
-    if [[ "$connected" == "connected" ]] && [[ -f "$nordfavoritesfile" ]] && grep -q "$server" "$nordfavoritesfile"; then
+    if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]] && [[ "$server" == "$dediwhere" ]]; then
+        fav="${FVColor}(Dedicated-IP)${Color_Off}"
+    elif [[ "$connected" == "connected" ]] && [[ -f "$nordfavoritesfile" ]] && grep -q "$server" "$nordfavoritesfile"; then
         fav="${FVColor}(Favorite)${Color_Off}"
+    elif [[ "$connected" == "connected" ]] && [[ ${nordvirtual[*]} =~ $(echo "$country" | tr ' ' '_') ]]; then
+        fav="${FVColor}(Virtual)${Color_Off}"
     else
         fav=""
     fi
@@ -984,11 +1005,7 @@ function create_list {
             readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
             if [[ "$2" == "count" ]]; then return; fi
             rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
-            # Shorten some names to help compact the list.
-            countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Bosnia-Herz}")
-            countrylist=("${countrylist[@]/Czech_Republic/Czech_Rep}")
-            countrylist=("${countrylist[@]/North_Macedonia/N_Macedonia}")
-            countrylist=("${countrylist[@]/United_Arab_Emirates/UAE}")
+            country_names "shorten"
             countrylist+=( "Random" "Exit" )
             ;;
         "city")
@@ -1006,8 +1023,50 @@ function create_list {
             ;;
     esac
 }
+function country_names {
+    # Shorten some country names so the menu fits better in the terminal window.
+    # Aim for 11 characters or less.
+    # $1 = "shorten" or "expand"
+    #
+    #return    # uncomment to skip this function
+    #
+    if [[ "$1" == "shorten" ]]; then
+        #
+        countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Bosnia_Herz}")
+        countrylist=("${countrylist[@]/Cayman_Islands/Cayman_Isl}")
+        countrylist=("${countrylist[@]/Czech_Republic/Czech_Rep}")
+        countrylist=("${countrylist[@]/Dominican_Republic/Dominican_R}")
+        countrylist=("${countrylist[@]/Lichtenstein/Lichtnstein}")
+        countrylist=("${countrylist[@]/North_Macedonia/N_Macedonia}")
+        countrylist=("${countrylist[@]/Papua_New_Guinea/Papua_NG}")
+        countrylist=("${countrylist[@]/South_Africa/S_Africa}")
+        countrylist=("${countrylist[@]/Trinidad_and_Tobago/Trinidad}")
+        countrylist=("${countrylist[@]/United_Arab_Emirates/UAE}")
+        countrylist=("${countrylist[@]/United_Kingdom/UK}")
+        countrylist=("${countrylist[@]/United_States/USA}")
+        #
+    elif [[ "$1" == "expand" ]]; then
+        #
+        case $xcountry in
+            "Bosnia_Herz")  xcountry="Bosnia_and_Herzegovina";;
+            "Cayman_Isl")   xcountry="Cayman_Islands";;
+            "Czech_Rep")    xcountry="Czech_Republic";;
+            "Dominican_R")  xcountry="Dominican_Republic";;
+            "Lichtnstein")  xcountry="Lichtenstein";;
+            "N_Macedonia")  xcountry="North_Macedonia";;
+            "Papua_NG")     xcountry="Papua_New_Guinea";;
+            "S_Africa")     xcountry="South_Africa";;
+            "Trinidad")     xcountry="Trinidad_and_Tobago";;
+            "UAE")          xcountry="United_Arab_Emirates";;
+            "UK")           xcountry="United_Kingdom";;
+            "USA")          xcountry="United_States";;
+        esac
+        #
+    fi
+}
 function country_menu {
     # submenu for all available countries
+    #
     heading "Countries"
     parent="Main"
     create_list "country"
@@ -1040,13 +1099,13 @@ function city_menu {
     else
         parent="Country"
     fi
-    if [[ "$xcountry" == "Bosnia-Herz" ]]; then xcountry="Bosnia_and_Herzegovina"
-    elif [[ "$xcountry" == "Czech_Rep" ]]; then xcountry="Czech_Republic"
-    elif [[ "$xcountry" == "N_Macedonia" ]]; then xcountry="North_Macedonia"
-    elif [[ "$xcountry" == "UAE" ]]; then xcountry="United_Arab_Emirates"
-    fi
+    country_names "expand"
     heading "$xcountry"
     echo
+    if [[ ${nordvirtual[*]} =~ $xcountry ]]; then
+        echo -e "${FVColor}(Virtual Servers)${Color_Off}"
+        echo
+    fi
     if [[ "$fast7" =~ ^[Yy]$ ]] && [[ -z "$1" ]]; then
         echo -e "${FColor}[F]ast7 is enabled. Connect to the country instead of choosing a city.${Color_Off}"
         echo
@@ -1105,29 +1164,51 @@ function city_menu {
 }
 function city_count {
     # list all the available cities by country and alphabetically
+    #
     allcities=()
+    virtualcount="0"
     create_list "country" "count"
-    heading "Countries" "txt"
-    printf '%s\n' "${countrylist[@]}"
+    heading "All Countries" "txt"
+    for xcountry in "${countrylist[@]}"
+    do
+        if [[ ${nordvirtual[*]} =~ $xcountry ]]; then
+            echo "$xcountry*"
+            virtualcount=$(( virtualcount + 1 ))
+        else
+            echo "$xcountry"
+        fi
+    done
     heading "Cities by Country" "txt"
     for xcountry in "${countrylist[@]}"
     do
-        echo "$xcountry"
+        if [[ ${nordvirtual[*]} =~ $xcountry ]]; then
+            echo "$xcountry*"
+        else
+            echo "$xcountry"
+        fi
         create_list "city" "count"
         for city in "${citylist[@]}"
         do
             echo "    $city"
-            allcities+=( "$city $xcountry" )
+            if [[ ${nordvirtual[*]} =~ $xcountry ]]; then
+                allcities+=( "$city $xcountry*" )
+            else
+                allcities+=( "$city $xcountry" )
+            fi
         done
         echo
     done
     heading "Cities Alphabetical" "txt"
     printf '%s\n' "${allcities[@]}" | sort
     echo
-    echo "====================="
+    echo "========================="
     echo "Total Countries = ${#countrylist[@]}"
     echo "Total Cities = ${#allcities[@]}"
-    echo "====================="
+    echo "Virtual Countries* = $virtualcount"
+    echo "========================="
+    echo
+    echo "(*) = The Country is listed in the 'nordvirtual' array."
+    echo "      Not automatically updated."
     echo
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Obfuscate is $obfuscatec."
@@ -1222,6 +1303,51 @@ function killswitch_groups {
         fi
     fi
 }
+function group_location {
+    # $1 = $1 from function group_connect (Nord group name)
+    #
+    heading "Set Location" "txt" "alt"
+    if [[ -n $location ]]; then
+        echo -e "Default location ${EColor}$location${Color_Off} will be ignored."
+        echo
+    fi
+    echo "The location must support $1."
+    echo
+    case "$1" in
+        "Obfuscated_Servers")
+            echo "For a list of locations, enable Obfuscate and visit:"
+            echo "Tools - NordVPN API - All Cities"
+            ;;
+        "Double_VPN")
+            echo "For a list of server-pairs, visit:"
+            echo "Tools - NordVPN API - All VPN Servers"
+            ;;
+        "Onion_Over_VPN")
+            echo "Typically only Netherlands and Switzerland are available."
+            echo "For a list of servers, visit:"
+            echo "Tools - NordVPN API - All VPN Servers"
+            ;;
+        "P2P")
+            echo "(Any region should be OK)"
+            ;;
+        "Dedicated_IP")
+            # https://support.nordvpn.com/hc/en-us/articles/19507808024209
+            echo -e "${EColor}$1 locations (subject to change):${Color_Off}"
+            echo "Buffalo Chicago Dallas Los_Angeles Miami New_York Seattle Toronto"
+            echo "Amsterdam Brussels Copenhagen Frankfurt Lisbon London Madrid Milan"
+            echo "Paris Stockholm Warsaw Zurich Hong_Kong Tokyo Sydney Johannesburg"
+            ;;
+    esac
+    echo
+    echo "Leave blank to have the app choose automatically."
+    echo
+    echo -e "${FColor}(Enter '$upmenu' to return to the $parent menu)${Color_Off}"
+    echo
+    read -r -p "Enter the $1 location: "
+    parent_menu
+    location="$REPLY"
+    REPLY="y"
+}
 function group_connect {
     # $1 = Nord group name
     #
@@ -1236,22 +1362,28 @@ function group_connect {
             ;;
         "Double_VPN")
             heading "Double-VPN"
-            echo "Double VPN is a privacy solution that sends your internet"
-            echo "traffic through two VPN servers, encrypting it twice."
+            echo "Double VPN is a privacy solution that sends your internet traffic"
+            echo "through two VPN servers, encrypting it twice."
             location="$dblwhere"
             ;;
         "Onion_Over_VPN")
             heading "Onion+VPN"
-            echo "Onion over VPN is a privacy solution that sends your "
-            echo "internet traffic through a VPN server and then"
-            echo "through the Onion network."
+            echo "Onion over VPN is a privacy solution that sends your internet traffic"
+            echo "through a VPN server and then through the Onion network."
             location="$torwhere"
             ;;
         "P2P")
             heading "Peer to Peer"
-            echo "Peer to Peer - sharing information and resources directly"
-            echo "without relying on a dedicated central server."
+            echo "Peer to Peer - sharing information and resources directly without"
+            echo "relying on a dedicated central server."
             location="$p2pwhere"
+            ;;
+        "Dedicated_IP")
+            heading "Dedicated-IP"
+            echo "Connect to your assigned server, or test the performance of the"
+            echo "server group before purchasing a Dedicated-IP.  Please refer to:"
+            echo "https://support.nordvpn.com/hc/en-us/articles/19507808024209"
+            location="$dediwhere"
             ;;
     esac
     echo
@@ -1265,6 +1397,10 @@ function group_connect {
         echo "Set Technology to OpenVPN."
         echo "Choose the Protocol."
         echo "Set Obfuscate to enabled."
+    elif [[ "$1" == "Dedicated_IP" ]]; then
+        echo "Set Technology to OpenVPN."
+        echo "Choose the Protocol."
+        echo "Set Obfuscate to disabled."
     else
         echo "Choose the Technology & Protocol."
         echo "Set Obfuscate to disabled."
@@ -1280,47 +1416,28 @@ function group_connect {
         echo
         read -n 1 -r -p "Proceed? (y/n/S) "; echo
         if [[ $REPLY =~ ^[Ss]$ ]]; then
-            heading "Set Location" "txt" "alt"
-            if [[ -n $location ]]; then
-                echo -e "Default location ${EColor}$location${Color_Off} will be ignored."
-                echo
-            fi
-            echo "The location must support $1."
-            if [[ "$1" == "Onion_Over_VPN" ]]; then
-                echo "Typically only Netherlands and Switzerland are available."
-                echo "See 'Tools - NordVPN API - All VPN Servers' for a list."
-                echo
-            fi
-            echo "Leave blank to have the app choose automatically."
-            echo
-            echo -e "${FColor}(Enter '$upmenu' to return to the $parent menu)${Color_Off}"
-            echo
-            read -r -p "Enter the $1 location: " location
-            REPLY="$location"
-            parent_menu
-            REPLY="y"
+            group_location "$1"
         fi
     fi
     parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnect_vpn "force"
-        if [[ "$1" == "Obfuscated_Servers" ]]; then
-            if [[ "$technology" == "nordlynx" ]]; then
-                nordvpn set technology openvpn; wait
-                echo
-            fi
-            protocol_ask
-            if [[ "$obfuscate" == "disabled" ]]; then
-                nordvpn set obfuscate enabled; wait
-                echo
-            fi
-        else
-            technology_setting "back"
-            if [[ "$obfuscate" == "enabled" ]]; then
-                nordvpn set obfuscate disabled; wait
-                echo
-            fi
-        fi
+        case "$1" in
+            "Obfuscated_Servers")
+                if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; wait; echo; fi
+                protocol_ask
+                if [[ "$obfuscate" == "disabled" ]]; then nordvpn set obfuscate enabled; wait; echo; fi
+                ;;
+            "Dedicated_IP")
+                if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; wait; echo; fi
+                protocol_ask
+                if [[ "$obfuscate" == "enabled" ]]; then nordvpn set obfuscate disabled; wait; echo; fi
+                ;;
+            *)
+                technology_setting "back"
+                if [[ "$obfuscate" == "enabled" ]]; then nordvpn set obfuscate disabled; wait; echo; fi
+                ;;
+        esac
         killswitch_groups
         echo -e "Connect to the $1 group ${EColor}$location${Color_Off}"
         echo
@@ -1345,8 +1462,8 @@ function technology_setting {
         heading "Technology"
         echo
         disconnect_warning
-        echo "OpenVPN is an open-source VPN protocol and is required to"
-        echo " use Obfuscated servers and to use TCP."
+        echo "OpenVPN is an open-source VPN protocol that is required"
+        echo " for Obfuscated servers, a Dedicated-IP, and to use TCP."
         echo "NordLynx is built around the WireGuard VPN protocol"
         echo " and may be faster with less overhead."
         echo
@@ -2605,7 +2722,7 @@ function login_token {
     echo "To create a token, login to your Nord Account and navigate to:"
     echo "Services - NordVPN - Manual Setup - Generate New Token"
     echo
-    openlink "https://my.nordaccount.com/" "ask"
+    echo -e "${LColor}https://my.nordaccount.com/${Color_Off}"
     echo
     echo -e "${FColor}(Leave blank to quit)${Color_Off}"
     echo
@@ -3061,7 +3178,7 @@ function server_load {
         return
     fi
     echo -ne "$nordhost load = "
-    sload=$(timeout 10 curl --silent https://api.nordvpn.com/server/stats/"$nordhost" | jq .percent)
+    # sload=$(timeout 10 curl --silent https://api.nordvpn.com/server/stats/"$nordhost" | jq .percent)
     if [[ -z $sload ]]; then
         echo "Request timed out."
     elif (( sload <= 30 )); then
@@ -3074,68 +3191,76 @@ function server_load {
     echo
 }
 function allservers_menu {
-    # API timeout/rejection error "parse error: Invalid numeric literal at line 1, column 6"
-    # If you get this error try again later.
     heading "All Servers"
     parent="Nord API"
-    if (( ${#allnordservers[@]} == 0 )); then
-        if [[ -f "$nordserversfile" ]]; then
-            echo -e "${EColor}Server List: ${LColor}$nordserversfile${Color_Off}"
-            head -n 1 "$nordserversfile"
-            readarray -t allnordservers < <( tail -n +4 "$nordserversfile" )
+    if [[ -f "$nordserversfile" ]]; then
+        echo -e "File: ${EColor}$nordserversfile${Color_Off}"
+    else
+        echo -e "${WColor}$nordserversfile does not exist.${Color_Off}"
+        echo
+        read -n 1 -r -p "Download the .json? (~20MB) (y/n) "; echo
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            touch "$nordserversfile"
+            curl --silent "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
+            echo -e "Saved as: ${EColor}$nordserversfile${Color_Off}"
+
+            # future plan is to use jq and the json for all queries
+            # I just need to figure out the syntax
+            # in the meantime grep this txt file
+            jq '.[].hostname' "$nordserversfile" | sort -u | sed 's/"//g' > "$nordserversfile.txt"
+
         else
-            echo "Retrieving the list of NordVPN servers..."
-            echo "Choose 'Update List' to save a local copy of the server list."
-            echo
-            readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
+            REPLY="$upmenu"
+            parent_menu
         fi
     fi
-    echo "Server Count: ${#allnordservers[@]}"
+    echo "Last Modified: $( date -r "$nordserversfile" )"
+    echo "Server Count: $( jq length "$nordserversfile")"
     echo
     PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
-    submallvpn=( "List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Update List" )
-    if [[ -f "$nordserversfile" ]]; then
-        submallvpn+=( "Edit File" )
-    fi
-    submallvpn+=( "Exit" )
+    submallvpn=( "List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Update List" "Exit" )
     select avpn in "${submallvpn[@]}"
     do
         parent_menu
         case $avpn in
             "List All Servers")
                 heading "All the VPN Servers" "txt"
-                printf '%s\n' "${allnordservers[@]}"
+                jq '.[].hostname' "$nordserversfile" | sort -u | sed 's/"//g'    # remove quotes
                 echo
-                echo "All Servers: ${#allnordservers[@]}"
+                echo "All Servers: $( jq length "$nordserversfile" )"
                 echo
                 ;;
             "Double-VPN Servers")
                 heading "Double-VPN Servers" "txt"
-                printf '%s\n' "${allnordservers[@]}" | grep "-" | grep -i -v -E "socks|onion|napps-6"
+                grep "-" "$nordserversfile.txt" | sort -u | grep -i -v -E "socks|onion|napps-6"
                 echo
-                # work in progress
-                echo "Double-VPN Servers: $( printf '%s\n' "${allnordservers[@]}" | grep "-" | grep -i -v -E "socks|onion|napps-6" -c )"
+                echo "Double-VPN Servers: $( grep "-" "$nordserversfile.txt" | sort -u | grep -c -i -v -E "socks|onion|napps-6" )"
                 echo
                 ;;
             "Onion Servers")
                 heading "Onion Servers" "txt"
-                printf '%s\n' "${allnordservers[@]}" | grep -i "onion"
+                grep -i "onion" "$nordserversfile.txt" | sort -u
                 echo
-                echo "Onion Servers: $( printf '%s\n' "${allnordservers[@]}" | grep -c -i "onion" )"
+                echo "Onion Servers: $( grep -c -i "onion" "$nordserversfile.txt" | sort -u )"
                 echo
                 ;;
             "SOCKS Servers")
                 heading "SOCKS Servers" "txt"
-                printf '%s\n' "${allnordservers[@]}" | grep -i "socks"
+                grep -i "socks" "$nordserversfile.txt" | sort -u
                 echo
-                echo "SOCKS Servers: $( printf '%s\n' "${allnordservers[@]}" | grep -c -i "socks" )"
+                echo "SOCKS Servers: $( grep -c -i "socks" "$nordserversfile.txt" | sort -u )"
                 echo
                 echo "Proxy names and locations are available online:"
                 echo -e "${EColor}https://support.nordvpn.com/hc/en-us/articles/20195967385745${Color_Off}"
                 echo
                 ;;
             "Search")
+                heading "Search Hostnames" "txt" "alt"
+                echo "Country code reference:"
+                echo "https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2"
+                echo
                 echo
                 read -r -p "Enter search term: " allvpnsearch
                 echo
@@ -3144,55 +3269,32 @@ function allservers_menu {
                     allvpnsearch="co[0-9]"
                 fi
                 heading "Search for '$allvpnsearch'" "txt"
-                printf '%s\n' "${allnordservers[@]}" | grep -i "$allvpnsearch"
+                grep -i "$allvpnsearch" "$nordserversfile.txt" | sort -u
                 echo
-                echo "'$allvpnsearch' Count: $( printf '%s\n' "${allnordservers[@]}" | grep -c -i "$allvpnsearch" )"
+                echo "'$allvpnsearch' Count: $( grep -c -i "$allvpnsearch" "$nordserversfile.txt" | sort -u )"
                 echo
                 ;;
             "Connect")
                 host_connect
                 ;;
             "Update List")
+                heading "Update Server List" "txt" "alt"
+                echo -e "File: ${EColor}$nordserversfile${Color_Off}"
+                echo "Last Modified: $( date -r "$nordserversfile" )"
+                echo "Server Count: $( jq length "$nordserversfile")"
                 echo
-                if [[ -f "$nordserversfile" ]]; then
-                    echo -e "${EColor}Server List: ${LColor}$nordserversfile${Color_Off}"
-                    head -n 2 "$nordserversfile"
-                    echo
-                    read -n 1 -r -p "Update the list? (y/n) "; echo
-                else
-                    echo -e "${WColor}$nordserversfile does not exist.${Color_Off}"
-                    echo
-                    read -n 1 -r -p "Create the file? (y/n) "; echo
-                fi
+                echo "Please backup your file before trying an update."
+                echo
+                read -n 1 -r -p "Download an updated .json? (~20MB) (y/n) "; echo
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    if [[ -f "$nordserversfile" ]]; then
-                        echo "Retrieving the list of NordVPN servers..."
-                        echo
-                        readarray -t allnordservers < <( curl --silent https://api.nordvpn.com/server | jq --raw-output '.[].domain' | sort --version-sort )
-                    fi
-                    if (( ${#allnordservers[@]} < 1000 )); then
-                        echo
-                        echo -e "${WColor}Server list is empty. Parse Error? Try again later.${Color_Off}"
-                        echo
-                        if [[ -f "$nordserversfile" ]]; then
-                            # rebuild array if it was blanked out on retrieval attempt
-                            readarray -t allnordservers < <( tail -n +4 "$nordserversfile" )
-                        fi
-                    else
-                        echo "Retrieved on: $( date )" > "$nordserversfile"
-                        echo "Server Count: ${#allnordservers[@]}" >> "$nordserversfile"
-                        echo >> "$nordserversfile"
-                        printf '%s\n' "${allnordservers[@]}" >> "$nordserversfile"
-                        echo -e "Saved as ${LColor}$nordserversfile${Color_Off}"
-                        head -n 2 "$nordserversfile"
-                        echo
-                    fi
+                    curl --silent "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
+                    jq '.[].hostname' "$nordserversfile" | sort -u | sed 's/"//g' > "$nordserversfile.txt"
+                    echo -e "Saved as: ${EColor}$nordserversfile${Color_Off}"
+                    echo "Last Modified: $( date -r "$nordserversfile" )"
+                    echo "Server Count: $( jq length "$nordserversfile")"
+                    echo
                 fi
-                ;;
-            "Edit File")
-                echo
-                openlink "$nordserversfile" "ask" "exit"
                 ;;
             "Exit")
                 main_menu
@@ -3208,6 +3310,9 @@ function nordapi_menu {
     # https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
     heading "Nord API"
     parent="Tools"
+    echo -e "${WColor}** Note:${Color_Off} Some functions are not working."
+    echo "See: https://github.com/ph202107/nordlist/issues/6"
+    echo
     echo "Query the NordVPN Public API.  Requires 'curl' and 'jq'"
     echo "Commands may take a few seconds to complete."
     echo "Rate-limiting by the server may result in a Parse error."
@@ -3217,7 +3322,7 @@ function nordapi_menu {
     fi
     echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
     echo
-    PS3=$'\n''API Call: '
+    PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
     submapi=("Host Server Load" "Host Server Info" "Top 15 Recommended" "Top 15 By Country" "#Servers per Country" "All VPN Servers" "All Cities" "Change Host" "Connect" "Exit")
     select napi in "${submapi[@]}"
@@ -3520,6 +3625,7 @@ function speedtest_menu {
         echo
     fi
     PS3=$'\n''Select a test: '
+    COLUMNS="$menuwidth"
     submspeed=( "Download & Upload" "Download Only" "Upload Only" "Latency & Load" "iperf3" "wget" "speedtest.net"  "speedof.me" "fast.com" "linode.com" "digitalocean.com" "nperf.com" "Exit" )
     select spd in "${submspeed[@]}"
     do
@@ -3564,7 +3670,9 @@ function speedtest_menu {
                 speedtest_iperf3
                 ;;
             "wget")
-                wgetfile="https://releases.ubuntu.com/22.04.3/ubuntu-22.04.3-desktop-amd64.iso"
+                wgetfile="https://releases.ubuntu.com/focal/ubuntu-20.04.6-desktop-amd64.iso"
+                #wgetfile="https://ash-speed.hetzner.com/1GB.bin"
+                #
                 heading "wget" "txt"
                 echo -e "${H2Color}wget -O /dev/null '$wgetfile'${Color_Off}"
                 echo
@@ -3621,6 +3729,7 @@ function tools_menu {
         echo
         PS3=$'\n''Choose an option (VPN Off): '
     fi
+    COLUMNS="$menuwidth"
     submtools=( "NordVPN API" "Speed Tests" "WireGuard" "External IP" "Server Load" "Rate VPN Server" "Ping VPN Server" "Ping Test" "My TraceRoute" "Nord DNS Test" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipinfo.io" "ipregistry.co" "ip2location.io" "ipaddress.my" "ipx.ac" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
     select tool in "${submtools[@]}"
     do
@@ -3919,7 +4028,6 @@ function favorites_menu {
     fi
     favoritelist+=( "Add Server" "Edit File" "Exit" )
     PS3=$'\n''Connect to Server: '
-    COLUMNS="$menuwidth"
     select xfavorite in "${favoritelist[@]}"
     do
         parent_menu
@@ -4014,7 +4122,7 @@ function group_menu {
     parent="Main"
     echo
     PS3=$'\n''Choose a Group: '
-    submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Exit")
+    submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Dedicated-IP" "Exit")
     select grp in "${submgroups[@]}"
     do
         parent_menu
@@ -4033,6 +4141,9 @@ function group_menu {
                 ;;
             "P2P")
                 group_connect "P2P"
+                ;;
+            "Dedicated-IP")
+                group_connect "Dedicated_IP"
                 ;;
             "Exit")
                 main_menu
