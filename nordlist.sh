@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.17.2 on Linux Mint 21.3
-# March 22, 2024
+# Tested with NordVPN Version 3.17.3 on Linux Mint 21.3
+# March 28, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -164,7 +164,8 @@ exitping="n"
 #
 # Query the server load when the script exits.  "y" or "n"
 # Requires 'curl' and 'jq'.
-# exitload="n"  (currently broken)
+# currently broken. see https://github.com/ph202107/nordlist/issues/6
+# exitload="n"
 #
 # Show your external IP address when the script exits.  "y" or "n"
 # Requires 'curl'.  Connects to ipinfo.io.
@@ -273,7 +274,7 @@ nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" 
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4279 (function main_menu).
+# The Main Menu starts on line 4284 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -406,7 +407,7 @@ function ascii_custom {
         done
     else
         # style when disconnected
-        figlet -t "NordVPN"
+        figlet -t -f "standard" "NordVPN"
     fi
 }
 function main_logo {
@@ -1346,16 +1347,16 @@ function group_location {
     echo
     case "$1" in
         "Obfuscated_Servers")
-            echo "For a list of locations, enable Obfuscate and visit:"
+            echo "For a list of supported locations, enable Obfuscate and visit:"
             echo "Tools - NordVPN API - All Cities"
             ;;
         "Double_VPN")
-            echo "For a list of server-pairs, visit:"
+            echo "For a list of $1 server-pairs, visit:"
             echo "Tools - NordVPN API - All VPN Servers"
             ;;
         "Onion_Over_VPN")
             echo "Typically only Netherlands and Switzerland are available."
-            echo "For a list of servers, visit:"
+            echo "For a list of $1 servers, visit:"
             echo "Tools - NordVPN API - All VPN Servers"
             ;;
         "P2P")
@@ -3170,14 +3171,16 @@ function iptables_menu {
 function service_logs {
     heading "Service Logs"
     echo
-    echo -e "Generate log file: ${LColor}$nordlogfile${Color_Off}"
+    echo -e "Generate log file: ${FColor}$nordlogfile${Color_Off}"
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo "journalctl -u nordvpnd > '$nordlogfile'"
-        echo
+        echo -e "${LColor}journalctl -u nordvpnd > '$nordlogfile'${Color_Off}"
         journalctl -u nordvpnd > "$nordlogfile"
+        echo
+        echo -e "${EColor}Completed \u2705${Color_Off}" # unicode checkmark
+        echo
         openlink "$nordlogfile" "ask"
     fi
     settings_menu
@@ -3211,7 +3214,8 @@ function server_load {
         return
     fi
     echo -ne "$nordhost load = "
-    # sload=$(timeout 10 curl --silent https://api.nordvpn.com/server/stats/"$nordhost" | jq .percent)
+    # this works but it will download 20MB every time and possible api server timeouts
+    # sload=$( timeout 10 curl --silent "https://api.nordvpn.com/v1/servers?limit=999999" | jq --arg host "$nordhost" '.[] | select(.hostname == $host) | .load' )
     if [[ -z $sload ]]; then
         echo "Request timed out."
     elif (( sload <= 30 )); then
@@ -3368,7 +3372,7 @@ function nordapi_menu {
                 ;;
             "Host Server Info")
                 heading "Server $nordhost Info" "txt" "alt"
-                curl --silent https://api.nordvpn.com/server | jq '.[] | select(.domain == "'"$nordhost"'")'
+                curl --silent "https://api.nordvpn.com/v1/servers?limit=999999" | jq --arg host "$nordhost" '.[] | select(.hostname == $host)'
                 ;;
             "Top 15 Recommended")
                 heading "Top 15 Recommended" "txt" "alt"
@@ -3387,7 +3391,7 @@ function nordapi_menu {
                 ;;
             "#Servers per Country")
                 heading "Number of Servers per Country" "txt" "alt"
-                curl --silent https://api.nordvpn.com/server | jq --raw-output '. as $parent | [.[].country] | sort | unique | .[] as $country | ($parent | map(select(.country == $country)) | length) as $count |  [$country, $count] |  "\(.[0]): \(.[1])"'
+                curl --silent "https://api.nordvpn.com/v1/servers?limit=16384" | jq --raw-output '. as $parent | [.[].locations[].country.name] | sort | unique | .[] as $country | ($parent | map(select(.locations[].country.name == $country)) | length) as $count |  [$country, $count] |  "\(.[0]): \(.[1])"'
                 echo
                 ;;
             "All VPN Servers")
@@ -3504,48 +3508,49 @@ function wireguard_gen {
     echo -e "${LColor}$wgfull${Color_Off}"
     echo
     read -n 1 -r -p "Proceed? (y/n) "; echo
-    echo
-    parent_menu
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        #
-        address=$(ip route get 8.8.8.8 | cut -f7 -d' ' | tr -d '\n')
-        #listenport=$(sudo wg showconf nordlynx | grep 'ListenPort = .*')
-        privatekey=$(sudo wg showconf nordlynx | grep 'PrivateKey = .*')
-        publickey=$(sudo wg showconf nordlynx | grep 'PublicKey = .*')
-        endpoint=$(sudo wg showconf nordlynx | grep 'Endpoint = .*')
-        #
-        echo "# $server.nordvpn.com $ipaddr" > "$wgfull"
-        echo "# $city $country" >> "$wgfull"
-        echo >> "$wgfull"
-        echo "[Interface]" >> "$wgfull"
-        echo "Address = ${address}/32" >> "$wgfull"
-        echo "${privatekey}" >> "$wgfull"
-        #
-        echo "DNS = 103.86.96.100, 103.86.99.100" >> "$wgfull"  # Regular DNS
-        # echo "DNS = 103.86.96.96, 103.86.99.99" >> "$wgfull"  # Threat Protection Lite DNS
-        #
-        wireguard_ks    # Prompt to add Linux iptables Kill Switch
-        #
-        echo >> "$wgfull"
-        echo "[Peer]" >> "$wgfull"
-        echo "${endpoint}" >> "$wgfull"
-        echo "${publickey}" >> "$wgfull"
-        echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgfull"
-        echo "PersistentKeepalive = 25" >> "$wgfull"
-        #
-        echo
-        echo -e "${EColor}Completed \u2705${Color_Off}" # unicode checkmark
-        echo
-        echo -e "Saved as ${LColor}$wgfull${Color_Off}"
-        echo
-        if (( "$highlight_exists" )); then
-            highlight -O xterm256 "$wgfull"
-        else
-            cat "$wgfull"
-        fi
-        echo
-        openlink "$wgfull" "ask"
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        REPLY="$upmenu"
+        parent_menu
     fi
+    echo
+    #
+    address=$(ip route get 8.8.8.8 | cut -f7 -d' ' | tr -d '\n')
+    #listenport=$(sudo wg showconf nordlynx | grep 'ListenPort = .*')
+    privatekey=$(sudo wg showconf nordlynx | grep 'PrivateKey = .*')
+    publickey=$(sudo wg showconf nordlynx | grep 'PublicKey = .*')
+    endpoint=$(sudo wg showconf nordlynx | grep 'Endpoint = .*')
+    #
+    echo "# $server.nordvpn.com $ipaddr" > "$wgfull"
+    echo "# $city $country" >> "$wgfull"
+    echo >> "$wgfull"
+    echo "[Interface]" >> "$wgfull"
+    echo "Address = ${address}/32" >> "$wgfull"
+    echo "${privatekey}" >> "$wgfull"
+    #
+    echo "DNS = 103.86.96.100, 103.86.99.100" >> "$wgfull"  # Regular DNS
+    # echo "DNS = 103.86.96.96, 103.86.99.99" >> "$wgfull"  # Threat Protection Lite DNS
+    #
+    wireguard_ks    # Prompt to add Linux iptables Kill Switch
+    #
+    echo >> "$wgfull"
+    echo "[Peer]" >> "$wgfull"
+    echo "${endpoint}" >> "$wgfull"
+    echo "${publickey}" >> "$wgfull"
+    echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgfull"
+    echo "PersistentKeepalive = 25" >> "$wgfull"
+    #
+    echo
+    echo -e "${EColor}Completed \u2705${Color_Off}" # unicode checkmark
+    echo
+    echo -e "Saved as ${LColor}$wgfull${Color_Off}"
+    echo
+    if (( "$highlight_exists" )); then
+        highlight -O xterm256 "$wgfull"
+    else
+        cat "$wgfull"
+    fi
+    echo
+    openlink "$wgfull" "ask"
     echo
 }
 function speedtest_ip {
