@@ -2,8 +2,8 @@
 # shellcheck disable=SC2034,SC2129,SC2154
 # unused color variables, individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.17.3 on Linux Mint 21.3
-# March 28, 2024
+# Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
+# April 5, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -162,10 +162,9 @@ exitkillswitch="n"
 # Ping the connected server when the script exits.  "y" or "n"
 exitping="n"
 #
-# Query the server load when the script exits.  "y" or "n"
-# Requires 'curl' and 'jq'.
-# currently broken. see https://github.com/ph202107/nordlist/issues/6
-# exitload="n"
+# Query the current server load when the script exits.  "y" or "n"
+# Requires 'curl' 'jq' and the local 'nordserversfile' mentioned above.
+exitload="n"
 #
 # Show your external IP address when the script exits.  "y" or "n"
 # Requires 'curl'.  Connects to ipinfo.io.
@@ -274,7 +273,7 @@ nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" 
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4284 (function main_menu).
+# The Main Menu starts on line 4304 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -3214,8 +3213,29 @@ function server_load {
         return
     fi
     echo -ne "$nordhost load = "
-    # this works but it will download 20MB every time and possible api server timeouts
+    # this will also work but it will download 20MB every time and possible api server timeouts
     # sload=$( timeout 10 curl --silent "https://api.nordvpn.com/v1/servers?limit=999999" | jq --arg host "$nordhost" '.[] | select(.hostname == $host) | .load' )
+    #
+    #
+    # workaround.  https://github.com/ph202107/nordlist/issues/6
+    if [[ -f "$nordserversfile" ]]; then
+        # have not found a way to query the api directly by "hostname", but "id" works
+        # find the "id" of the current server from the local .json
+        serverid=$( jq --arg host "$nordhost" '.[] | select(.hostname == $host) | .id' "$nordserversfile" )
+        if [[ -n "$serverid" ]]; then
+            # query the api by the server id. this method downloads about 3KB instead of 20MB
+            sload=$( timeout 10 curl --silent "https://api.nordvpn.com/v1/servers?limit=1&filters\[servers.id\]=$serverid" | jq '.[].load' )
+        else
+            # servers may be added or removed
+            echo -e "${WColor}No id found for '$nordhost'${Color_Off}"
+            echo "Try updating $nordserversfile"
+            echo "(Tools - NordVPN API - All VPN Servers)"
+        fi
+    else
+        echo -e "${WColor}$nordserversfile not found${Color_Off}"
+        echo "Create the file at: Tools - NordVPN API - All VPN Servers"
+    fi
+    #
     if [[ -z $sload ]]; then
         echo "Request timed out."
     elif (( sload <= 30 )); then
