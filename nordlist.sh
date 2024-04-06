@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
-# April 5, 2024
+# April 6, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -252,7 +252,8 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Countries listed here will be labelled as (Virtual).
 # Source: https://nordvpn.com/blog/new-nordvpn-virtual-servers/
 # This list is subject to change and must be updated manually.
-nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" "Belize" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Cambodia" "Cayman_Islands" "Dominican_Republic" "Ecuador" "Egypt" "El_Salvador" "Ghana" "Greenland" "Guam" "Guatemala" "Honduras" "India" "Isle_Of_Man" "Jamaica" "Jersey" "Kazakhstan" "Kenya" "Lao_People'S_Democratic_Republic" "Lebanon" "Liechtenstein" "Malta" "Monaco" "Mongolia" "Montenegro" "Morocco" "Myanmar" "Nepal" "Nigeria" "Pakistan" "Panama" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Puerto_Rico" "Sri_Lanka" "Trinidad_And_Tobago" "Uruguay" "Uzbekistan" "Venezuela" )
+# Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
+nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" "Belize" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Cambodia" "Cayman_Islands" "Dominican_Republic" "Ecuador" "Egypt" "El_Salvador" "Ghana" "Greenland" "Guam" "Guatemala" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Kazakhstan" "Kenya" "Lao_People's_Democratic_Republic" "Lebanon" "Liechtenstein" "Malta" "Monaco" "Mongolia" "Montenegro" "Morocco" "Myanmar" "Nepal" "Nigeria" "Pakistan" "Panama" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Puerto_Rico" "Sri_Lanka" "Trinidad_and_Tobago" "Uruguay" "Uzbekistan" "Venezuela" )
 #
 # =====================================================================
 # Visual Options
@@ -273,7 +274,7 @@ nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" 
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4304 (function main_menu).
+# The Main Menu starts on line 4374 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1036,7 +1037,7 @@ function country_names {
     fi
     #
     if [[ "$1" == "shorten" ]]; then
-        #
+        # Names must match exactly the output of "nordvpn countries"
         countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Bosnia_Herz}")
         countrylist=("${countrylist[@]/Brunei_Darussalam/Brunei}")
         countrylist=("${countrylist[@]/Cayman_Islands/Cayman_Isl}")
@@ -3248,8 +3249,15 @@ function server_load {
     echo
 }
 function allservers_menu {
+    # credit to ChatGPT 3.5 for help with jq syntax.  https://chat.openai.com/
+    # can use 'sort -u' instead of 'sort -k2' to sort by hostname instead of by city
+    # to list only the hostnames eg:  jq -r '.[] | select(.groups[].title == "P2P") | .hostname' "$nordserversfile" | sort -u
+    #
     heading "All Servers"
     parent="Nord API"
+    echo "Query a local .json of all the NordVPN servers."
+    echo "Requires 'curl' and 'jq'"
+    echo
     if [[ -f "$nordserversfile" ]]; then
         echo -e "File: ${EColor}$nordserversfile${Color_Off}"
     else
@@ -3261,23 +3269,17 @@ function allservers_menu {
             touch "$nordserversfile"
             curl --silent "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
             echo -e "Saved as: ${EColor}$nordserversfile${Color_Off}"
-
-            # future plan is to use jq and the json for all queries
-            # I just need to figure out the syntax
-            # in the meantime grep this txt file
-            jq '.[].hostname' "$nordserversfile" | sort -u | sed 's/"//g' > "$nordserversfile.txt"
-
         else
             REPLY="$upmenu"
             parent_menu
         fi
     fi
     echo "Last Modified: $( date -r "$nordserversfile" )"
-    echo "Server Count: $( jq length "$nordserversfile")"
+    echo "Server Count: $( jq length "$nordserversfile" )"
     echo
     PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
-    submallvpn=( "List All Servers" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Search" "Connect" "Update List" "Exit" )
+    submallvpn=( "List All Servers" "Server Count" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Obfuscated Servers" "P2P Servers" "Dedicated-IP Servers" "Virtual Locations" "Search Country" "Search City" "Search Server" "Connect" "Update List" "Exit" )
     select avpn in "${submallvpn[@]}"
     do
         parent_menu
@@ -3289,46 +3291,120 @@ function allservers_menu {
                 echo "All Servers: $( jq length "$nordserversfile" )"
                 echo
                 ;;
+            "Server Count")
+                heading "Servers in each Country" "txt"
+                jq -r 'group_by(.locations[0].country.name) | map({country: .[0].locations[0].country.name, total: length}) | sort_by(.country) | .[] | "\(.country) \(.total)"' "$nordserversfile"
+                echo
+                heading "Servers in each City" "txt"
+                jq -r 'group_by(.locations[0].country.city.name) | map({city_country: "\(.[0].locations[0].country.city.name) \(.[0].locations[0].country.name)", total: length}) | sort_by(.city_country) | .[] | "\(.city_country) \(.total)"' "$nordserversfile"
+                echo
+                ;;
             "Double-VPN Servers")
                 heading "Double-VPN Servers" "txt"
-                grep "-" "$nordserversfile.txt" | grep -i -v -E "socks|onion|napps-6"
+                jq -r '.[] | select(.groups[].title == "Double VPN") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
                 echo
-                echo "Double-VPN Servers: $( grep "-" "$nordserversfile.txt" | grep -c -i -v -E "socks|onion|napps-6" )"
+                echo "(City Name) is the second hop."
+                echo
+                echo "Double-VPN Servers: $( jq -r '.[] | select(.groups[].title == "Double VPN") | .hostname' "$nordserversfile" | sort -u | wc -l )"
                 echo
                 ;;
             "Onion Servers")
                 heading "Onion Servers" "txt"
-                grep -i "onion" "$nordserversfile.txt"
+                jq -r '.[] | select(.groups[].title == "Onion Over VPN") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
                 echo
-                echo "Onion Servers: $( grep -c -i "onion" "$nordserversfile.txt" )"
+                echo "Onion Servers: $( jq -r '.[] | select(.groups[].title == "Onion Over VPN") | .hostname' "$nordserversfile" | sort -u | wc -l )"
                 echo
                 ;;
             "SOCKS Servers")
                 heading "SOCKS Servers" "txt"
-                grep -i "socks" "$nordserversfile.txt"
+                jq -r '.[] | select(.technologies[].name == "Socks 5") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
                 echo
-                echo "SOCKS Servers: $( grep -c -i "socks" "$nordserversfile.txt" )"
+                echo "SOCKS Servers: $( jq -r '.[] | select(.technologies[].name == "Socks 5") | .hostname' "$nordserversfile" | sort -u | wc -l )"
                 echo
                 echo "Proxy names and locations are available online:"
                 echo -e "${EColor}https://support.nordvpn.com/hc/en-us/articles/20195967385745${Color_Off}"
                 echo
                 ;;
-            "Search")
-                heading "Search Hostnames" "txt" "alt"
-                echo "Country code reference:"
-                echo -e "${EColor}https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2${Color_Off}"
+            "Obfuscated Servers")
+                heading "Obfuscated Servers" "txt"
+                jq -r '.[] | select(.groups[].title == "Obfuscated Servers") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
                 echo
+                echo "Obfuscated Servers: $( jq -r '.[] | select(.groups[].title == "Obfuscated Servers") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -u | wc -l )"
                 echo
-                read -r -p "Enter search term: " allvpnsearch
+                ;;
+            "P2P Servers")
+                heading "P2P Servers" "txt"
+                jq -r '.[] | select(.groups[].title == "P2P") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
                 echo
-                if [[ "$allvpnsearch" == "co" ]]; then
-                    # list Columbia servers
-                    allvpnsearch="co[0-9]"
-                fi
-                heading "Search for '$allvpnsearch'" "txt"
-                grep -i "$allvpnsearch" "$nordserversfile.txt"
+                echo "P2P Servers: $( jq -r '.[] | select(.groups[].title == "P2P") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -u | wc -l )"
                 echo
-                echo "'$allvpnsearch' Count: $( grep -c -i "$allvpnsearch" "$nordserversfile.txt" )"
+                ;;
+            "Dedicated-IP Servers")
+                heading "Dedicated-IP Servers" "txt"
+                jq -r '.[] | select(.groups[].title == "Dedicated IP") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+                echo
+                echo "Dedicated-IP Servers: $( jq -r '.[] | select(.groups[].title == "Dedicated IP") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -u | wc -l )"
+                echo
+                ;;
+            #
+            # "technologies": "IKEv2/IPSec" "OpenVPN UDP" "OpenVPN TCP" "HTTP Proxy (SSL)" "HTTP CyberSec Proxy (SSL)" "Wireguard"
+            # jq -r '.[] | select(.technologies[] | select(.name == "IKEv2/IPSec")) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+            #
+            "Virtual Locations")
+                heading "Virtual Locations" "txt"
+                echo -e "${LColor}Virtual Country Locations${Color_Off}"
+                jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
+                echo; echo
+                echo "Virtual Country Locations: $( jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | sort -u | wc -l )"
+                echo
+                echo "Can be used to update the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual" "$0" | cut -f1 -d':'))."
+                #
+                # cities only
+                # jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
+                #
+                #echo; echo
+                #echo -e "${LColor}Virtual Country and City Locations${Color_Off}"
+                #jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
+                #echo; echo
+                #echo "Virtual Country and City Locations: $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | sort -u | wc -l )"
+                echo
+                ;;
+            "Search Country")
+                heading "Search by Country Name" "txt"
+                echo "Return the server hostnames in a particular country."
+                echo "Please use exact format, eg. 'United States'"
+                echo
+                read -r -p "Enter the country name: " searchcountry
+                echo
+                heading "Servers in $searchcountry" "txt"
+                jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | .hostname' "$nordserversfile" | sort -u
+                echo
+                echo "$searchcountry servers: $( jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | .hostname' "$nordserversfile" | sort -u | wc -l )"
+                echo
+                ;;
+            "Search City")
+                heading "Search by City Name" "txt"
+                echo "Return the server hostnames in a particular city."
+                echo "Please use exact format, eg. 'Los Angeles'"
+                echo
+                read -r -p "Enter the city name: " searchcity
+                echo
+                heading "Servers in $searchcity" "txt"
+                jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -u
+                echo
+                echo "$searchcity servers: $( jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -u | wc -l )"
+                echo
+                ;;
+            "Search Server")
+                heading "Search by Server Hostname" "txt"
+                echo "The complete record for a particular server stored in:"
+                echo -e "${EColor}$nordserversfile${Color_Off}"
+                echo "For example 'us9723.nordvpn.com'"
+                echo
+                read -r -p "Enter the full server hostname: " searchserver
+                echo
+                heading "Record for $searchserver" "txt"
+                jq --arg searchserver "$searchserver" '.[] | select(.hostname == $searchserver)' "$nordserversfile"
                 echo
                 ;;
             "Connect")
@@ -3337,19 +3413,25 @@ function allservers_menu {
             "Update List")
                 heading "Update Server List" "txt" "alt"
                 echo -e "File: ${EColor}$nordserversfile${Color_Off}"
+                echo "File Size: $( du -k "$nordserversfile" | cut -f1 ) KB"
                 echo "Last Modified: $( date -r "$nordserversfile" )"
-                echo "Server Count: $( jq length "$nordserversfile")"
+                echo "Server Count: $( jq length "$nordserversfile" )"
                 echo
-                echo "Please backup your file before trying an update."
+                read -n 1 -r -p "Backup as $( echo -e "${FColor}$nordserversfile.$( date -r "$nordserversfile" +"%Y%m%d" )${Color_Off}" ) ? (y/n) "; echo
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    cp -v "$nordserversfile" "$nordserversfile.$( date -r "$nordserversfile" +"%Y%m%d" )"
+                fi
                 echo
                 read -n 1 -r -p "Download an updated .json? (~20MB) (y/n) "; echo
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    curl --silent "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
-                    jq '.[].hostname' "$nordserversfile" | sort -u | sed 's/"//g' > "$nordserversfile.txt"
+                    curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
+                    echo
                     echo -e "Saved as: ${EColor}$nordserversfile${Color_Off}"
+                    echo "File Size: $( du -k "$nordserversfile" | cut -f1 ) KB"
                     echo "Last Modified: $( date -r "$nordserversfile" )"
-                    echo "Server Count: $( jq length "$nordserversfile")"
+                    echo "Server Count: $( jq length "$nordserversfile" )"
                     echo
                 fi
                 ;;
@@ -3367,9 +3449,6 @@ function nordapi_menu {
     # https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
     heading "Nord API"
     parent="Tools"
-    echo -e "${WColor}** Note:${Color_Off} Some functions are not working."
-    echo "See: https://github.com/ph202107/nordlist/issues/6"
-    echo
     echo "Query the NordVPN Public API.  Requires 'curl' and 'jq'"
     echo "Commands may take a few seconds to complete."
     echo "Rate-limiting by the server may result in a Parse error."
@@ -3381,7 +3460,7 @@ function nordapi_menu {
     echo
     PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
-    submapi=("Host Server Load" "Host Server Info" "Top 15 Recommended" "Top 15 By Country" "#Servers per Country" "All VPN Servers" "All Cities" "Change Host" "Connect" "Exit")
+    submapi=("Host Server Load" "Top 15 Recommended" "Top 15 By Country" "All VPN Servers" "All Cities" "Change Host" "Connect" "Exit")
     select napi in "${submapi[@]}"
     do
         parent_menu
@@ -3389,10 +3468,6 @@ function nordapi_menu {
             "Host Server Load")
                 heading "Current $nordhost Load" "txt" "alt"
                 server_load
-                ;;
-            "Host Server Info")
-                heading "Server $nordhost Info" "txt" "alt"
-                curl --silent "https://api.nordvpn.com/v1/servers?limit=999999" | jq --arg host "$nordhost" '.[] | select(.hostname == $host)'
                 ;;
             "Top 15 Recommended")
                 heading "Top 15 Recommended" "txt" "alt"
@@ -3407,11 +3482,6 @@ function nordapi_menu {
                 echo -e "${H2Color}SERVER: ${H1Color}%LOAD${Color_Off}"
                 echo
                 curl --silent "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$ccode&\[servers_groups\]\[identifier\]=legacy_standard" | jq --raw-output --slurp ' .[] | sort_by(.load) | limit(15;.[]) | [.hostname, .load] | "\(.[0]): \(.[1])"'
-                echo
-                ;;
-            "#Servers per Country")
-                heading "Number of Servers per Country" "txt" "alt"
-                curl --silent "https://api.nordvpn.com/v1/servers?limit=16384" | jq --raw-output '. as $parent | [.[].locations[].country.name] | sort | unique | .[] as $country | ($parent | map(select(.locations[].country.name == $country)) | length) as $count |  [$country, $count] |  "\(.[0]): \(.[1])"'
                 echo
                 ;;
             "All VPN Servers")
