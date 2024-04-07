@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
-# April 6, 2024
+# April 7, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -274,7 +274,7 @@ nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" 
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4374 (function main_menu).
+# The Main Menu starts on line 4392 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -780,34 +780,38 @@ function disconnect_vpn {
         fi
     fi
 }
-function ipinfo_search {
-    printf '%s\n' "${ipinfo[@]}" | grep -m1 -i "$1" | cut -f4 -d'"'
-}
 function ipinfo_curl {
     echo -n "External IP: "
-    readarray -t ipinfo < <( timeout 6 curl --silent ipinfo.io )
-    extip=$( ipinfo_search "ip" )
-    exthost=$( ipinfo_search "hostname" )
-    extorg=$( ipinfo_search "org" )
-    extcity=$( ipinfo_search "city" )
-    extregion=$( ipinfo_search "region" )
-    extcountry=$( ipinfo_search "country" )
-    extlimit=$( ipinfo_search "rate limit" )
-    if [[ -n "$extip" ]]; then # not empty
-        echo -e "${IPColor}$extip  $exthost${Color_Off}"
-        echo -e "${SVColor}$extorg ${CIColor}$extcity $extregion ${COColor}$extcountry${Color_Off}"
-        echo
-    elif [[ -n "$extlimit" ]]; then
-        echo -e "${WColor}$extlimit${Color_Off}"
-        echo "This IP has hit the daily limit for the unauthenticated API."
-        echo
-    else
+    response=$( timeout 6 curl --silent https://ipinfo.io/ )
+    #
+    if [[ -z $response ]]; then
         set_vars
-        echo -n "Request timed out"
+        echo -ne "${WColor}Timed Out${Color_Off}"
         if [[ "$connected" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
             echo -ne " - $ks"
         fi
-        echo; echo
+        echo
+        echo
+    elif [[ $response == *"rate limit"* ]]; then
+        echo -e "${WColor}Rate Limit${Color_Off}"
+        echo "This IP has hit the daily limit for the unauthenticated API."
+        echo
+    else
+        # each field from the ipinfo json response
+        fields=( "ip" "hostname" "city" "region" "country" "loc" "org" "postal" "timezone" )
+        for field in "${fields[@]}"
+        do
+            # find the value of each field
+            value=$(echo "$response" | jq -r ".$field")
+            # ignore "null" fields, hostname usually
+            if [ "$value" != "null" ]; then
+                # create a variable starting with "ext"+"field", eg. "extip" with the corresponding value
+                declare "ext$field=$value"
+            fi
+        done
+        echo -e "${IPColor}$extip  $exthostname${Color_Off}"
+        echo -e "${SVColor}$extorg ${CIColor}$extcity $extregion ${COColor}$extcountry${Color_Off}"
+        echo
     fi
 }
 function status {
@@ -1009,7 +1013,6 @@ function create_list {
             readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
             if [[ "$2" == "count" ]]; then return; fi
             rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
-            country_names "shorten"
             countrylist+=( "Random" "Exit" )
             ;;
         "city")
@@ -1027,52 +1030,61 @@ function create_list {
             ;;
     esac
 }
-function country_names {
-    # Shorten some names so the "Countries" menu fits better in the terminal window.
-    # Aim for 11 characters or less.
-    # $1 = "shorten" or "expand"
+function country_names_modify {
+    # Add an asterisk if the country is listed in the 'nordvirtual' array.
+    # Shorten long names so the "Countries" menu fits better in the terminal window.
     #
-    if [[ ! "$shortcountries" =~ ^[Yy]$ ]]; then
+    modcountrylist=()
+    # iterate over elements in countrylist
+    for country in "${countrylist[@]}"
+    do
+        # check if the country is in the nordvirtual array
+        if [[ ${nordvirtual[*],,} =~ ${country,,} ]]; then
+            # add an asterisk to the country name
+            country="${country}*"
+        fi
+        # shorten long names if the option is enabled
+        if [[ "$shortcountries" =~ ^[Yy]$ ]]; then
+            # if the country name has an asterisk at the end
+            if [[ "${country: -1}" == "*" ]]; then
+                # check if the country name is longer than 12 characters
+                if (( ${#country} > 12 )); then
+                    # shorten the country name to the first 11 characters
+                    shortened_country="${country:0:11}"
+                    # add the asterisk, 12 characters total
+                    country="${shortened_country}*"
+                fi
+            else
+                # if no asterisk at the end
+                # check if the country name is longer than 12 characters
+                if (( ${#country} > 12 )); then
+                    # shorten the country name to the first 12 characters
+                    country="${country:0:12}"
+                fi
+            fi
+        fi
+        # add the modified country name to modcountrylist. includes "Random" "Exit"
+        modcountrylist+=( "$country" )
+    done
+}
+function country_names_restore {
+    # countrylist and modcountrylist store two names for the same country at the same index
+    # xcountry is selected from modcountrylist (abbreviated and/or with asterisk)
+    #
+    if [[ "$xcountry" == "$rcountry" ]]; then
+        # rcountry is not modified so nothing to restore
         return
     fi
+    # iterate over modcountrylist to find the index of the selection
+    for i in "${!modcountrylist[@]}"; do
+        if [[ "${modcountrylist[i]}" == "$xcountry" ]]; then
+            index=$i
+            break
+        fi
+    done
+    # restore the original country name from the countrylist array
+    xcountry="${countrylist[index]}"
     #
-    if [[ "$1" == "shorten" ]]; then
-        # Names must match exactly the output of "nordvpn countries"
-        countrylist=("${countrylist[@]/Bosnia_And_Herzegovina/Bosnia_Herz}")
-        countrylist=("${countrylist[@]/Brunei_Darussalam/Brunei}")
-        countrylist=("${countrylist[@]/Cayman_Islands/Cayman_Isl}")
-        countrylist=("${countrylist[@]/Czech_Republic/Czech_Rep}")
-        countrylist=("${countrylist[@]/Dominican_Republic/Dominican_R}")
-        countrylist=("${countrylist[@]/Lao_People\'S_Democratic_Republic/Laos}")
-        countrylist=("${countrylist[@]/Liechtenstein/Liechtenstn}")
-        countrylist=("${countrylist[@]/North_Macedonia/N_Macedonia}")
-        countrylist=("${countrylist[@]/Papua_New_Guinea/Papua_NG}")
-        countrylist=("${countrylist[@]/South_Africa/S_Africa}")
-        countrylist=("${countrylist[@]/Trinidad_And_Tobago/Trinidad}")
-        countrylist=("${countrylist[@]/United_Arab_Emirates/UAE}")
-        countrylist=("${countrylist[@]/United_Kingdom/UK}")
-        countrylist=("${countrylist[@]/United_States/USA}")
-        #
-    elif [[ "$1" == "expand" ]]; then
-        #
-        case $xcountry in
-            "Bosnia_Herz")  xcountry="Bosnia_and_Herzegovina";;
-            "Brunei")       xcountry="Brunei_Darussalam";;
-            "Cayman_Isl")   xcountry="Cayman_Islands";;
-            "Czech_Rep")    xcountry="Czech_Republic";;
-            "Dominican_R")  xcountry="Dominican_Republic";;
-            "Laos")         xcountry="Lao_People's_Democratic_Republic";;
-            "Liechtenstn")  xcountry="Liechtenstein";;
-            "N_Macedonia")  xcountry="North_Macedonia";;
-            "Papua_NG")     xcountry="Papua_New_Guinea";;
-            "S_Africa")     xcountry="South_Africa";;
-            "Trinidad")     xcountry="Trinidad_and_Tobago";;
-            "UAE")          xcountry="United_Arab_Emirates";;
-            "UK")           xcountry="United_Kingdom";;
-            "USA")          xcountry="United_States";;
-        esac
-        #
-    fi
 }
 function country_menu {
     # submenu for all available countries
@@ -1080,12 +1092,15 @@ function country_menu {
     heading "Countries"
     parent="Main"
     create_list "country"
+    country_names_modify
+    echo "(*) = Virtual Servers"
+    echo
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Countries with Obfuscation support"
         echo
     fi
     PS3=$'\n''Choose a Country: '
-    select xcountry in "${countrylist[@]}"
+    select xcountry in "${modcountrylist[@]}"
     do
         parent_menu
         if [[ "$xcountry" == "Exit" ]]; then
@@ -1093,10 +1108,10 @@ function country_menu {
         elif [[ "$xcountry" == "Random" ]]; then
             xcountry="$rcountry"
             city_menu
-        elif (( 1 <= REPLY )) && (( REPLY <= ${#countrylist[@]} )); then
+        elif (( 1 <= REPLY )) && (( REPLY <= ${#modcountrylist[@]} )); then
             city_menu
         else
-            invalid_option "${#countrylist[@]}" "$parent"
+            invalid_option "${#modcountrylist[@]}" "$parent"
         fi
     done
 }
@@ -1109,7 +1124,7 @@ function city_menu {
     else
         parent="Country"
     fi
-    country_names "expand"
+    country_names_restore
     heading "$xcountry"
     echo
     if [[ ${nordvirtual[*],,} =~ ${xcountry,,} ]]; then
@@ -1150,7 +1165,7 @@ function city_menu {
             "Random")
                 heading "Random"
                 disconnect_vpn
-                echo "Connect to $rcity $xcountry"
+                echo "Connect to $rcity $rcountry"
                 echo
                 nordvpn connect "$rcity"
                 status
@@ -1239,7 +1254,7 @@ function city_count {
     echo "Virtual Cities*    = ${#virtualcities[@]}"
     echo "========================="
     echo
-    echo "(*) = The Country is listed in the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual" "$0" | cut -f1 -d':'))."
+    echo "(*) = The Country is listed in the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))."
     echo
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Obfuscate is $obfuscatec."
@@ -3250,7 +3265,7 @@ function server_load {
 }
 function allservers_menu {
     # credit to ChatGPT 3.5 for help with jq syntax.  https://chat.openai.com/
-    # can use 'sort -u' instead of 'sort -k2' to sort by hostname instead of by city
+    # can use 'sort -k1' instead of 'sort -k2' to sort by hostname instead of by city
     # to list only the hostnames eg:  jq -r '.[] | select(.groups[].title == "P2P") | .hostname' "$nordserversfile" | sort -u
     #
     heading "All Servers"
@@ -3286,7 +3301,7 @@ function allservers_menu {
         case $avpn in
             "List All Servers")
                 heading "All the VPN Servers" "txt"
-                jq '.[].hostname' "$nordserversfile" | sort -u | sed 's/"//g'    # remove quotes
+                jq '.[].hostname' "$nordserversfile" | sort -V -u | sed 's/"//g'    # remove quotes
                 echo
                 echo "All Servers: $( jq length "$nordserversfile" )"
                 echo
@@ -3296,7 +3311,7 @@ function allservers_menu {
                 jq -r 'group_by(.locations[0].country.name) | map({country: .[0].locations[0].country.name, total: length}) | sort_by(.country) | .[] | "\(.country) \(.total)"' "$nordserversfile"
                 echo
                 heading "Servers in each City" "txt"
-                jq -r 'group_by(.locations[0].country.city.name) | map({city_country: "\(.[0].locations[0].country.city.name) \(.[0].locations[0].country.name)", total: length}) | sort_by(.city_country) | .[] | "\(.city_country) \(.total)"' "$nordserversfile"
+                jq -r 'group_by(.locations[0].country.name + " " + .locations[0].country.city.name) | map({country: .[0].locations[0].country.name, city: .[0].locations[0].country.city.name, total: length}) | sort_by(.country, .city) | .[] | "\(.country) \(.city) \(.total)"' "$nordserversfile"
                 echo
                 ;;
             "Double-VPN Servers")
@@ -3357,7 +3372,7 @@ function allservers_menu {
                 echo; echo
                 echo "Virtual Country Locations: $( jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | sort -u | wc -l )"
                 echo
-                echo "Can be used to update the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual" "$0" | cut -f1 -d':'))."
+                echo "Can be used to update the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))."
                 #
                 # cities only
                 # jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
@@ -3376,8 +3391,11 @@ function allservers_menu {
                 echo
                 read -r -p "Enter the country name: " searchcountry
                 echo
-                heading "Servers in $searchcountry" "txt"
-                jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | .hostname' "$nordserversfile" | sort -u
+                #heading "Servers in $searchcountry sorted by City" "txt"
+                #jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+                #echo
+                heading "Servers in $searchcountry sorted by Hostname" "txt"
+                jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -V -k1
                 echo
                 echo "$searchcountry servers: $( jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | .hostname' "$nordserversfile" | sort -u | wc -l )"
                 echo
@@ -3390,7 +3408,7 @@ function allservers_menu {
                 read -r -p "Enter the city name: " searchcity
                 echo
                 heading "Servers in $searchcity" "txt"
-                jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -u
+                jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -V
                 echo
                 echo "$searchcity servers: $( jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -u | wc -l )"
                 echo
@@ -3421,8 +3439,8 @@ function allservers_menu {
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     cp -v "$nordserversfile" "$nordserversfile.$( date -r "$nordserversfile" +"%Y%m%d" )"
+                    echo
                 fi
-                echo
                 read -n 1 -r -p "Download an updated .json? (~20MB) (y/n) "; echo
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
