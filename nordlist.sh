@@ -190,8 +190,8 @@ pingcount="3"
 # Leave blank to have the menu width change with the window size.
 menuwidth="80"
 #
-# Abbreviate long country names so the 'Countries' menu fits better in
-# the terminal window.  "y" or "n"
+# Shorten country names to 12 characters so the 'Countries' menu
+# fits better in the terminal window.  "y" or "n"
 shortcountries="y"
 #
 # Choosing 'Exit' in a submenu will take you to the main menu.
@@ -274,7 +274,7 @@ nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" 
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4392 (function main_menu).
+# The Main Menu starts on line 4401 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1117,14 +1117,15 @@ function country_menu {
 }
 function city_menu {
     # all available cities in $xcountry
-    # $1 = parent menu name, disables fast7
+    # $1 = parent menu name, disables fast7, skips country_names_restore
+    #      set $xcountry first when using the $1 option
     #
     if [[ -n "$1" ]]; then
         parent="$1"
     else
         parent="Country"
+        country_names_restore
     fi
-    country_names_restore
     heading "$xcountry"
     echo
     if [[ ${nordvirtual[*],,} =~ ${xcountry,,} ]]; then
@@ -3772,7 +3773,7 @@ function speedtest_menu {
     fi
     PS3=$'\n''Select a test: '
     COLUMNS="$menuwidth"
-    submspeed=( "Download & Upload" "Download Only" "Upload Only" "Latency & Load" "iperf3" "wget" "speedtest.net"  "speedof.me" "fast.com" "linode.com" "digitalocean.com" "nperf.com" "Exit" )
+    submspeed=( "Download & Upload" "Download Only" "Upload Only" "Single DL" "List" "Latency & Load" "iperf3" "wget" "speedtest.net"  "speedof.me" "fast.com" "linode.com" "digitalocean.com" "nperf.com" "Exit" )
     select spd in "${submspeed[@]}"
     do
         parent_menu
@@ -3788,6 +3789,14 @@ function speedtest_menu {
             "Upload Only")
                 echo
                 speedtest-cli --no-download
+                ;;
+            "Single DL")
+                echo
+                speedtest-cli --single --no-upload
+                ;;
+            "List")
+                echo
+                speedtest-cli --list
                 ;;
             "Latency & Load")
                 echo
