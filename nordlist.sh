@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
-# April 7, 2024
+# April 8, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -185,14 +185,15 @@ newfirefox="n"
 # Specify the number of pings to send when pinging a destination.
 pingcount="3"
 #
-# Set 'menuwidth' to your terminal width or lower to compact the menus
+# Set 'menuwidth' to your terminal width or lower, to compact the menus
 # horizontally. ("Countries" and "Favorites" excluded.)
 # Leave blank to have the menu width change with the window size.
 menuwidth="80"
 #
-# Shorten country names to 12 characters so the 'Countries' menu
-# fits better in the terminal window.  "y" or "n"
-shortcountries="y"
+# Choose the maximum number of characters for country names in the
+# "Countries" menu. Shortens long names so the menu fits better in the
+# terminal window. Minimum is "6".  Leave blank to disable.
+charlimit="12"
 #
 # Choosing 'Exit' in a submenu will take you to the main menu.
 # Entering this value while in a submenu will return you to the default
@@ -274,7 +275,7 @@ nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" 
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4401 (function main_menu).
+# The Main Menu starts on line 4418 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1043,23 +1044,29 @@ function country_names_modify {
             # add an asterisk to the country name
             country="${country}*"
         fi
-        # shorten long names if the option is enabled
-        if [[ "$shortcountries" =~ ^[Yy]$ ]]; then
-            # if the country name has an asterisk at the end
+        # shorten long country names if the option is enabled
+        if [[ -n "$charlimit" ]]; then
+            # minimum is 6 characters.  Austra|lia  Austri|a
+            if (( charlimit < 6 )); then charlimit="6"; fi
+            # general substitutions
+            country="${country/United/Utd}"
+            country="${country/North/N}"
+            country="${country/South/S}"
+            # check if the country name has an asterisk at the end
             if [[ "${country: -1}" == "*" ]]; then
-                # check if the country name is longer than 12 characters
-                if (( ${#country} > 12 )); then
-                    # shorten the country name to the first 11 characters
-                    shortened_country="${country:0:11}"
-                    # add the asterisk, 12 characters total
+                # check if the country name is longer than the character limit
+                if (( ${#country} > charlimit )); then
+                    # shorten the country name to the limit minus one
+                    shortened_country="${country:0:$(( charlimit - 1 ))}"
+                    # add the asterisk to the end
                     country="${shortened_country}*"
                 fi
             else
-                # if no asterisk at the end
-                # check if the country name is longer than 12 characters
-                if (( ${#country} > 12 )); then
-                    # shorten the country name to the first 12 characters
-                    country="${country:0:12}"
+                # if there is no asterisk
+                # check if the country name is longer than the limit
+                if (( ${#country} > charlimit )); then
+                    # shorten the country name to match the limit
+                    country="${country:0:$charlimit}"
                 fi
             fi
         fi
@@ -1069,10 +1076,12 @@ function country_names_modify {
 }
 function country_names_restore {
     # countrylist and modcountrylist store two names for the same country at the same index
-    # xcountry is selected from modcountrylist (abbreviated and/or with asterisk)
+    # xcountry is selected from modcountrylist (abbreviated and/or with asterisk) in the country_menu
+    # find the original country name to use in function city_menu
     #
-    if [[ "$xcountry" == "$rcountry" ]]; then
+    if [[ "$xcountry" == "$rcountry" ]] || [[ "${#modcountrylist[@]}" == "0" ]] || [[ "${#countrylist[@]}" == "0" ]]; then
         # rcountry is not modified so nothing to restore
+        # if either modcountrylist or countrylist is empty there is nothing to do.
         return
     fi
     # iterate over modcountrylist to find the index of the selection
@@ -1093,8 +1102,15 @@ function country_menu {
     parent="Main"
     create_list "country"
     country_names_modify
-    echo "(*) = Virtual Servers"
-    echo
+    #
+    # check if any country name has an asterisk
+    for astrx in "${modcountrylist[@]}"; do
+        if [[ $astrx == *"*"* ]]; then
+            echo "(*) = Virtual Servers"
+            echo
+            break
+        fi
+    done
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Countries with Obfuscation support"
         echo
@@ -1117,8 +1133,9 @@ function country_menu {
 }
 function city_menu {
     # all available cities in $xcountry
-    # $1 = parent menu name, disables fast7, skips country_names_restore
-    #      set $xcountry first when using the $1 option
+    # $1 = parent menu name - valid options are listed in function parent_menu
+    #      disables fast7 (automatic connect to country), and skips country_names_restore (which will set $xcountry)
+    #      must set $xcountry AND use $1 option when calling this function from anywhere but country_menu
     #
     if [[ -n "$1" ]]; then
         parent="$1"
@@ -1166,7 +1183,7 @@ function city_menu {
             "Random")
                 heading "Random"
                 disconnect_vpn
-                echo "Connect to $rcity $rcountry"
+                echo "Connect to $rcity $xcountry"
                 echo
                 nordvpn connect "$rcity"
                 status
@@ -3267,7 +3284,7 @@ function server_load {
 function allservers_menu {
     # credit to ChatGPT 3.5 for help with jq syntax.  https://chat.openai.com/
     # can use 'sort -k1' instead of 'sort -k2' to sort by hostname instead of by city
-    # to list only the hostnames eg:  jq -r '.[] | select(.groups[].title == "P2P") | .hostname' "$nordserversfile" | sort -u
+    # to list only the hostnames eg:  jq -r '.[] | select(.groups[].title == "P2P") | .hostname' "$nordserversfile" | sort -V -u
     #
     heading "All Servers"
     parent="Nord API"
@@ -4451,12 +4468,12 @@ function main_menu {
             "US_Cities")
                 # city menu for United_States
                 xcountry="United_States"
-                city_menu "Main"    # 'upmenu' returns to the Main menu
+                city_menu "Main"
                 ;;
             "CA_Cities")
                 # city menu for Canada
                 xcountry="Canada"
-                city_menu "Main"    # 'upmenu' returns to the Main menu
+                city_menu "Main"
                 ;;
             "P2P-USA")
                 # force a disconnect and apply default settings
