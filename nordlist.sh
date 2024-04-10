@@ -3,7 +3,7 @@
 # unused color variables, individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
-# April 8, 2024
+# April 10, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -167,7 +167,7 @@ exitping="n"
 exitload="n"
 #
 # Show your external IP address when the script exits.  "y" or "n"
-# Requires 'curl'.  Connects to ipinfo.io.
+# Requires 'curl' and 'jq'.  Connects to ipinfo.io.
 exitip="n"
 #
 # Reload the "Bash Sensors" Cinnamon applet when the script exits.
@@ -275,7 +275,7 @@ nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" 
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4418 (function main_menu).
+# The Main Menu starts on line 4549 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -783,9 +783,9 @@ function disconnect_vpn {
 }
 function ipinfo_curl {
     echo -n "External IP: "
-    response=$( timeout 6 curl --silent https://ipinfo.io/ )
+    response=$( timeout 6 curl --silent "https://ipinfo.io/" )
     #
-    if [[ -z $response ]]; then
+    if [[ -z "$response" ]]; then
         set_vars
         echo -ne "${WColor}Timed Out${Color_Off}"
         if [[ "$connected" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
@@ -793,7 +793,7 @@ function ipinfo_curl {
         fi
         echo
         echo
-    elif [[ $response == *"rate limit"* ]]; then
+    elif [[ "$response" == *"rate limit"* ]]; then
         echo -e "${WColor}Rate Limit${Color_Off}"
         echo "This IP has hit the daily limit for the unauthenticated API."
         echo
@@ -805,7 +805,7 @@ function ipinfo_curl {
             # find the value of each field
             value=$(echo "$response" | jq -r ".$field")
             # ignore "null" fields, hostname usually
-            if [ "$value" != "null" ]; then
+            if [[ "$value" != "null" ]]; then
                 # create a variable starting with "ext"+"field", eg. "extip" with the corresponding value
                 declare "ext$field=$value"
             fi
@@ -1048,10 +1048,17 @@ function country_names_modify {
         if [[ -n "$charlimit" ]]; then
             # minimum is 6 characters.  Austra|lia  Austri|a
             if (( charlimit < 6 )); then charlimit="6"; fi
+            #
+            # special case
+            country="${country/Lao_People\'S_Democratic_Republic/Laos}"
+            #
             # general substitutions
             country="${country/United/Utd}"
             country="${country/North/N}"
             country="${country/South/S}"
+            country="${country/Republic/Rep}"
+            country="${country/_And_/+}"
+            #
             # check if the country name has an asterisk at the end
             if [[ "${country: -1}" == "*" ]]; then
                 # check if the country name is longer than the character limit
@@ -3281,6 +3288,145 @@ function server_load {
     fi
     echo
 }
+function backup_file {
+    # $1 = full path and filename.  "$nordserversfile"  "$nordfavoritesfile"
+    # $2 = "jq" - use 'jq' to count servers, otherwise count the lines in the file
+    #
+    backupfile="$1.$(date -r "$1" +"%Y%m%d")"
+    directory=$(dirname "$1")
+    # everything before the final period.  used for search
+    filename=$(basename "$1" | rev | cut -f2- -d '.' | rev)
+    # search the directory for filename*
+    existfiles=$(find "$directory" -type f -name "$filename*")
+    #
+    echo -e "File: ${EColor}$1${Color_Off}"
+    echo "File Size: $( du -k "$1" | cut -f1 ) KB"
+    echo "Last Modified: $( date -r "$1" )"
+    if [[ "$2" == "jq" ]]; then
+        echo "Server Count: $( jq length "$1" )"
+    else
+        echo "Server Count: $( wc -l < "$1" )"
+    fi
+    echo
+    # list the backups that are in the same directory
+    echo -e "${LColor}$filename*${Color_Off} files in ${LColor}$directory${Color_Off}:"
+    echo "$existfiles"
+    echo
+    read -n 1 -r -p "Backup as $(echo -e "${FColor}$backupfile${Color_Off}") ? (y/n) "; echo
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [[ -f "$backupfile" ]]; then
+            read -n 1 -r -p "$(echo -e "${WColor}Already exists!${Color_Off}") Overwrite? (y/n) "; echo
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                cp -v "$1" "$backupfile"
+                echo
+            fi
+        else
+            cp -v "$1" "$backupfile"
+            echo
+        fi
+    fi
+}
+function favorites_verify {
+    heading "Check for Obsolete Favorites" "txt"
+    echo "Compare: $nordfavoritesfile"
+    echo "Against: $nordserversfile"
+    echo "To check if any hostnames have been removed from service."
+    echo "You will be prompted to delete the obsolete server from the"
+    echo "favorites list."
+    echo
+    echo
+    echo "============================================================"
+    echo "Backup and update the JSON file."
+    echo "Recommended if you've added favorites since the last update."
+    echo
+    if [[ ! -f "$nordserversfile" ]]; then
+        echo -e "${WColor}$(basename "$nordserversfile") does not exist.${Color_Off}"
+        echo
+        echo "Please visit: Tools - NordVPN API - All VPN Servers"
+        echo
+        return
+    fi
+    allservers_update
+    echo
+    echo "============================================================"
+    echo "Please backup your favorites file."
+    echo
+    backup_file "$nordfavoritesfile"
+    echo
+    echo "============================================================"
+    echo "Comparing your favorites with $(basename "$nordserversfile"):"
+    echo
+    # extract hostnames.  this speeds up the process significantly since we only search the json once
+    hostnames="$(jq -r '.[].hostname' "$nordserversfile")"
+    #
+    # loop through lines in nordfavoritesfile
+    # https://superuser.com/questions/421701/bash-reading-input-within-while-read-loop-doesnt-work
+    while IFS= read -r -u 3 line; do
+        # take the partial hostname from the line and append ".nordvpn.com". awk last field by "_"
+        search_hostname=$(echo "$line" | awk -F'_' '{print $NF}').nordvpn.com
+        # check if 'search_hostname' exists in the list of hostnames
+        if grep -q "$search_hostname" <<<"$hostnames"; then
+            # if the hostname exists, print a unicode checkmark
+            echo -e "$line \u2705"
+        else
+            # if it doesn't exist, print a unicode "X" and prompt to delete
+            echo
+            echo -e "$line \u274c"
+            read -n 1 -r -p "$(echo -e "${WColor}Delete${Color_Off}") $line from '$(basename "$nordfavoritesfile")'? (y/n): "
+            echo
+            if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+                # delete the line using awk.  tried using 'sed -i' but had problems with special characters
+                awk -v pattern="$line" '$0 != pattern' "$nordfavoritesfile" >temp && mv temp "$nordfavoritesfile"
+                echo -e "$line ${WColor}deleted${Color_Off}"
+                echo
+            else
+                echo -e "${EIColor}Keep${Color_Off} $line"
+                echo
+            fi
+        fi
+    done 3< <(sort < "$nordfavoritesfile")
+    echo
+    echo "Completed."
+    echo
+    echo
+    # reload the favorites menu in case nordfavoritesfile has changed
+    read -n 1 -s -r -p "Press any key to continue... "; echo
+    favorites_menu
+}
+function allservers_update {
+    # download an updated json file of all the nordvpn servers
+    # if a backup file was created, compare it with the new json to see if any hostnames were added or removed
+    #
+    # backup the current json
+    backup_file "$nordserversfile" "jq"
+    #
+    read -n 1 -r -p "Download an updated .json? (~20MB) (y/n) "; echo
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
+        echo
+        echo -e "Saved as: ${EColor}$nordserversfile${Color_Off}"
+        echo "File Size: $( du -k "$nordserversfile" | cut -f1 ) KB"
+        echo "Last Modified: $( date -r "$nordserversfile" )"
+        echo "Server Count: $( jq length "$nordserversfile" )"
+        echo
+    fi
+    if [[ -f "$backupfile" ]]; then
+        #
+        oldfile="$backupfile"
+        newfile="$nordserversfile"
+        #
+        echo -e "Hostname changes in ${EColor}$newfile${Color_Off}"
+        echo -e "Compared to ${FColor}$oldfile${Color_Off}"
+        echo
+        # Compare the "hostname" fields from both JSON files. Sorted by city name. ChatGPT 3.5
+        # use 'sort -u' to remove duplicates, otherwise diff will mark a removed dupe record, even though there is a remaining record with the same hostname
+        diff -u <(jq -r '.[] | "\(.hostname) (\(.locations[0].country.city.name))"' "$oldfile" | sort -u) <(jq -r '.[] | "\(.hostname) (\(.locations[0].country.city.name))"' "$newfile" | sort -u) | grep -E '^[+-]' | tail -n +3 | sed -e 's/^-/Removed: /' -e 's/^+/Added: /'
+        echo
+    fi
+}
 function allservers_menu {
     # credit to ChatGPT 3.5 for help with jq syntax.  https://chat.openai.com/
     # can use 'sort -k1' instead of 'sort -k2' to sort by hostname instead of by city
@@ -3448,28 +3594,7 @@ function allservers_menu {
                 ;;
             "Update List")
                 heading "Update Server List" "txt" "alt"
-                echo -e "File: ${EColor}$nordserversfile${Color_Off}"
-                echo "File Size: $( du -k "$nordserversfile" | cut -f1 ) KB"
-                echo "Last Modified: $( date -r "$nordserversfile" )"
-                echo "Server Count: $( jq length "$nordserversfile" )"
-                echo
-                read -n 1 -r -p "Backup as $( echo -e "${FColor}$nordserversfile.$( date -r "$nordserversfile" +"%Y%m%d" )${Color_Off}" ) ? (y/n) "; echo
-                echo
-                if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    cp -v "$nordserversfile" "$nordserversfile.$( date -r "$nordserversfile" +"%Y%m%d" )"
-                    echo
-                fi
-                read -n 1 -r -p "Download an updated .json? (~20MB) (y/n) "; echo
-                echo
-                if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
-                    echo
-                    echo -e "Saved as: ${EColor}$nordserversfile${Color_Off}"
-                    echo "File Size: $( du -k "$nordserversfile" | cut -f1 ) KB"
-                    echo "Last Modified: $( date -r "$nordserversfile" )"
-                    echo "Server Count: $( jq length "$nordserversfile" )"
-                    echo
-                fi
+                allservers_update
                 ;;
             "Exit")
                 main_menu
@@ -4137,7 +4262,10 @@ function favorites_menu {
     if [[ -f "$nordfavoritesfile" ]]; then
         # trim spaces and remove empty lines
         # https://stackoverflow.com/questions/16414410/delete-empty-lines-using-sed/24957725#24957725
-        sed -i 's/^ *//; s/ *$//; /^$/d' "$nordfavoritesfile"
+        # prevent sed from changing the "Last Modified" file property unless it actually makes changes
+        if ! cmp -s "$nordfavoritesfile" <(sed 's/^ *//; s/ *$//; /^$/d' "$nordfavoritesfile"); then
+            sed -i 's/^ *//; s/ *$//; /^$/d' "$nordfavoritesfile"
+        fi
     else
         echo -e "${WColor}$nordfavoritesfile does not exist.${Color_Off}"
         echo
@@ -4162,7 +4290,7 @@ function favorites_menu {
             favoritelist+=( "Add Current Server" )
         fi
     fi
-    favoritelist+=( "Add Server" "Edit File" "Exit" )
+    favoritelist+=( "Add Server" "Edit File" "Verify" "Exit" )
     PS3=$'\n''Connect to Server: '
     select xfavorite in "${favoritelist[@]}"
     do
@@ -4170,6 +4298,9 @@ function favorites_menu {
         case $xfavorite in
             "Exit")
                 main_menu
+                ;;
+            "Verify")
+                favorites_verify
                 ;;
             "Edit File")
                 heading "Edit File" "txt"
@@ -4243,7 +4374,7 @@ function favorites_menu {
                     disconnect_vpn
                     echo "Connect to $xfavorite"
                     echo
-                    nordvpn connect "$( echo "$xfavorite" | rev | cut -f1 -d'_' | rev )"
+                    nordvpn connect "$( echo "$xfavorite" | awk -F'_' '{print $NF}' )"
                     status
                     exit
                 else
