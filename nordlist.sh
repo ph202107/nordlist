@@ -1,9 +1,9 @@
 #!/bin/bash
-# shellcheck disable=SC2034,SC2129,SC2154
-# unused color variables, individual redirects, var assigned
+# shellcheck disable=SC2129,SC2154
+# individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
-# April 10, 2024
+# April 14, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -185,8 +185,8 @@ newfirefox="n"
 # Specify the number of pings to send when pinging a destination.
 pingcount="3"
 #
-# Set 'menuwidth' to your terminal width or lower, to compact the menus
-# horizontally. ("Countries" and "Favorites" excluded.)
+# Set 'menuwidth' to your terminal width or lower.  This will compact
+# the menus horizontally. ("Countries" and "Favorites" excluded.)
 # Leave blank to have the menu width change with the window size.
 menuwidth="80"
 #
@@ -197,8 +197,9 @@ charlimit="12"
 #
 # Choosing 'Exit' in a submenu will take you to the main menu.
 # Entering this value while in a submenu will return you to the default
-# parent menu.  To avoid conflicts avoid using any number other than
-# zero, or the letters y,n,c,e,s.    eg. upmenu="0" or upmenu="b"
+# parent menu.  Also works with most (y/n) prompts to exit the prompt.
+# To avoid conflicts avoid using any number other than zero, or
+# the letters y,n,c,e,s.    eg. upmenu="0" or upmenu="b"
 upmenu="0"
 #
 # =====================================================================
@@ -275,7 +276,7 @@ nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" 
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4549 (function main_menu).
+# The Main Menu starts on line 4591 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -467,58 +468,62 @@ function heading {
 }
 function set_colors {
     #
-    # Regular
-    Black='\033[0;30m'
-    Red='\033[0;31m'
-    Green='\033[0;32m'
-    Yellow='\033[0;33m'
-    Blue='\033[0;34m'
-    Purple='\033[0;35m'
-    Cyan='\033[0;36m'
-    White='\033[0;97m'
-    #
-    # Light
-    LGrey='\033[0;37m'
-    DGrey='\033[0;90m'  # Dark
-    LRed='\033[0;91m'
-    LGreen='\033[0;92m'
-    LYellow='\033[0;93m'
-    LBlue='\033[0;94m'
-    LPurple='\033[0;95m'
-    LCyan='\033[0;96m'
-    #
-    # Bold
-    BBlack='\033[1;30m'
-    BRed='\033[1;31m'
-    BGreen='\033[1;32m'
-    BYellow='\033[1;33m'
-    BBlue='\033[1;34m'
-    BPurple='\033[1;35m'
-    BCyan='\033[1;36m'
-    BWhite='\033[1;37m'
-    #
-    # Underline
-    UBlack='\033[4;30m'
-    URed='\033[4;31m'
-    UGreen='\033[4;32m'
-    UYellow='\033[4;33m'
-    UBlue='\033[4;34m'
-    UPurple='\033[4;35m'
-    UCyan='\033[4;36m'
-    UWhite='\033[4;37m'
-    #
-    # Background
-    # eg: ${White}${On_Red} = White text on red background
-    On_Black='\033[40m'
-    On_Red='\033[41m'
-    On_Green='\033[42m'
-    On_Yellow='\033[43m'
-    On_Blue='\033[44m'
-    On_Purple='\033[45m'
-    On_Cyan='\033[46m'
-    On_White='\033[47m'
-    #
-    Color_Off='\033[0m'
+    # shellcheck disable=SC2034
+    # supress warning about unused color variables
+    {
+        # Regular
+        Black='\033[0;30m'
+        Red='\033[0;31m'
+        Green='\033[0;32m'
+        Yellow='\033[0;33m'
+        Blue='\033[0;34m'
+        Purple='\033[0;35m'
+        Cyan='\033[0;36m'
+        White='\033[0;97m'
+        #
+        # Light
+        LGrey='\033[0;37m'
+        DGrey='\033[0;90m'  # Dark
+        LRed='\033[0;91m'
+        LGreen='\033[0;92m'
+        LYellow='\033[0;93m'
+        LBlue='\033[0;94m'
+        LPurple='\033[0;95m'
+        LCyan='\033[0;96m'
+        #
+        # Bold
+        BBlack='\033[1;30m'
+        BRed='\033[1;31m'
+        BGreen='\033[1;32m'
+        BYellow='\033[1;33m'
+        BBlue='\033[1;34m'
+        BPurple='\033[1;35m'
+        BCyan='\033[1;36m'
+        BWhite='\033[1;37m'
+        #
+        # Underline
+        UBlack='\033[4;30m'
+        URed='\033[4;31m'
+        UGreen='\033[4;32m'
+        UYellow='\033[4;33m'
+        UBlue='\033[4;34m'
+        UPurple='\033[4;35m'
+        UCyan='\033[4;36m'
+        UWhite='\033[4;37m'
+        #
+        # Background
+        # eg: ${White}${On_Red} = White text on red background
+        On_Black='\033[40m'
+        On_Red='\033[41m'
+        On_Green='\033[42m'
+        On_Yellow='\033[43m'
+        On_Blue='\033[44m'
+        On_Purple='\033[45m'
+        On_Cyan='\033[46m'
+        On_White='\033[47m'
+        #
+        Color_Off='\033[0m'
+    }
     #
     # ============== Change colors here if needed. ====================
     #
@@ -963,7 +968,7 @@ function countdown_timer {
 }
 function parent_menu {
     # $1 = $1 or $2 (back) of the calling function - disable upmenu if a return is required
-    # "Main" "Country" "Settings" "Group" "Tools" "Nord API" "Meshnet" "Speed Test"
+    # "Main" "Country" "Settings" "Group" "Tools" "Nord API" "Meshnet" "Favorites" "All Servers" "Speed Test"
     #
     if [[ "$REPLY" == "$upmenu" ]]; then
         if [[ "$1" == "back" ]]; then
@@ -981,6 +986,8 @@ function parent_menu {
                 "Tools")        tools_menu;;
                 "Nord API")     nordapi_menu;;
                 "Meshnet")      meshnet_menu;;
+                "Favorites")    favorites_menu;;
+                "All Servers")  allservers_menu;;
                 "Speed Test")   speedtest_menu;;
             esac
         fi
@@ -1083,15 +1090,23 @@ function country_names_modify {
 }
 function country_names_restore {
     # countrylist and modcountrylist store two names for the same country at the same index
-    # xcountry is selected from modcountrylist (abbreviated and/or with asterisk) in the country_menu
+    # in country_menu, xcountry is selected from modcountrylist (abbreviated and/or with asterisk)
     # find the original country name to use in function city_menu
     #
-    if [[ "$xcountry" == "$rcountry" ]] || [[ "${#modcountrylist[@]}" == "0" ]] || [[ "${#countrylist[@]}" == "0" ]]; then
+    if [[ "$xcountry" == "$rcountry" ]] || [[ "${#countrylist[@]}" == "0" ]]; then
         # rcountry is not modified so nothing to restore
-        # if either modcountrylist or countrylist is empty there is nothing to do.
+        # if countrylist is empty there is nothing to do
         return
     fi
-    # iterate over modcountrylist to find the index of the selection
+    # if xcountry is a valid country name then return
+    # for cases such as "US_Cities" chosen from the main menu, after countrylist has already been populated
+    for i in "${!countrylist[@]}"; do
+        if [[ "${countrylist[i]}" == "$xcountry" ]]; then
+            return
+        fi
+    done
+    # xcountry must have been selected from modcountrylist (or spelling mistake)
+    # iterate over modcountrylist to find the index
     for i in "${!modcountrylist[@]}"; do
         if [[ "${modcountrylist[i]}" == "$xcountry" ]]; then
             index=$i
@@ -1141,15 +1156,14 @@ function country_menu {
 function city_menu {
     # all available cities in $xcountry
     # $1 = parent menu name - valid options are listed in function parent_menu
-    #      disables fast7 (automatic connect to country), and skips country_names_restore (which will set $xcountry)
-    #      must set $xcountry AND use $1 option when calling this function from anywhere but country_menu
+    #      disables fast7 (automatic connect to country)
     #
     if [[ -n "$1" ]]; then
         parent="$1"
     else
         parent="Country"
-        country_names_restore
     fi
+    country_names_restore
     heading "$xcountry"
     echo
     if [[ ${nordvirtual[*],,} =~ ${xcountry,,} ]]; then
@@ -3210,16 +3224,27 @@ function iptables_menu {
 }
 function service_logs {
     heading "Service Logs"
+    parent="Settings"
     echo
-    echo -e "Generate log file: ${FColor}$nordlogfile${Color_Off}"
+    if [[ -f "$nordlogfile" ]]; then
+        echo -e "${EColor}$(basename "$nordlogfile")${Color_Off} already exists."
+        echo
+        backup_file "$nordlogfile"
+    fi
+    read -n 1 -r -p "Generate new log file: $(echo -e "${EColor}$nordlogfile${Color_Off}") ? (y/n) "; echo
     echo
-    read -n 1 -r -p "Proceed? (y/n) "; echo
-    echo
+    parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo -e "${LColor}journalctl -u nordvpnd > '$nordlogfile'${Color_Off}"
         journalctl -u nordvpnd > "$nordlogfile"
         echo
-        echo -e "${EColor}Completed \u2705${Color_Off}" # unicode checkmark
+        echo -e "${EColor}Completed $( wc -l < "$nordlogfile" ) lines \u2705${Color_Off}" # unicode checkmark
+        echo
+    fi
+    if [[ -f "$nordlogfile" ]]; then
+        echo -e "${LColor}grep -E 'Warning|Error' '$nordlogfile' | grep -v 'TELIO' | tail -n 30${Color_Off}"
+        echo
+        grep -E "Warning|Error" "$nordlogfile" | grep -v "TELIO" | tail -n 30
         echo
         openlink "$nordlogfile" "ask"
     fi
@@ -3289,8 +3314,9 @@ function server_load {
     echo
 }
 function backup_file {
-    # $1 = full path and filename.  "$nordserversfile"  "$nordfavoritesfile"
-    # $2 = "jq" - use 'jq' to count servers, otherwise count the lines in the file
+    # $1 = full path and filename.  "$nordserversfile"  "$nordfavoritesfile" "$nordlogfile"
+    #
+    if [[ ! -f "$1" ]]; then return; fi
     #
     backupfile="$1.$(date -r "$1" +"%Y%m%d")"
     directory=$(dirname "$1")
@@ -3302,22 +3328,27 @@ function backup_file {
     echo -e "File: ${EColor}$1${Color_Off}"
     echo "File Size: $( du -k "$1" | cut -f1 ) KB"
     echo "Last Modified: $( date -r "$1" )"
-    if [[ "$2" == "jq" ]]; then
+    #
+    if [[ "$1" == "$nordserversfile" ]]; then
         echo "Server Count: $( jq length "$1" )"
-    else
+    elif [[ "$1" == "$nordfavoritesfile" ]]; then
         echo "Server Count: $( wc -l < "$1" )"
+    else
+        echo "Lines: $( wc -l < "$1" )"
     fi
     echo
     # list the backups that are in the same directory
-    echo -e "${LColor}$filename*${Color_Off} files in ${LColor}$directory${Color_Off}:"
+    echo -e "All ${LColor}$filename*${Color_Off} files in ${LColor}$directory${Color_Off}:"
     echo "$existfiles"
     echo
     read -n 1 -r -p "Backup as $(echo -e "${FColor}$backupfile${Color_Off}") ? (y/n) "; echo
     echo
+    parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if [[ -f "$backupfile" ]]; then
             read -n 1 -r -p "$(echo -e "${WColor}Already exists!${Color_Off}") Overwrite? (y/n) "; echo
             echo
+            parent_menu
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 cp -v "$1" "$backupfile"
                 echo
@@ -3329,13 +3360,16 @@ function backup_file {
     fi
 }
 function favorites_verify {
+    parent="Favorites"
     heading "Check for Obsolete Favorites" "txt"
-    echo "Compare: $nordfavoritesfile"
-    echo "Against: $nordserversfile"
-    echo "To check if any hostnames have been removed from service."
-    echo "You will be prompted to delete the obsolete server from the"
-    echo "favorites list."
+    echo -e "Compare: ${EColor}$nordfavoritesfile${Color_Off}"
+    echo "Last Modified: $( date -r "$nordfavoritesfile" )"
+    echo -e "Against: ${EColor}$nordserversfile${Color_Off}"
+    echo "Last Modified: $( date -r "$nordserversfile" )"
     echo
+    echo "Check if any hostnames have been removed from service."
+    echo "You will be prompted to delete any obsolete servers from"
+    echo "the favorites list."
     echo
     echo "============================================================"
     echo "Backup and update the JSON file."
@@ -3400,10 +3434,11 @@ function allservers_update {
     # if a backup file was created, compare it with the new json to see if any hostnames were added or removed
     #
     # backup the current json
-    backup_file "$nordserversfile" "jq"
+    backup_file "$nordserversfile"
     #
     read -n 1 -r -p "Download an updated .json? (~20MB) (y/n) "; echo
     echo
+    parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
         echo
@@ -3496,7 +3531,13 @@ function allservers_menu {
                 ;;
             "SOCKS Servers")
                 heading "SOCKS Servers" "txt"
-                jq -r '.[] | select(.technologies[].name == "Socks 5") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+                #
+                # no quotation marks
+                # jq -r '.[] | select(.technologies[].name == "Socks 5") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+                #
+                # add double quotes
+                jq -r '.[] | select(.technologies[].name == "Socks 5") | "\"\(.hostname) (\(.locations[0].country.city.name))\"" ' "$nordserversfile" | sort -k2
+                #
                 echo
                 echo "SOCKS Servers: $( jq -r '.[] | select(.technologies[].name == "Socks 5") | .hostname' "$nordserversfile" | sort -u | wc -l )"
                 echo
@@ -3593,6 +3634,7 @@ function allservers_menu {
                 host_connect
                 ;;
             "Update List")
+                parent="All Servers"
                 heading "Update Server List" "txt" "alt"
                 allservers_update
                 ;;
@@ -4700,13 +4742,12 @@ function check_depends {
     do
         name=$( echo "$program" | tr -d '-' )       # remove hyphens
         if command -v "$program" &> /dev/null; then
-            echo -ne "${EIColor}Y${Color_Off}"
+            echo -e "${EIColor}Y${Color_Off} $program"
             printf -v "${name}_exists" '%s' '1'
         else
-            echo -ne "${DIColor}N${Color_Off}"
+            echo -e "${DIColor}N${Color_Off} $program"
             printf -v "${name}_exists" '%s' '0'
         fi
-        echo "  $program"
     done
 }
 function start {
