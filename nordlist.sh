@@ -3,7 +3,7 @@
 # individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
-# April 14, 2024
+# April 16, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -251,11 +251,12 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # Virtual Servers
 # ================
 #
-# Countries listed here will be labelled as (Virtual).
-# Source: https://nordvpn.com/blog/new-nordvpn-virtual-servers/
+# Countries and Cities listed here will be labelled as (Virtual).
 # This list is subject to change and must be updated manually.
 # Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
-nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" "Belize" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Cambodia" "Cayman_Islands" "Dominican_Republic" "Ecuador" "Egypt" "El_Salvador" "Ghana" "Greenland" "Guam" "Guatemala" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Kazakhstan" "Kenya" "Lao_People's_Democratic_Republic" "Lebanon" "Liechtenstein" "Malta" "Monaco" "Mongolia" "Montenegro" "Morocco" "Myanmar" "Nepal" "Nigeria" "Pakistan" "Panama" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Puerto_Rico" "Sri_Lanka" "Trinidad_and_Tobago" "Uruguay" "Uzbekistan" "Venezuela" )
+nordvirtual=(
+"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Armenia" "Astana" "Asunción" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lagos" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Lima" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nigeria" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Tashkent" "Tegucigalpa" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
+)
 #
 # =====================================================================
 # Visual Options
@@ -276,7 +277,7 @@ nordvirtual=( "Algeria" "Andorra" "Armenia" "Azerbaijan" "Bahamas" "Bangladesh" 
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4591 (function main_menu).
+# The Main Menu starts on line 4643 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -761,7 +762,7 @@ function set_vars {
         fav="${FVColor}(Dedicated-IP)${Color_Off}"
     elif [[ "$connected" == "connected" ]] && [[ -f "$nordfavoritesfile" ]] && grep -q "$server" "$nordfavoritesfile"; then
         fav="${FVColor}(Favorite)${Color_Off}"
-    elif [[ "$connected" == "connected" ]] && [[ ${nordvirtual[*],,} =~ $(echo "${country,,}" | tr ' ' '_') ]]; then
+    elif [[ "$connected" == "connected" ]] && printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "$(echo "${city,,}" | tr ' ' '_')"; then
         fav="${FVColor}(Virtual)${Color_Off}"
     else
         fav=""
@@ -1047,7 +1048,7 @@ function country_names_modify {
     for country in "${countrylist[@]}"
     do
         # check if the country is in the nordvirtual array
-        if [[ ${nordvirtual[*],,} =~ ${country,,} ]]; then
+        if printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${country,,}"; then
             # add an asterisk to the country name
             country="${country}*"
         fi
@@ -1088,33 +1089,63 @@ function country_names_modify {
         modcountrylist+=( "$country" )
     done
 }
+function city_names_modify {
+    # Add an asterisk if the city is listed in the 'nordvirtual' array.
+    #
+    modcitylist=()
+    for city in "${citylist[@]}"
+    do
+        # check if the city is in the nordvirtual array
+        if printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${city,,}"; then
+            # add an asterisk to the city name
+            city="${city}*"
+        fi
+        # add the modified city name to modcitylist. includes "Random" "Best" "Exit"
+        modcitylist+=( "$city" )
+    done
+}
 function country_names_restore {
     # countrylist and modcountrylist store two names for the same country at the same index
     # in country_menu, xcountry is selected from modcountrylist (abbreviated and/or with asterisk)
     # find the original country name to use in function city_menu
     #
-    if [[ "$xcountry" == "$rcountry" ]] || [[ "${#countrylist[@]}" == "0" ]]; then
-        # rcountry is not modified so nothing to restore
-        # if countrylist is empty there is nothing to do
-        return
-    fi
     # if xcountry is a valid country name then return
-    # for cases such as "US_Cities" chosen from the main menu, after countrylist has already been populated
     for i in "${!countrylist[@]}"; do
-        if [[ "${countrylist[i]}" == "$xcountry" ]]; then
+        if [[ "${countrylist[i],,}" == "${xcountry,,}" ]]; then
             return
         fi
     done
-    # xcountry must have been selected from modcountrylist (or spelling mistake)
     # iterate over modcountrylist to find the index
     for i in "${!modcountrylist[@]}"; do
-        if [[ "${modcountrylist[i]}" == "$xcountry" ]]; then
+        if [[ "${modcountrylist[i],,}" == "${xcountry,,}" ]]; then
             index=$i
             break
         fi
     done
     # restore the original country name from the countrylist array
     xcountry="${countrylist[index]}"
+    #
+}
+function city_names_restore {
+    # citylist and modcitylist store two names for the same city at the same index
+    # in city_menu, xcity is selected from modcitylist (may have an asterisk)
+    # find the original city name to make the VPN connection
+    #
+    # if xcity is a valid city name then return
+    for i in "${!citylist[@]}"; do
+        if [[ "${citylist[i],,}" == "${xcity,,}" ]]; then
+            return
+        fi
+    done
+    # iterate over modcitylist to find the index
+    for i in "${!modcitylist[@]}"; do
+        if [[ "${modcitylist[i],,}" == "${xcity,,}" ]]; then
+            index=$i
+            break
+        fi
+    done
+    # restore the original city name from the citylist array
+    xcity="${citylist[index]}"
     #
 }
 function country_menu {
@@ -1128,7 +1159,7 @@ function country_menu {
     # check if any country name has an asterisk
     for astrx in "${modcountrylist[@]}"; do
         if [[ $astrx == *"*"* ]]; then
-            echo "(*) = Virtual Servers"
+            echo -e "${FVColor}(*) = Virtual Servers${Color_Off}"
             echo
             break
         fi
@@ -1147,6 +1178,7 @@ function country_menu {
             xcountry="$rcountry"
             city_menu
         elif (( 1 <= REPLY )) && (( REPLY <= ${#modcountrylist[@]} )); then
+            country_names_restore
             city_menu
         else
             invalid_option "${#modcountrylist[@]}" "$parent"
@@ -1163,15 +1195,10 @@ function city_menu {
     else
         parent="Country"
     fi
-    country_names_restore
     heading "$xcountry"
     echo
-    if [[ ${nordvirtual[*],,} =~ ${xcountry,,} ]]; then
-        echo -e "${FVColor}(Virtual Servers)${Color_Off}"
-        echo
-    fi
     if [[ "$fast7" =~ ^[Yy]$ ]] && [[ -z "$1" ]]; then
-        echo -e "${FColor}[F]ast7 is enabled. Connect to the country instead of choosing a city.${Color_Off}"
+        echo -e "${FColor}[F]ast7 is enabled. Connect to the country not a city.${Color_Off}"
         echo
         echo -e "Connect to ${LColor}$xcountry${Color_Off}."
         disconnect_vpn
@@ -1180,12 +1207,20 @@ function city_menu {
         exit
     fi
     create_list "city"
+    city_names_modify
+    for astrx in "${modcitylist[@]}"; do
+        if [[ $astrx == *"*"* ]]; then
+            echo -e "${FVColor}(*) = Virtual Servers${Color_Off}"
+            echo
+            break
+        fi
+    done
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Cities in $xcountry with Obfuscation support"
         echo
     fi
     PS3=$'\n''Connect to City: '
-    select xcity in "${citylist[@]}"
+    select xcity in "${modcitylist[@]}"
     do
         parent_menu
         case $xcity in
@@ -1211,7 +1246,8 @@ function city_menu {
                 exit
                 ;;
             *)
-                if (( 1 <= REPLY )) && (( REPLY <= ${#citylist[@]} )); then
+                if (( 1 <= REPLY )) && (( REPLY <= ${#modcitylist[@]} )); then
+                    city_names_restore
                     heading "$xcity"
                     disconnect_vpn
                     echo "Connect to $xcity $xcountry"
@@ -1220,80 +1256,88 @@ function city_menu {
                     status
                     exit
                 else
-                    invalid_option "${#citylist[@]}" "$parent"
+                    invalid_option "${#modcitylist[@]}" "$parent"
                 fi
                 ;;
         esac
     done
 }
 function city_count {
-    # list all the available cities by country and alphabetically
+    # list all the available cities by using the Nord CLI
     #
+    allcountries=()
     allcities=()
     virtualcountries=()
     virtualcities=()
     #
     create_list "country" "count"
     #
-    heading "All Countries" "txt"
-    for xcountry in "${countrylist[@]}"
-    do
-        if [[ ${nordvirtual[*],,} =~ ${xcountry,,} ]]; then
-            echo "$xcountry*"
-            virtualcountries+=( "$xcountry" )
-        else
-            echo "$xcountry"
-        fi
-    done
-    #
-    if (( ${#virtualcountries[@]} >= 1 )); then
-        heading "Virtual* Countries and Cities" "txt"
-        for xcountry in "${virtualcountries[@]}"
-        do
-            echo "$xcountry*"
-            create_list "city" "count"
-            for city in "${citylist[@]}"
-            do
-                echo "    $city"
-                virtualcities+=( "$city $xcountry*" )
-            done
-            echo
-        done
-    fi
-    #
     heading "All Countries and Cities" "txt"
     for xcountry in "${countrylist[@]}"
     do
-        if [[ ${nordvirtual[*],,} =~ ${xcountry,,} ]]; then
-            echo "$xcountry*"
-        else
+        virtualcountry="false"
+        for element in "${nordvirtual[@]}"
+        do
+            if [[ "${element,,}" == "${xcountry,,}" ]]; then
+                virtualcountry="true"
+                echo "$xcountry*"
+                allcountries+=( "$xcountry*" )
+                virtualcountries+=( "$xcountry*" )
+                break
+            fi
+        done
+        if ! $virtualcountry; then
             echo "$xcountry"
+            allcountries+=( "$xcountry" )
         fi
         create_list "city" "count"
         for city in "${citylist[@]}"
         do
-            echo "    $city"
-            if [[ ${nordvirtual[*],,} =~ ${xcountry,,} ]]; then
-                allcities+=( "$city $xcountry*" )
-            else
+            virtualcity="false"
+            for element in "${nordvirtual[@]}"
+            do
+                if [[ "${element,,}" == "${city,,}" ]]; then
+                    virtualcity="true"
+                    echo "    $city*"
+                    if $virtualcountry; then
+                        virtualcities+=( "$xcountry* $city*" )
+                        allcities+=( "$city* $xcountry*" )
+                    else
+                        virtualcities+=( "$xcountry $city*" )
+                        allcities+=( "$city* $xcountry" )
+                    fi
+                    break
+                fi
+            done
+            if ! $virtualcity; then
+                echo "    $city"
                 allcities+=( "$city $xcountry" )
             fi
         done
         echo
     done
     #
-    heading "All Cities Alphabetical" "txt"
+    #heading "All Countries" "txt"
+    #printf '%s\n' "${allcountries[@]}" | sort
+    #
+    heading "All Cities" "txt"
     printf '%s\n' "${allcities[@]}" | sort
+    #
+    #heading "Virtual Countries" "txt"
+    #printf '%s\n' "${virtualcountries[@]}" | sort
+    #
+    #heading "Virtual Cities" "txt"
+    #printf '%s\n' "${virtualcities[@]}" | sort
     #
     echo
     echo "========================="
-    echo "Total Countries    = ${#countrylist[@]}"
+    echo "Total Countries    = ${#allcountries[@]}"
     echo "Total Cities       = ${#allcities[@]}"
     echo "Virtual Countries* = ${#virtualcountries[@]}"
     echo "Virtual Cities*    = ${#virtualcities[@]}"
     echo "========================="
     echo
-    echo "(*) = The Country is listed in the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))."
+    echo "(*) = The location is listed in the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))."
     echo
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Obfuscate is $obfuscatec."
@@ -3462,6 +3506,30 @@ function allservers_update {
         echo
     fi
 }
+function virtual_locations {
+    heading "Virtual Locations" "txt"
+    #
+    echo -e "${LColor}Virtual Country Locations${Color_Off}"
+    jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
+    echo; echo
+    echo "Virtual Country Locations: $( jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | sort -u | wc -l )"
+    echo
+    echo
+    echo -e "${LColor}Virtual City Locations${Color_Off}"
+    jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
+    echo; echo
+    echo "Virtual City Locations: $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | wc -l )"
+    echo
+    echo
+    echo -e "${LColor}Virtual Country and City Locations${Color_Off}"
+    jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
+    echo; echo
+    echo -e "${FColor}Can use this list to update the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))${Color_Off}"
+    echo
+    echo "Virtual Country and City Locations: $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | sort -u | wc -l )"
+    echo
+    echo
+}
 function allservers_menu {
     # credit to ChatGPT 3.5 for help with jq syntax.  https://chat.openai.com/
     # can use 'sort -k1' instead of 'sort -k2' to sort by hostname instead of by city
@@ -3571,23 +3639,7 @@ function allservers_menu {
             # jq -r '.[] | select(.technologies[] | select(.name == "IKEv2/IPSec")) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
             #
             "Virtual Locations")
-                heading "Virtual Locations" "txt"
-                echo -e "${LColor}Virtual Country Locations${Color_Off}"
-                jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
-                echo; echo
-                echo "Virtual Country Locations: $( jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | sort -u | wc -l )"
-                echo
-                echo "Can be used to update the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))."
-                #
-                # cities only
-                # jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
-                #
-                #echo; echo
-                #echo -e "${LColor}Virtual Country and City Locations${Color_Off}"
-                #jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
-                #echo; echo
-                #echo "Virtual Country and City Locations: $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | sort -u | wc -l )"
-                echo
+                virtual_locations
                 ;;
             "Search Country")
                 heading "Search by Country Name" "txt"
@@ -4978,7 +5030,7 @@ start
 #           Two Line Mode:  Off
 #           Dynamic Icon:  On
 #           Static Icon or Command:
-#               if [[ "$(nordvpn status | grep -i "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')" == "connected" ]]; then echo "PATH_TO_ICON/nord.round.green.png"; else echo "PATH_TO_ICON/nord.round.red.png"; fi
+#               if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then echo "PATH_TO_ICON/nord.round.green.png"; else echo "PATH_TO_ICON/nord.round.red.png"; fi
 #           Dynamic Tooltip:  On
 #           Tooltip Command:
 #               To show the connection status and city:
@@ -4997,7 +5049,7 @@ start
 #           Refresh Interval:  15 seconds or choose
 #           Shell:  bash
 #           Command 1:
-#               if [[ "$(nordvpn status | grep -i "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')" == "connected" ]]; then echo -e "\u2705"; else echo -e "\u274c"; fi
+#               if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then echo -e "\u2705"; else echo -e "\u274c"; fi
 #           Two Line Mode:  Off
 #           Dynamic Icon:  Off
 #           Static Icon or Command: blank
