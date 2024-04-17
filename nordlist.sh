@@ -3,7 +3,7 @@
 # individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
-# April 16, 2024
+# April 17, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -252,6 +252,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # ================
 #
 # Countries and Cities listed here will be labelled as (Virtual).
+# Refer to: https://nordvpn.com/blog/new-nordvpn-virtual-servers/
 # This list is subject to change and must be updated manually.
 # Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
 nordvirtual=(
@@ -277,7 +278,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4643 (function main_menu).
+# The Main Menu starts on line 4640 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -760,7 +761,7 @@ function set_vars {
     #
     if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]] && [[ "$server" == "$dediwhere" ]]; then
         fav="${FVColor}(Dedicated-IP)${Color_Off}"
-    elif [[ "$connected" == "connected" ]] && [[ -f "$nordfavoritesfile" ]] && grep -q "$server" "$nordfavoritesfile"; then
+    elif [[ "$connected" == "connected" ]] && [[ -f "$nordfavoritesfile" ]] && grep -q -i "$server" "$nordfavoritesfile"; then
         fav="${FVColor}(Favorite)${Color_Off}"
     elif [[ "$connected" == "connected" ]] && printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "$(echo "${city,,}" | tr ' ' '_')"; then
         fav="${FVColor}(Virtual)${Color_Off}"
@@ -791,34 +792,29 @@ function ipinfo_curl {
     echo -n "External IP: "
     response=$( timeout 6 curl --silent "https://ipinfo.io/" )
     #
-    if [[ -z "$response" ]]; then
-        set_vars
-        echo -ne "${WColor}Timed Out${Color_Off}"
-        if [[ "$connected" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
-            echo -ne " - $ks"
-        fi
+    extip=$(echo "$response" | jq -r '.ip | if . == null then empty else . end')
+    exthost=$(echo "$response" | jq -r '.hostname | if . == null then empty else . end')
+    extorg=$(echo "$response" | jq -r '.org | if . == null then empty else . end')
+    extcity=$(echo "$response" | jq -r '.city | if . == null then empty else . end')
+    extregion=$(echo "$response" | jq -r '.region | if . == null then empty else . end')
+    extcountry=$(echo "$response" | jq -r '.country | if . == null then empty else . end')
+    extlimit=$(echo "$response" | grep -i "rate limit")
+    #
+    if [[ -n "$extip" ]]; then
+        echo -e "${IPColor}$extip  $exthost${Color_Off}"
+        echo -e "${SVColor}$extorg ${CIColor}$extcity $extregion ${COColor}$extcountry${Color_Off}"
         echo
-        echo
-    elif [[ "$response" == *"rate limit"* ]]; then
-        echo -e "${WColor}Rate Limit${Color_Off}"
+    elif [[ -n "$extlimit" ]]; then
+        echo -e "${WColor}$extlimit${Color_Off}"
         echo "This IP has hit the daily limit for the unauthenticated API."
         echo
     else
-        # each field from the ipinfo json response
-        fields=( "ip" "hostname" "city" "region" "country" "loc" "org" "postal" "timezone" )
-        for field in "${fields[@]}"
-        do
-            # find the value of each field
-            value=$(echo "$response" | jq -r ".$field")
-            # ignore "null" fields, hostname usually
-            if [[ "$value" != "null" ]]; then
-                # create a variable starting with "ext"+"field", eg. "extip" with the corresponding value
-                declare "ext$field=$value"
-            fi
-        done
-        echo -e "${IPColor}$extip  $exthostname${Color_Off}"
-        echo -e "${SVColor}$extorg ${CIColor}$extcity $extregion ${COColor}$extcountry${Color_Off}"
-        echo
+        set_vars
+        echo -n "Request timed out"
+        if [[ "$connected" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
+            echo -ne " - $ks"
+        fi
+        echo; echo
     fi
 }
 function status {
@@ -1045,12 +1041,12 @@ function country_names_modify {
     #
     modcountrylist=()
     # iterate over elements in countrylist
-    for country in "${countrylist[@]}"
+    for mcountry in "${countrylist[@]}"
     do
         # check if the country is in the nordvirtual array
-        if printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${country,,}"; then
+        if printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${mcountry,,}"; then
             # add an asterisk to the country name
-            country="${country}*"
+            mcountry="${mcountry}*"
         fi
         # shorten long country names if the option is enabled
         if [[ -n "$charlimit" ]]; then
@@ -1058,50 +1054,50 @@ function country_names_modify {
             if (( charlimit < 6 )); then charlimit="6"; fi
             #
             # special case
-            country="${country/Lao_People\'S_Democratic_Republic/Laos}"
+            mcountry="${mcountry/Lao_People\'S_Democratic_Republic/Laos}"
             #
             # general substitutions
-            country="${country/United/Utd}"
-            country="${country/North/N}"
-            country="${country/South/S}"
-            country="${country/Republic/Rep}"
-            country="${country/_And_/+}"
+            mcountry="${mcountry/United/Utd}"
+            mcountry="${mcountry/North/N}"
+            mcountry="${mcountry/South/S}"
+            mcountry="${mcountry/Republic/Rep}"
+            mcountry="${mcountry/_And_/+}"
             #
             # check if the country name has an asterisk at the end
-            if [[ "${country: -1}" == "*" ]]; then
+            if [[ "${mcountry: -1}" == "*" ]]; then
                 # check if the country name is longer than the character limit
-                if (( ${#country} > charlimit )); then
+                if (( ${#mcountry} > charlimit )); then
                     # shorten the country name to the limit minus one
-                    shortened_country="${country:0:$(( charlimit - 1 ))}"
+                    shortened_country="${mcountry:0:$(( charlimit - 1 ))}"
                     # add the asterisk to the end
-                    country="${shortened_country}*"
+                    mcountry="${shortened_country}*"
                 fi
             else
                 # if there is no asterisk
                 # check if the country name is longer than the limit
-                if (( ${#country} > charlimit )); then
+                if (( ${#mcountry} > charlimit )); then
                     # shorten the country name to match the limit
-                    country="${country:0:$charlimit}"
+                    mcountry="${mcountry:0:$charlimit}"
                 fi
             fi
         fi
         # add the modified country name to modcountrylist. includes "Random" "Exit"
-        modcountrylist+=( "$country" )
+        modcountrylist+=( "$mcountry" )
     done
 }
 function city_names_modify {
     # Add an asterisk if the city is listed in the 'nordvirtual' array.
     #
     modcitylist=()
-    for city in "${citylist[@]}"
+    for mcity in "${citylist[@]}"
     do
         # check if the city is in the nordvirtual array
-        if printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${city,,}"; then
+        if printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${mcity,,}"; then
             # add an asterisk to the city name
-            city="${city}*"
+            mcity="${mcity}*"
         fi
         # add the modified city name to modcitylist. includes "Random" "Best" "Exit"
-        modcitylist+=( "$city" )
+        modcitylist+=( "$mcity" )
     done
 }
 function country_names_restore {
@@ -1273,6 +1269,7 @@ function city_count {
     create_list "country" "count"
     #
     heading "All Countries and Cities" "txt"
+    # must use var "$xcountry" for command: create_list "city"
     for xcountry in "${countrylist[@]}"
     do
         virtualcountry="false"
@@ -1291,27 +1288,27 @@ function city_count {
             allcountries+=( "$xcountry" )
         fi
         create_list "city" "count"
-        for city in "${citylist[@]}"
+        for ccity in "${citylist[@]}"
         do
             virtualcity="false"
             for element in "${nordvirtual[@]}"
             do
-                if [[ "${element,,}" == "${city,,}" ]]; then
+                if [[ "${element,,}" == "${ccity,,}" ]]; then
                     virtualcity="true"
-                    echo "    $city*"
+                    echo "    $ccity*"
                     if $virtualcountry; then
-                        virtualcities+=( "$xcountry* $city*" )
-                        allcities+=( "$city* $xcountry*" )
+                        virtualcities+=( "$xcountry* $ccity*" )
+                        allcities+=( "$ccity* $xcountry*" )
                     else
-                        virtualcities+=( "$xcountry $city*" )
-                        allcities+=( "$city* $xcountry" )
+                        virtualcities+=( "$xcountry $ccity*" )
+                        allcities+=( "$ccity* $xcountry" )
                     fi
                     break
                 fi
             done
             if ! $virtualcity; then
-                echo "    $city"
-                allcities+=( "$city $xcountry" )
+                echo "    $ccity"
+                allcities+=( "$ccity $xcountry" )
             fi
         done
         echo
@@ -3445,7 +3442,7 @@ function favorites_verify {
         # take the partial hostname from the line and append ".nordvpn.com". awk last field by "_"
         search_hostname=$(echo "$line" | awk -F'_' '{print $NF}').nordvpn.com
         # check if 'search_hostname' exists in the list of hostnames
-        if grep -q "$search_hostname" <<<"$hostnames"; then
+        if grep -q -i "$search_hostname" <<<"$hostnames"; then
             # if the hostname exists, print a unicode checkmark
             echo -e "$line \u2705"
         else
@@ -4377,8 +4374,8 @@ function favorites_menu {
         favoritelist+=( "Random" )
     fi
     if [[ "$connected" == "connected" ]]; then
-        if grep -q "$server" "$nordfavoritesfile"; then
-            echo -e "The Current Server is in the list:  ${FColor}$( grep "$server" "$nordfavoritesfile" )${Color_Off}"
+        if grep -q -i "$server" "$nordfavoritesfile"; then
+            echo -e "The Current Server is in the list:  ${FColor}$( grep -i "$server" "$nordfavoritesfile" )${Color_Off}"
             echo
         else
             favoritelist+=( "Add Current Server" )
