@@ -3,7 +3,7 @@
 # individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
-# April 17, 2024
+# April 19, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -278,7 +278,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4640 (function main_menu).
+# The Main Menu starts on line 4717 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1268,7 +1268,7 @@ function city_count {
     #
     create_list "country" "count"
     #
-    heading "All Countries and Cities" "txt"
+    heading "All Countries and Cities by using Nord CLI" "txt"
     # must use var "$xcountry" for command: create_list "city"
     for xcountry in "${countrylist[@]}"
     do
@@ -1317,8 +1317,8 @@ function city_count {
     #heading "All Countries" "txt"
     #printf '%s\n' "${allcountries[@]}" | sort
     #
-    heading "All Cities" "txt"
-    printf '%s\n' "${allcities[@]}" | sort
+    #heading "All Cities" "txt"
+    #printf '%s\n' "${allcities[@]}" | sort
     #
     #heading "Virtual Countries" "txt"
     #printf '%s\n' "${virtualcountries[@]}" | sort
@@ -3285,7 +3285,10 @@ function service_logs {
     if [[ -f "$nordlogfile" ]]; then
         echo -e "${LColor}grep -E 'Warning|Error' '$nordlogfile' | grep -v 'TELIO' | tail -n 30${Color_Off}"
         echo
-        grep -E "Warning|Error" "$nordlogfile" | grep -v "TELIO" | tail -n 30
+        #grep -E "Warning|Error" "$nordlogfile" | grep -v "TELIO" | tail -n 30
+        # use color for Warning|Error
+        # shellcheck disable=SC2059     # ignore info about printf color codes, doesn't work with %s
+        grep -E "Warning|Error" "$nordlogfile" | grep -v "TELIO" | tail -n 30 | sed -E "s/Warning/$(printf "${FIColor}")&$(printf "${Color_Off}")/Ig; s/Error/$(printf "${WColor}")&$(printf "${Color_Off}")/Ig"
         echo
         openlink "$nordlogfile" "ask"
     fi
@@ -3696,14 +3699,73 @@ function allservers_menu {
         esac
     done
 }
+function nordapi_countrycode {
+    # find the country code to use as an api filter
+    #
+    parent="Nord API"
+    create_list "country" "count"
+    countrylist+=( "Exit" ) # needed for "invalid option" error
+    PS3=$'\n''Choose a Country: '
+    select xcountry in "${countrylist[@]}"
+    do
+        parent_menu
+        if [[ "$xcountry" == "Exit" ]]; then
+            main_menu
+        elif (( 1 <= REPLY )) && (( REPLY <= ${#countrylist[@]} )); then
+            # replace underscores to match the format, use lowercase for case insensitive search
+            modxcountry=$(echo "$xcountry" | tr '_' ' ' | tr '[:upper:]' '[:lower:]')
+            #
+            country_code=$(curl --silent "https://api.nordvpn.com/v1/servers/countries" | \
+            jq --raw-output --arg country "$modxcountry" '.[] | select(.name | ascii_downcase == $country) | .id')
+            #
+            echo
+            return
+        else
+            invalid_option "${#countrylist[@]}" "$parent"
+        fi
+    done
+}
+function nordapi_city_top {
+    # Top 15 Recommended by City
+    # pulls all the servers for one country by the country code, then searches by city
+    #
+    heading "Top 15 Recommended by City" "txt" "alt"
+    parent="Nord API"
+    # get the country code and set $xcountry for create_list "city"
+    nordapi_countrycode
+    create_list "city" "count"
+    citylist+=( "Exit" )    # needed for "invalid option" error
+    PS3=$'\n''Choose a City: '
+    select city_name in "${citylist[@]}"
+    do
+        parent_menu
+        if [[ "$city_name" == "Exit" ]]; then
+            main_menu
+        elif (( 1 <= REPLY )) && (( REPLY <= ${#citylist[@]} )); then
+            heading "Top 15 Recommended in $city_name" "txt" "alt"
+            # replace underscores to match the format, use lowercase for case insensitive search
+            modcity_name=$(echo "$city_name" | tr '_' ' ' | tr '[:upper:]' '[:lower:]')
+            #
+            curl --silent "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$country_code&limit=0" | \
+            jq -r --arg city "$modcity_name" '.[] | select(.locations[0].country.city.name | ascii_downcase == $city) | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name) \(.hostname)"' | \
+            sort -n | head -n 15
+            #
+            echo
+            read -n 1 -s -r -p "Press any key to continue... "; echo
+            nordapi_menu
+        else
+            invalid_option "${#citylist[@]}" "$parent"
+        fi
+    done
+}
 function nordapi_menu {
-    # Commands copied from:
+    # Commands copied and modified from:
     # https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
     heading "Nord API"
     parent="Tools"
     echo "Query the NordVPN Public API.  Requires 'curl' and 'jq'"
     echo "Commands may take a few seconds to complete."
-    echo "Rate-limiting by the server may result in a Parse error."
+    echo "Rate-limiting may cause a stall or 'Parse' error."
     echo
     if [[ "$connected" == "connected" ]]; then
         echo -e "Connected to: ${EColor}$server.nordvpn.com${Color_Off}"
@@ -3712,7 +3774,7 @@ function nordapi_menu {
     echo
     PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
-    submapi=("Host Server Load" "Top 15 Recommended" "Top 15 By Country" "All VPN Servers" "All Cities" "Change Host" "Connect" "Exit")
+    submapi=("Host Server Load" "Top 15 Recommended" "Top 15 By Country" "Top 15 By City" "Top 100 World" "All VPN Servers" "All Cities" "Change Host" "Connect" "Exit")
     select napi in "${submapi[@]}"
     do
         parent_menu
@@ -3723,17 +3785,33 @@ function nordapi_menu {
                 ;;
             "Top 15 Recommended")
                 heading "Top 15 Recommended" "txt" "alt"
-                curl --silent "https://api.nordvpn.com/v1/servers/recommendations" | jq --raw-output 'limit(15;.[]) | "  Server: \(.name)\nHostname: \(.hostname)\nLocation: \(.locations[0].country.name) - \(.locations[0].country.city.name)\n    Load: \(.load)\n"'
+                curl --silent "https://api.nordvpn.com/v1/servers/recommendations?limit=15" | \
+                jq -r 'sort_by(.load) | limit(15;.[]) | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name) \(.hostname)"'
+                echo
                 ;;
             "Top 15 By Country")
-                heading "Top 15 by Country Code" "txt" "alt"
-                curl --silent "https://api.nordvpn.com/v1/servers/countries" | jq --raw-output '.[] | [.id, .name] | @tsv'
+                heading "Top 15 Recommended by Country" "txt" "alt"
+                # find the country code to use as an api filter
+                nordapi_countrycode
+                heading "Top 15 Recommended in $xcountry" "txt" "alt"
+                #
+                curl --silent "https://api.nordvpn.com/v1/servers/recommendations?limit=15&filters\[country_id\]=$country_code" | \
+                jq -r 'sort_by(.load) | limit(15;.[]) | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name) \(.hostname)"'
+                #
                 echo
-                read -r -p "Enter the Country Code number: " ccode
-                echo
-                echo -e "${H2Color}SERVER: ${H1Color}%LOAD${Color_Off}"
-                echo
-                curl --silent "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$ccode&\[servers_groups\]\[identifier\]=legacy_standard" | jq --raw-output --slurp ' .[] | sort_by(.load) | limit(15;.[]) | [.hostname, .load] | "\(.[0]): \(.[1])"'
+                read -n 1 -s -r -p "Press any key to continue... "; echo
+                nordapi_menu
+                ;;
+            "Top 15 By City")
+                nordapi_city_top
+                ;;
+            "Top 100 World")
+                heading "Top 100 Recommended Servers Worldwide" "txt" "alt"
+                #
+                curl --silent "https://api.nordvpn.com/v1/servers/recommendations?limit=0" | \
+                jq -r '.[] | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name) \(.hostname)"' | \
+                sort -n | head -n 100
+                #
                 echo
                 ;;
             "All VPN Servers")
@@ -4351,11 +4429,10 @@ function favorites_menu {
     echo "this list. For example low ping servers or streaming servers."
     echo
     if [[ -f "$nordfavoritesfile" ]]; then
-        # trim spaces and remove empty lines
-        # https://stackoverflow.com/questions/16414410/delete-empty-lines-using-sed/24957725#24957725
+        # remove leading and trailing spaces and tabs, delete empty lines
         # prevent sed from changing the "Last Modified" file property unless it actually makes changes
-        if ! cmp -s "$nordfavoritesfile" <(sed 's/^ *//; s/ *$//; /^$/d' "$nordfavoritesfile"); then
-            sed -i 's/^ *//; s/ *$//; /^$/d' "$nordfavoritesfile"
+        if ! cmp -s "$nordfavoritesfile" <( sed -e 's/^[ \t]*//' -e 's/[ \t]*$//' -e '/^$/d' "$nordfavoritesfile" ); then
+            sed -i -e 's/^[ \t]*//' -e 's/[ \t]*$//' -e '/^$/d' "$nordfavoritesfile"
         fi
     else
         echo -e "${WColor}$nordfavoritesfile does not exist.${Color_Off}"
