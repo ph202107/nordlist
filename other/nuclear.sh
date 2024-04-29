@@ -72,6 +72,7 @@ function trashnord {
     linebreak "Quit Nord & Stop Service"
     nordvpn set killswitch disabled
     nordvpn disconnect
+    reload_cinnapplet
     if nordvpn logout --help | grep -q -i "persist-token"; then
         linecolor "cyan" "nordvpn logout --persist-token"
         nordvpn logout --persist-token
@@ -154,8 +155,11 @@ function loginnord {
     nordvpn account
 }
 function flushtables {
+    linecolor "cyan" "iptables before:"
     sudo iptables -S
+    echo
     linecolor "red" "*** Flush ***"
+    echo
     # https://www.cyberciti.biz/tips/linux-iptables-how-to-flush-all-rules.html
     # Accept all traffic first to avoid ssh lockdown
     sudo iptables -P INPUT ACCEPT
@@ -175,6 +179,7 @@ function flushtables {
     sudo iptables -t raw -F
     sudo iptables -t raw -X
     #
+    linecolor "cyan" "iptables after:"
     sudo iptables -S
 }
 function changelog {
@@ -184,6 +189,23 @@ function changelog {
     zcat "$nordchangelog" | head -n 15
     echo
     linecolor "green" "https://nordvpn.com/blog/nordvpn-linux-release-notes/"
+}
+function reload_cinnapplet {
+    # reload the "bash-sensors" Cinnamon applet
+    # changes the icon color (for connection status) immediately
+    # does nothing if there's no applet or if it's not used with nordvpn
+    #
+    directory="/home/$USER/.cinnamon/configs/bash-sensors@pkkk"
+    desktop_env="$(echo "$XDG_CURRENT_DESKTOP" | tr '[:upper:]' '[:lower:]')"
+    #
+    # check if the directory exists and the Cinnamon Desktop is in use
+    if [[ -d "$directory" ]] && [[ "$desktop_env" == *"cinnamon"* ]]; then
+        # search for "nordvpn" within the config file
+        if grep -rqi --include='*.json' "nordvpn" "$directory"; then
+            # reload the applet
+            dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+        fi
+    fi
 }
 #
 clear -x
@@ -241,6 +263,11 @@ nordvpn status
 linebreak "\n$(linecolor "green" "Completed \u2705")" # unicode checkmark
 nordvpn --version
 linebreak
+#
+# function default_settings may contain a "connect" command
+if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then
+    reload_cinnapplet
+fi
 #
 # Alternate install method:
 #  sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
