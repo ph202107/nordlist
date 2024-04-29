@@ -3,7 +3,7 @@
 # individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
-# April 19, 2024
+# April 29, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -256,7 +256,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # This list is subject to change and must be updated manually.
 # Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
 nordvirtual=(
-"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Armenia" "Astana" "Asunción" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lagos" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Lima" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nigeria" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Tashkent" "Tegucigalpa" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
+"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lagos" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Lima" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nigeria" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Tashkent" "Tegucigalpa" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
 )
 #
 # =====================================================================
@@ -278,7 +278,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4717 (function main_menu).
+# The Main Menu starts on line 4750 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -568,9 +568,9 @@ function nstatus_search {
     if [[ "$2" == "line" ]]; then
         printf '%s\n' "${nstatus[@]}" | grep -i "$1"
     else
-        # the last field using <colon> as delimiter
+        # the last field using <colon><space> as delimiter
         # some elements may have spaces eg Los Angeles, United States
-        printf '%s\n' "${nstatus[@]}" | grep -i "$1" | grep -o '[^:]*$' | cut -c 2-
+        printf '%s\n' "${nstatus[@]}" | grep -i "$1" | awk -F': ' '{print $NF}'
     fi
 }
 function nsettings_search {
@@ -582,10 +582,8 @@ function nsettings_search {
         printf '%s\n' "${nsettings[@]}" | grep -i "$1"
     else
         # the last field using <space> as delimiter
-        printf '%s\n' "${nsettings[@]}" | grep -i "$1" | grep -o '[^ ]*$'
+        printf '%s\n' "${nsettings[@]}" | grep -i "$1" | awk -F' ' '{print $NF}'
     fi
-    # can also use: | awk -F' ' '{print $NF}'
-    # https://stackoverflow.com/questions/22727107/how-to-find-the-last-field-using-cut
 }
 function set_vars {
     # Store info in arrays (BASH v4)
@@ -1144,6 +1142,19 @@ function city_names_restore {
     xcity="${citylist[index]}"
     #
 }
+function print_virtual {
+    # note if virtual servers are in the list
+    # $1 = "${modcountrylist[@]}" or "${modcitylist[@]}"
+    #
+    # check if any element has an asterisk
+    for astrx in "${@}"; do
+        if [[ $astrx == *"*"* ]]; then
+            echo -e "${FVColor}(*) = Virtual Servers${Color_Off}"
+            echo
+            break
+        fi
+    done
+}
 function country_menu {
     # submenu for all available countries
     #
@@ -1152,14 +1163,7 @@ function country_menu {
     create_list "country"
     country_names_modify
     #
-    # check if any country name has an asterisk
-    for astrx in "${modcountrylist[@]}"; do
-        if [[ $astrx == *"*"* ]]; then
-            echo -e "${FVColor}(*) = Virtual Servers${Color_Off}"
-            echo
-            break
-        fi
-    done
+    print_virtual "${modcountrylist[@]}"
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Countries with Obfuscation support"
         echo
@@ -1204,13 +1208,7 @@ function city_menu {
     fi
     create_list "city"
     city_names_modify
-    for astrx in "${modcitylist[@]}"; do
-        if [[ $astrx == *"*"* ]]; then
-            echo -e "${FVColor}(*) = Virtual Servers${Color_Off}"
-            echo
-            break
-        fi
-    done
+    print_virtual "${modcitylist[@]}"
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Cities in $xcountry with Obfuscation support"
         echo
@@ -3509,19 +3507,19 @@ function allservers_update {
 function virtual_locations {
     heading "Virtual Locations" "txt"
     #
-    echo -e "${LColor}Virtual Country Locations${Color_Off}"
+    echo -e "${H2Color}Virtual Country Locations${Color_Off}"
     jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
     echo; echo
     echo "Virtual Country Locations: $( jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | sort -u | wc -l )"
     echo
     echo
-    echo -e "${LColor}Virtual City Locations${Color_Off}"
+    echo -e "${H2Color}Virtual City Locations${Color_Off}"
     jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
     echo; echo
     echo "Virtual City Locations: $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | wc -l )"
     echo
     echo
-    echo -e "${LColor}Virtual Country and City Locations${Color_Off}"
+    echo -e "${H2Color}Virtual Country and City Locations${Color_Off}"
     jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
     echo; echo
     echo -e "${FColor}Can use this list to update the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))${Color_Off}"
@@ -3535,7 +3533,7 @@ function allservers_menu {
     # can use 'sort -k1' instead of 'sort -k2' to sort by hostname instead of by city
     # to list only the hostnames eg:  jq -r '.[] | select(.groups[].title == "P2P") | .hostname' "$nordserversfile" | sort -V -u
     #
-    heading "All Servers"
+    heading "All VPN Servers"
     parent="Nord API"
     echo "Query a local .json of all the NordVPN servers."
     echo "Requires 'curl' and 'jq'"
@@ -3642,33 +3640,48 @@ function allservers_menu {
                 virtual_locations
                 ;;
             "Search Country")
+                # search for any country name rather than use a 'select' menu based on the CLI output
                 heading "Search by Country Name" "txt"
                 echo "Return the server hostnames in a particular country."
                 echo "Please use exact format, eg. 'United States'"
                 echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
                 read -r -p "Enter the country name: " searchcountry
-                echo
-                #heading "Servers in $searchcountry sorted by City" "txt"
-                #jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
-                #echo
-                heading "Servers in $searchcountry sorted by Hostname" "txt"
-                jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -V -k1
-                echo
-                echo "$searchcountry servers: $( jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | .hostname' "$nordserversfile" | sort -u | wc -l )"
-                echo
+                if [[ -z $searchcountry ]]; then
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                else
+                    echo
+                    #heading "Servers in $searchcountry sorted by City" "txt"
+                    #jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+                    #echo
+                    heading "Servers in $searchcountry sorted by Hostname" "txt"
+                    jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -V -k1
+                    echo
+                    echo "$searchcountry servers: $( jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | .hostname' "$nordserversfile" | sort -u | wc -l )"
+                    echo
+                fi
                 ;;
             "Search City")
                 heading "Search by City Name" "txt"
                 echo "Return the server hostnames in a particular city."
                 echo "Please use exact format, eg. 'Los Angeles'"
                 echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
                 read -r -p "Enter the city name: " searchcity
-                echo
-                heading "Servers in $searchcity" "txt"
-                jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -V
-                echo
-                echo "$searchcity servers: $( jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -u | wc -l )"
-                echo
+                if [[ -z $searchcity ]]; then
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                else
+                    echo
+                    heading "Servers in $searchcity" "txt"
+                    jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -V
+                    echo
+                    echo "$searchcity servers: $( jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -u | wc -l )"
+                    echo
+                fi
                 ;;
             "Search Server")
                 heading "Search by Server Hostname" "txt"
@@ -3676,11 +3689,18 @@ function allservers_menu {
                 echo -e "${EColor}$nordserversfile${Color_Off}"
                 echo "For example 'us9723.nordvpn.com'"
                 echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
                 read -r -p "Enter the full server hostname: " searchserver
-                echo
-                heading "Record for $searchserver" "txt"
-                jq --arg searchserver "$searchserver" '.[] | select(.hostname == $searchserver)' "$nordserversfile"
-                echo
+                if [[ -z $searchserver ]]; then
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                else
+                    echo
+                    heading "Record for $searchserver" "txt"
+                    jq --arg searchserver "$searchserver" '.[] | select(.hostname == $searchserver)' "$nordserversfile"
+                    echo
+                fi
                 ;;
             "Connect")
                 host_connect
@@ -3704,14 +3724,19 @@ function nordapi_countrycode {
     #
     parent="Nord API"
     create_list "country" "count"
-    countrylist+=( "Exit" ) # needed for "invalid option" error
+    # needed for "invalid option" error
+    countrylist+=( "Exit" )
+    # add an asterisk to virtual countries and shorten country names (if enabled)
+    country_names_modify
+    print_virtual "${modcountrylist[@]}"
     PS3=$'\n''Choose a Country: '
-    select xcountry in "${countrylist[@]}"
+    select xcountry in "${modcountrylist[@]}"
     do
         parent_menu
         if [[ "$xcountry" == "Exit" ]]; then
             main_menu
-        elif (( 1 <= REPLY )) && (( REPLY <= ${#countrylist[@]} )); then
+        elif (( 1 <= REPLY )) && (( REPLY <= ${#modcountrylist[@]} )); then
+            country_names_restore
             # replace underscores to match the format, use lowercase for case insensitive search
             modxcountry=$(echo "$xcountry" | tr '_' ' ' | tr '[:upper:]' '[:lower:]')
             #
@@ -3719,49 +3744,57 @@ function nordapi_countrycode {
             jq --raw-output --arg country "$modxcountry" '.[] | select(.name | ascii_downcase == $country) | .id')
             #
             echo
+            echo "$xcountry" # (id: $country_code)
+            echo
             return
         else
-            invalid_option "${#countrylist[@]}" "$parent"
+            invalid_option "${#modcountrylist[@]}" "$parent"
         fi
     done
 }
-function nordapi_city_top {
+function nordapi_top_city {
     # Top 15 Recommended by City
     # pulls all the servers for one country by the country code, then searches by city
     #
-    heading "Top 15 Recommended by City" "txt" "alt"
+    heading "Top 15 Recommended by City" "txt"
     parent="Nord API"
     # get the country code and set $xcountry for create_list "city"
     nordapi_countrycode
     create_list "city" "count"
-    citylist+=( "Exit" )    # needed for "invalid option" error
+    # needed for "invalid option" error
+    citylist+=( "Exit" )
+    # mark virtual cities with an asterisk
+    city_names_modify
+    print_virtual "${modcitylist[@]}"
     PS3=$'\n''Choose a City: '
-    select city_name in "${citylist[@]}"
+    # must use $xcity for city_names_restore
+    select xcity in "${modcitylist[@]}"
     do
         parent_menu
-        if [[ "$city_name" == "Exit" ]]; then
+        if [[ "$xcity" == "Exit" ]]; then
             main_menu
-        elif (( 1 <= REPLY )) && (( REPLY <= ${#citylist[@]} )); then
-            heading "Top 15 Recommended in $city_name" "txt" "alt"
+        elif (( 1 <= REPLY )) && (( REPLY <= ${#modcitylist[@]} )); then
+            city_names_restore
+            heading "Top 15 Recommended in $xcity" "txt" "alt"
             # replace underscores to match the format, use lowercase for case insensitive search
-            modcity_name=$(echo "$city_name" | tr '_' ' ' | tr '[:upper:]' '[:lower:]')
+            modxcity=$(echo "$xcity" | tr '_' ' ' | tr '[:upper:]' '[:lower:]')
             #
             curl --silent "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$country_code&limit=0" | \
-            jq -r --arg city "$modcity_name" '.[] | select(.locations[0].country.city.name | ascii_downcase == $city) | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name) \(.hostname)"' | \
+            jq -r --arg city "$modxcity" '.[] | select(.locations[0].country.city.name | ascii_downcase == $city) | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name)   \(.hostname)"' | \
             sort -n | head -n 15
             #
             echo
             read -n 1 -s -r -p "Press any key to continue... "; echo
             nordapi_menu
         else
-            invalid_option "${#citylist[@]}" "$parent"
+            invalid_option "${#modcitylist[@]}" "$parent"
         fi
     done
 }
 function nordapi_menu {
     # Commands copied and modified from:
     # https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
-    heading "Nord API"
+    heading "NordVPN  API"
     parent="Tools"
     echo "Query the NordVPN Public API.  Requires 'curl' and 'jq'"
     echo "Commands may take a few seconds to complete."
@@ -3786,30 +3819,30 @@ function nordapi_menu {
             "Top 15 Recommended")
                 heading "Top 15 Recommended" "txt" "alt"
                 curl --silent "https://api.nordvpn.com/v1/servers/recommendations?limit=15" | \
-                jq -r 'sort_by(.load) | limit(15;.[]) | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name) \(.hostname)"'
+                jq -r 'sort_by(.load) | limit(15;.[]) | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name)   \(.hostname)"'
                 echo
                 ;;
             "Top 15 By Country")
-                heading "Top 15 Recommended by Country" "txt" "alt"
+                heading "Top 15 Recommended by Country" "txt"
                 # find the country code to use as an api filter
                 nordapi_countrycode
                 heading "Top 15 Recommended in $xcountry" "txt" "alt"
                 #
                 curl --silent "https://api.nordvpn.com/v1/servers/recommendations?limit=15&filters\[country_id\]=$country_code" | \
-                jq -r 'sort_by(.load) | limit(15;.[]) | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name) \(.hostname)"'
+                jq -r 'sort_by(.load) | limit(15;.[]) | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name)   \(.hostname)"'
                 #
                 echo
                 read -n 1 -s -r -p "Press any key to continue... "; echo
                 nordapi_menu
                 ;;
             "Top 15 By City")
-                nordapi_city_top
+                nordapi_top_city
                 ;;
             "Top 100 World")
                 heading "Top 100 Recommended Servers Worldwide" "txt" "alt"
                 #
                 curl --silent "https://api.nordvpn.com/v1/servers/recommendations?limit=0" | \
-                jq -r '.[] | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name) \(.hostname)"' | \
+                jq -r '.[] | "\(.load) %load   \(.locations[0].country.city.name) \(.locations[0].country.name)   \(.hostname)"' | \
                 sort -n | head -n 100
                 #
                 echo
