@@ -48,7 +48,7 @@ function check_login {
 }
 function check_connect {
     #
-    connectstatus=$(nordvpn status | grep -i "Status" | cut -f2 -d':' | cut -c 2- | tr '[:upper:]' '[:lower:]')
+    connectstatus=$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )
     #
     if [[ "$connectstatus" != "connected" ]]; then
         connectcount=$(( connectcount + 1 ))
