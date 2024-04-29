@@ -9,7 +9,6 @@
 # the next server. When no servers remain it connects to another city
 # and retrieves a new list.
 #
-# Tested on Linux Mint 21.1
 # Requires 'curl' and 'jq'.  eg "sudo apt install curl jq"
 # Make sure the script is executable, eg "chmod +x jd.reconnect.sh"
 #
@@ -45,14 +44,10 @@ jdcity5="Atlanta"
 # Send notifications when changing servers. "y" or "n"
 notifications="y"
 #
-# Show server load in notification (may take a few seconds) "y" or "n"
-showserverload="y"
-#
 # =====================================================================
 #
 function getserverlist {
-    # https://sleeplessbeastie.eu/2019/02/18/how-to-use-public-nordvpn-api/
-    curl --silent "https://api.nordvpn.com/v1/servers/recommendations" | jq --raw-output 'limit(20;.[]) | "\(.hostname)"' > "$jdlist"
+    curl --silent "https://api.nordvpn.com/v1/servers/recommendations?limit=20" | jq -r '.[].hostname' > "$jdlist"
     echo "EOF" >> "$jdlist"
 }
 function getcurrentinfo {
@@ -74,17 +69,6 @@ function getnextcity {
         nextcity="$jdcity1"
     fi
 }
-function getserverload {
-    if [[ "$showserverload" =~ ^[Yy]$ ]]; then
-        sload=$(timeout 10 curl --silent https://api.nordvpn.com/server/stats/"$currenthost" | jq .percent)
-        if [[ -n "$sload" ]]; then
-            serverload=" ($sload% load)"
-        else
-            serverload=""
-        fi
-    fi
-}
-#
 # create the list if it doesn't exist
 if [[ ! -e "$jdlist" ]]; then
     getserverlist
@@ -115,6 +99,5 @@ fi
 if [[ "$notifications" =~ ^[Yy]$ ]]; then
     getcurrentinfo
     getnextcity
-    getserverload
-    notify-send "JDReconnect - $currentcity $shorthost $serverload" "$servercount servers remain.  Next city: $nextcity"
+    notify-send "JDReconnect - $currentcity $shorthost" "$servercount servers remain.  Next city: $nextcity"
 fi
