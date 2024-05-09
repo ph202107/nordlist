@@ -2,8 +2,8 @@
 # shellcheck disable=SC2129,SC2154
 # individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.17.4 on Linux Mint 21.3
-# April 29, 2024
+# Tested with NordVPN Version 3.18.0 on Linux Mint 21.3
+# May 9, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -256,7 +256,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # This list is subject to change and must be updated manually.
 # Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
 nordvirtual=(
-"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lagos" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Lima" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nigeria" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Tashkent" "Tegucigalpa" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
+"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lagos" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Lima" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nigeria" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
 )
 #
 # =====================================================================
@@ -278,7 +278,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4750 (function main_menu).
+# The Main Menu starts on line 4781 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1142,8 +1142,8 @@ function city_names_restore {
     xcity="${citylist[index]}"
     #
 }
-function print_virtual {
-    # note if virtual servers are in the list
+function virtual_note {
+    # make a note if virtual servers are in the list
     # $1 = "${modcountrylist[@]}" or "${modcitylist[@]}"
     #
     # check if any element has an asterisk
@@ -1163,7 +1163,7 @@ function country_menu {
     create_list "country"
     country_names_modify
     #
-    print_virtual "${modcountrylist[@]}"
+    virtual_note "${modcountrylist[@]}"
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Countries with Obfuscation support"
         echo
@@ -1208,7 +1208,7 @@ function city_menu {
     fi
     create_list "city"
     city_names_modify
-    print_virtual "${modcitylist[@]}"
+    virtual_note "${modcitylist[@]}"
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Cities in $xcountry with Obfuscation support"
         echo
@@ -2702,11 +2702,14 @@ function customdns_menu {
                 echo "Enter the DNS server IPs or hit 'Enter' for default."
                 echo -e "Default: ${FColor}$dnsdesc ($default_dns)${Color_Off}"
                 echo
-                read -r -p "Up to 3 DNS server IPs: " dns3srvrs
+                read -r -p "Up to 3 DNS server IPs: "
+                parent_menu
+                dns3srvrs="$REPLY"
                 dns3srvrs=${dns3srvrs:-$default_dns}
                 tplite_disable
                 # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1 8.8.8.8"
                 nordvpn set dns $dns3srvrs
+                echo
                 ;;
             "Disable Custom-DNS")
                 echo
@@ -3504,6 +3507,33 @@ function allservers_update {
         echo
     fi
 }
+function virtual_check {
+    # compare the json output of virtual locations with the existing nordvirtual array
+    #
+    # associative arrays for comparison
+    declare -A nordv_map
+    declare -A jsonv_map
+    #
+    readarray -t jsonvirtual < <( jq -r '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u )
+    #
+    for element in "${nordvirtual[@]}"; do
+        nordv_map["$element"]=1
+    done
+    for element in "${jsonvirtual[@]}"; do
+        jsonv_map["$element"]=1
+    done
+    #
+    for element in "${!nordv_map[@]}"; do
+        if [[ -z "${jsonv_map[$element]}" ]]; then
+            echo -e "${DColor}$element${Color_Off} is in the ${H1Color}nordvirtual array${Color_Off} but not in the ${H2Color}json output${Color_Off}"
+        fi
+    done
+    for element in "${!jsonv_map[@]}"; do
+        if [[ -z "${nordv_map[$element]}" ]]; then
+            echo -e "${DColor}$element${Color_Off} is in the ${H2Color}json output${Color_Off} but not in the ${H1Color}nordvirtual array${Color_Off}"
+        fi
+    done
+}
 function virtual_locations {
     heading "Virtual Locations" "txt"
     #
@@ -3526,6 +3556,7 @@ function virtual_locations {
     echo
     echo "Virtual Country and City Locations: $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | sort -u | wc -l )"
     echo
+    virtual_check
     echo
 }
 function allservers_menu {
@@ -3566,7 +3597,7 @@ function allservers_menu {
         case $avpn in
             "List All Servers")
                 heading "All the VPN Servers" "txt"
-                jq '.[].hostname' "$nordserversfile" | sort -V -u | sed 's/"//g'    # remove quotes
+                jq -r '.[].hostname' "$nordserversfile" | sort -V -u
                 echo
                 echo "All Servers: $( jq length "$nordserversfile" )"
                 echo
@@ -3728,7 +3759,7 @@ function nordapi_countrycode {
     countrylist+=( "Exit" )
     # add an asterisk to virtual countries and shorten country names (if enabled)
     country_names_modify
-    print_virtual "${modcountrylist[@]}"
+    virtual_note "${modcountrylist[@]}"
     PS3=$'\n''Choose a Country: '
     select xcountry in "${modcountrylist[@]}"
     do
@@ -3744,7 +3775,7 @@ function nordapi_countrycode {
             jq --raw-output --arg country "$modxcountry" '.[] | select(.name | ascii_downcase == $country) | .id')
             #
             echo
-            echo "$xcountry" # (id: $country_code)
+            echo -e "${H1Color}$xcountry${Color_Off}  (API Country ID = $country_code)"
             echo
             return
         else
@@ -3754,7 +3785,7 @@ function nordapi_countrycode {
 }
 function nordapi_top_city {
     # Top 15 Recommended by City
-    # pulls all the servers for one country by the country code, then searches by city
+    # retrieve all the servers for one country by the country code, then search by city
     #
     heading "Top 15 Recommended by City" "txt"
     parent="Nord API"
@@ -3765,7 +3796,7 @@ function nordapi_top_city {
     citylist+=( "Exit" )
     # mark virtual cities with an asterisk
     city_names_modify
-    print_virtual "${modcitylist[@]}"
+    virtual_note "${modcitylist[@]}"
     PS3=$'\n''Choose a City: '
     # must use $xcity for city_names_restore
     select xcity in "${modcitylist[@]}"
