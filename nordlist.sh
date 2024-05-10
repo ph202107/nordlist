@@ -2,8 +2,8 @@
 # shellcheck disable=SC2129,SC2154
 # individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.18.0 on Linux Mint 21.3
-# May 9, 2024
+# Tested with NordVPN Version 3.18.1 on Linux Mint 21.3
+# May 10, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -278,7 +278,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4781 (function main_menu).
+# The Main Menu starts on line 4789 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -3368,7 +3368,7 @@ function backup_file {
     # everything before the final period.  used for search
     filename=$(basename "$1" | rev | cut -f2- -d '.' | rev)
     # search the directory for filename*
-    existfiles=$(find "$directory" -type f -name "$filename*")
+    existfiles=$(find "$directory" -type f -name "$filename*" | sort)
     #
     echo -e "File: ${EColor}$1${Color_Off}"
     echo "File Size: $( du -k "$1" | cut -f1 ) KB"
@@ -3523,16 +3523,25 @@ function virtual_check {
         jsonv_map["$element"]=1
     done
     #
+    mismatch="false"
     for element in "${!nordv_map[@]}"; do
         if [[ -z "${jsonv_map[$element]}" ]]; then
+            mismatch="true"
             echo -e "${DColor}$element${Color_Off} is in the ${H1Color}nordvirtual array${Color_Off} but not in the ${H2Color}json output${Color_Off}"
         fi
     done
     for element in "${!jsonv_map[@]}"; do
         if [[ -z "${nordv_map[$element]}" ]]; then
+            mismatch="true"
             echo -e "${DColor}$element${Color_Off} is in the ${H2Color}json output${Color_Off} but not in the ${H1Color}nordvirtual array${Color_Off}"
         fi
     done
+    if "$mismatch"; then
+        echo
+        echo -e "${WColor}** Virtual location mismatch **${Color_Off}"
+        echo "Please update the server list and then the nordvirtual array."
+        echo
+    fi
 }
 function virtual_locations {
     heading "Virtual Locations" "txt"
@@ -3557,7 +3566,6 @@ function virtual_locations {
     echo "Virtual Country and City Locations: $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | sort -u | wc -l )"
     echo
     virtual_check
-    echo
 }
 function allservers_menu {
     # credit to ChatGPT 3.5 for help with jq syntax.  https://chat.openai.com/
