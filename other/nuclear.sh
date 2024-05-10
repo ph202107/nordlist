@@ -32,6 +32,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.17.3"      # 28 Mar 2024 Fixed meshnet routing and OpenVPN
 #nord_version="nordvpn=3.17.4"      # 05 Apr 2024 Fixed DNS leak in 3.17.3
 #nord_version="nordvpn=3.18.0"      # 09 May 2024 Tray icon. Fix Meshnet Routing kill switch. 
+#nord_version="nordvpn=3.18.1"      # 10 May 2024 Fix potential security vulnerabilities. 
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
