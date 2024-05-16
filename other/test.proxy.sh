@@ -3,98 +3,108 @@
 # Simple script to test NordVPN https and socks5 proxy servers.
 # Uses 'curl' via the proxy to retrieve the external IP information.
 #
-# Nord Service Credentials (required)
+# NordVPN Service Credentials (required)
+# These are not the same as your NordAccount email/password.
 # https://my.nordaccount.com - Services - NordVPN - Manual Setup
 user=""
 pass=""
 #
-# Choose "socks5" or "https"
+# Choose the proxy type. Enter "https" or "socks5"
 protocol="socks5"
+#
+# Specify ports
+https_port="89"     # default: 89
+socks5_port="1080"  # default: 1080
 #
 # Returns the external IP and geolocation info
 site="https://ipinfo.io/"
 #
+# Perform a file download speed test using curl. "y" or "n"
+speedtest="n"
+localfile="/dev/null"
+remotefile="https://ash-speed.hetzner.com/100MB.bin"
+#remotefile="https://ash-speed.hetzner.com/1GB.bin"
+#remotefile="https://releases.ubuntu.com/focal/ubuntu-20.04.6-desktop-amd64.iso"
 #
-function config_https {
-    port="89"
+#
+function list_https {
     proxylist+=(
         # Add https proxy servers here
-        # Almost all the VPN servers will handle https proxy
-        # Format: "<location><space><server>"
-        "Chicago us9892.nordvpn.com"
-        "Seattle us9986.nordvpn.com"
-        "Atlanta us8041.nordvpn.com"
-        "Denver us5079.nordvpn.com"
-        "Vancouver ca1586.nordvpn.com"
+        # Almost all the NordVPN servers support https proxy
+        # Format: "<server><space><location>"
+        "us6574.nordvpn.com (Chicago)"
+        "us6575.nordvpn.com (Chicago)"
+        "us8243.nordvpn.com (Seattle)"
+        "us8244.nordvpn.com (Seattle)"
+        "us10147.nordvpn.com (Dallas)"
+        "us10148.nordvpn.com (Dallas)"
+        "us10507.nordvpn.com (Atlanta)"
+        "us10508.nordvpn.com (Atlanta)"
+        "us9201.nordvpn.com (Denver)"
+        "us9202.nordvpn.com (Denver)"
+        "ca1743.nordvpn.com (Vancouver)"
+        "ca1744.nordvpn.com (Vancouver)"
     )
 }
-function config_socks5 {
-    port="1080"
-    # Choose one or both for the socks5 proxylist
-    socks5_proxies
-    socks5_individual
-}
-function socks5_proxies {
+function list_socks5 {
     proxylist+=(
-        # https://support.nordvpn.com/1087802472
-        amsterdam.nl.socks.nordhold.net
-        atlanta.us.socks.nordhold.net
-        dallas.us.socks.nordhold.net
-        los-angeles.us.socks.nordhold.net
-        nl.socks.nordhold.net
-        se.socks.nordhold.net
-        stockholm.se.socks.nordhold.net
-        us.socks.nordhold.net
-        new-york.us.socks.nordhold.net
-    )
-}
-function socks5_individual {
-    proxylist+=(
-        # List retrieved via NordVPN Public API on January 2, 2024
+        # https://support.nordvpn.com/hc/en-us/articles/20195967385745
+        "amsterdam.nl.socks.nordhold.net"
+        "atlanta.us.socks.nordhold.net"
+        "dallas.us.socks.nordhold.net"
+        "los-angeles.us.socks.nordhold.net"
+        "nl.socks.nordhold.net"
+        "se.socks.nordhold.net"
+        "stockholm.se.socks.nordhold.net"
+        "us.socks.nordhold.net"
+        "new-york.us.socks.nordhold.net"
+        #
+        # Server list retrieved via NordVPN Public API on 14 May 2024
         # Subject to change
-        socks-nl1.nordvpn.com
-        socks-nl2.nordvpn.com
-        socks-nl3.nordvpn.com
-        socks-nl4.nordvpn.com
-        socks-nl5.nordvpn.com
-        socks-nl6.nordvpn.com
-        socks-nl7.nordvpn.com
-        socks-nl8.nordvpn.com
-        socks-se8.nordvpn.com
-        socks-se9.nordvpn.com
-        socks-se10.nordvpn.com
-        socks-se11.nordvpn.com
-        socks-se12.nordvpn.com
-        socks-se13.nordvpn.com
-        socks-se14.nordvpn.com
-        socks-se15.nordvpn.com
-        socks-se16.nordvpn.com
-        socks-se17.nordvpn.com
-        socks-se18.nordvpn.com
-        socks-se19.nordvpn.com
-        socks-se20.nordvpn.com
-        socks-se21.nordvpn.com
-        socks-se22.nordvpn.com
-        socks-se23.nordvpn.com
-        socks-us1.nordvpn.com
-        socks-us2.nordvpn.com
-        socks-us3.nordvpn.com
-        socks-us7.nordvpn.com
-        socks-us8.nordvpn.com
-        socks-us9.nordvpn.com
-        socks-us10.nordvpn.com
-        socks-us11.nordvpn.com
-        socks-us12.nordvpn.com
-        socks-us13.nordvpn.com
-        socks-us14.nordvpn.com
-        socks-us15.nordvpn.com
-        socks-us27.nordvpn.com
-        socks-us28.nordvpn.com
-        socks-us29.nordvpn.com
-        socks-us30.nordvpn.com
-        socks-us31.nordvpn.com
-        socks-us32.nordvpn.com
-        socks-us33.nordvpn.com
+        "socks-nl1.nordvpn.com (Amsterdam)"
+        "socks-nl2.nordvpn.com (Amsterdam)"
+        "socks-nl3.nordvpn.com (Amsterdam)"
+        "socks-nl4.nordvpn.com (Amsterdam)"
+        "socks-nl5.nordvpn.com (Amsterdam)"
+        "socks-nl6.nordvpn.com (Amsterdam)"
+        "socks-nl7.nordvpn.com (Amsterdam)"
+        "socks-nl8.nordvpn.com (Amsterdam)"
+        "socks-us10.nordvpn.com (Atlanta)"
+        "socks-us27.nordvpn.com (Atlanta)"
+        "socks-us7.nordvpn.com (Atlanta)"
+        "socks-us8.nordvpn.com (Atlanta)"
+        "socks-us9.nordvpn.com (Atlanta)"
+        "socks-us1.nordvpn.com (Dallas)"
+        "socks-us2.nordvpn.com (Dallas)"
+        "socks-us3.nordvpn.com (Dallas)"
+        "socks-us11.nordvpn.com (Los Angeles)"
+        "socks-us12.nordvpn.com (Los Angeles)"
+        "socks-us13.nordvpn.com (Los Angeles)"
+        "socks-us14.nordvpn.com (Los Angeles)"
+        "socks-us15.nordvpn.com (Los Angeles)"
+        "socks-us28.nordvpn.com (New York)"
+        "socks-us29.nordvpn.com (New York)"
+        "socks-us30.nordvpn.com (New York)"
+        "socks-us31.nordvpn.com (New York)"
+        "socks-us32.nordvpn.com (New York)"
+        "socks-us33.nordvpn.com (New York)"
+        "socks-se10.nordvpn.com (Stockholm)"
+        "socks-se11.nordvpn.com (Stockholm)"
+        "socks-se12.nordvpn.com (Stockholm)"
+        "socks-se13.nordvpn.com (Stockholm)"
+        "socks-se14.nordvpn.com (Stockholm)"
+        "socks-se15.nordvpn.com (Stockholm)"
+        "socks-se16.nordvpn.com (Stockholm)"
+        "socks-se17.nordvpn.com (Stockholm)"
+        "socks-se18.nordvpn.com (Stockholm)"
+        "socks-se19.nordvpn.com (Stockholm)"
+        "socks-se20.nordvpn.com (Stockholm)"
+        "socks-se21.nordvpn.com (Stockholm)"
+        "socks-se22.nordvpn.com (Stockholm)"
+        "socks-se23.nordvpn.com (Stockholm)"
+        "socks-se24.nordvpn.com (Stockholm)"
+        "socks-se8.nordvpn.com (Stockholm)"
+        "socks-se9.nordvpn.com (Stockholm)"
     )
 }
 function linecolor {
@@ -108,13 +118,23 @@ function linecolor {
     esac
 }
 #
-proxylist=()
-if [[ "${protocol}" == "socks5" ]]; then
-    config_socks5
-elif [[ "${protocol}" == "https" ]]; then
-    config_https
+if [[ -z "${user}" ]] || [[ -z "${pass}" ]]; then
+    linecolor "red" "Missing user/pass credentials."
+    exit
 fi
-proxylist+=( "Exit" )
+#
+proxylist=()
+if [[ "${protocol,,}" == "https" ]]; then
+    port="${https_port}"
+    list_https
+elif [[ "${protocol,,}" == "socks5" ]]; then
+    port="${socks5_port}"
+    list_socks5
+else
+    linecolor "red" "Invalid Protocol: ${protocol}"
+    exit
+fi
+proxylist+=( "Edit Script" "Exit" )
 #
 clear -x
 echo
@@ -123,32 +143,42 @@ echo
 echo "Protocol= $(linecolor "yellow" "${protocol}")    Port= $(linecolor "yellow" "${port}")"
 echo
 PS3=$'\n''Choose a Server: '
-select proxy in "${proxylist[@]}"
+select xproxy in "${proxylist[@]}"
 do
-    if [[ "${proxy}" == "Exit" ]]; then
+    if [[ "${xproxy}" == "Exit" ]]; then
         echo
         exit
+    elif [[ "${xproxy}" == "Edit Script" ]]; then
+        nano "$0"
+        exit
     elif (( 1 <= REPLY )) && (( REPLY <= ${#proxylist[@]} )); then
-        if [[ "${protocol}" == "https" ]]; then
-            location="$( echo "${proxy}" | cut -f1 -d' ' )"
-            proxy="$( echo "${proxy}" | cut -f2 -d' ' )"
-        else
-            location="$( echo "${proxy}" | cut -f1 -d'.' )"
-        fi
+        #
+        proxy="$( echo "${xproxy}" | cut -f1 -d' ' )"
+        location="$( echo "${xproxy}" | cut -f2- -d' ' )"
+        #
         echo
         linecolor "cyan" "ping -c 3 ${proxy}"
         echo
         ping -c 3 "${proxy}"
         echo
-        linecolor "cyan" "curl --verbose --proxy ${protocol}://${proxy}:${port} --proxy-user ${user}:${pass} --location ${site}"
+        linecolor "cyan" "curl --proxy '${protocol}://${proxy}:${port}' --proxy-user '${user}:${pass}' --location '${site}'"
         echo
-        curl --verbose --proxy "${protocol}://${proxy}:${port}" --proxy-user "${user}:${pass}" --location "${site}"
+        curl --proxy "${protocol}://${proxy}:${port}" --proxy-user "${user}:${pass}" --location "${site}"
         echo
         echo
         echo "${location}"
         linecolor "yellow" "${protocol}://${proxy}:${port}"
         linecolor "green" "${protocol}://${user}:${pass}@${proxy}:${port}"
         echo
+        echo "File download speed test:"
+        linecolor "cyan" "curl --proxy '${protocol}://${user}:${pass}@${proxy}:${port}' --output '$localfile' '$remotefile'"
+        echo
+        if [[ "$speedtest" =~ ^[Yy]$ ]]; then
+            linecolor "yellow" "(CTRL-C to quit)"
+            echo
+            curl --proxy "${protocol}://${user}:${pass}@${proxy}:${port}" --output "$localfile" "$remotefile"
+            echo
+        fi
     else
         echo
         linecolor "red" "Invalid Option"
