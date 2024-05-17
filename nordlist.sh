@@ -3,7 +3,7 @@
 # individual redirects, var assigned
 #
 # Tested with NordVPN Version 3.18.1 on Linux Mint 21.3
-# May 10, 2024
+# May 17, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -278,7 +278,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4789 (function main_menu).
+# The Main Menu starts on line 4799 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -796,7 +796,7 @@ function ipinfo_curl {
     extcity=$(echo "$response" | jq -r '.city | if . == null then empty else . end')
     extregion=$(echo "$response" | jq -r '.region | if . == null then empty else . end')
     extcountry=$(echo "$response" | jq -r '.country | if . == null then empty else . end')
-    extlimit=$(echo "$response" | grep -i "rate limit")
+    extlimit=$(echo "$response" | jq -r '.error.title | if . == null then empty else . end')
     #
     if [[ -n "$extip" ]]; then
         echo -e "${IPColor}$extip  $exthost${Color_Off}"
@@ -804,7 +804,6 @@ function ipinfo_curl {
         echo
     elif [[ -n "$extlimit" ]]; then
         echo -e "${WColor}$extlimit${Color_Off}"
-        echo "This IP has hit the daily limit for the unauthenticated API."
         echo
     else
         set_vars
@@ -3549,13 +3548,13 @@ function virtual_locations {
     echo -e "${H2Color}Virtual Country Locations${Color_Off}"
     jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
     echo; echo
-    echo "Virtual Country Locations: $( jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | sort -u | wc -l )"
+    echo "Virtual Country Locations = $( jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | sort -u | wc -l )"
     echo
     echo
     echo -e "${H2Color}Virtual City Locations${Color_Off}"
     jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
     echo; echo
-    echo "Virtual City Locations: $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | wc -l )"
+    echo "Virtual City Locations = $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | wc -l )"
     echo
     echo
     echo -e "${H2Color}Virtual Country and City Locations${Color_Off}"
@@ -3563,15 +3562,44 @@ function virtual_locations {
     echo; echo
     echo -e "${FColor}Can use this list to update the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))${Color_Off}"
     echo
-    echo "Virtual Country and City Locations: $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | sort -u | wc -l )"
+    echo "Virtual Country and City Locations = $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | sort -u | wc -l )"
     echo
     virtual_check
 }
+function allservers_group {
+    # query the local json to list and count the servers in a specified group
+    # $1 = exact group name - "Double VPN" "Onion Over VPN" "Obfuscated Servers" "P2P" "Dedicated IP"
+    # $2 = "quotes" - keep the double quotes to use the list elsewhere
+    #
+    heading "Group: $1" "txt"
+    if [[ "$2" == "quotes" ]]; then
+        jq --arg group "$1" '.[] | select(.groups[].title == $group) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+    else
+        jq -r --arg group "$1" '.[] | select(.groups[].title == $group) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+    fi
+    servercount="$( jq -r --arg group "$1" '.[] | select(.groups[].title == $group) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -u | wc -l )"
+    echo
+    echo "Servers in Group '$1' = $servercount"
+    echo
+}
+function allservers_technology {
+    # query the local json to list and count the servers with a specific technology
+    # $1 = exact technology name - "Socks 5" "IKEv2/IPSec" "HTTP Proxy (SSL)" "HTTP CyberSec Proxy (SSL)" "OpenVPN UDP" "OpenVPN TCP" "Wireguard"
+    # $2 = "quotes" - keep the double quotes to use the list elsewhere
+    #
+    heading "Technology: $1" "txt"
+    if [[ "$2" == "quotes" ]]; then
+        jq --arg tech "$1" '.[] | select(.technologies[].name == $tech) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+    else
+        jq -r --arg tech "$1" '.[] | select(.technologies[].name == $tech) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+    fi
+    servercount="$( jq --arg tech "$1" '.[] | select(.technologies[].name == $tech) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -u | wc -l )"
+    echo
+    echo "$1 Servers = $servercount"
+    echo
+}
 function allservers_menu {
     # credit to ChatGPT 3.5 for help with jq syntax.  https://chat.openai.com/
-    # can use 'sort -k1' instead of 'sort -k2' to sort by hostname instead of by city
-    # to list only the hostnames eg:  jq -r '.[] | select(.groups[].title == "P2P") | .hostname' "$nordserversfile" | sort -V -u
-    #
     heading "All VPN Servers"
     parent="Nord API"
     echo "Query a local .json of all the NordVPN servers."
@@ -3598,7 +3626,7 @@ function allservers_menu {
     echo
     PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
-    submallvpn=( "List All Servers" "Server Count" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Obfuscated Servers" "P2P Servers" "Dedicated-IP Servers" "Virtual Locations" "Search Country" "Search City" "Search Server" "Connect" "Update List" "Exit" )
+    submallvpn=( "List All Servers" "Server Count" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Obfuscated Servers" "P2P Servers" "Dedicated-IP Servers" "IKEv2/IPSec" "HTTPS Proxy" "HTTPS CyberSec Proxy" "OpenVPN UDP" "OpenVPN TCP" "WireGuard" "Virtual Locations" "Search Country" "Search City" "Search Server" "Connect" "Update List" "Exit" )
     select avpn in "${submallvpn[@]}"
     do
         parent_menu
@@ -3607,7 +3635,7 @@ function allservers_menu {
                 heading "All the VPN Servers" "txt"
                 jq -r '.[].hostname' "$nordserversfile" | sort -V -u
                 echo
-                echo "All Servers: $( jq length "$nordserversfile" )"
+                echo "All Servers = $( jq length "$nordserversfile" )"
                 echo
                 ;;
             "Server Count")
@@ -3619,62 +3647,44 @@ function allservers_menu {
                 echo
                 ;;
             "Double-VPN Servers")
-                heading "Double-VPN Servers" "txt"
-                jq -r '.[] | select(.groups[].title == "Double VPN") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
-                echo
-                echo "(City Name) is the second hop."
-                echo
-                echo "Double-VPN Servers: $( jq -r '.[] | select(.groups[].title == "Double VPN") | .hostname' "$nordserversfile" | sort -u | wc -l )"
-                echo
+                allservers_group "Double VPN"
                 ;;
             "Onion Servers")
-                heading "Onion Servers" "txt"
-                jq -r '.[] | select(.groups[].title == "Onion Over VPN") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
-                echo
-                echo "Onion Servers: $( jq -r '.[] | select(.groups[].title == "Onion Over VPN") | .hostname' "$nordserversfile" | sort -u | wc -l )"
-                echo
+                allservers_group "Onion Over VPN"
                 ;;
             "SOCKS Servers")
-                heading "SOCKS Servers" "txt"
-                #
-                # no quotation marks
-                # jq -r '.[] | select(.technologies[].name == "Socks 5") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
-                #
-                # add double quotes
-                jq -r '.[] | select(.technologies[].name == "Socks 5") | "\"\(.hostname) (\(.locations[0].country.city.name))\"" ' "$nordserversfile" | sort -k2
-                #
-                echo
-                echo "SOCKS Servers: $( jq -r '.[] | select(.technologies[].name == "Socks 5") | .hostname' "$nordserversfile" | sort -u | wc -l )"
-                echo
+                allservers_technology "Socks 5" "quotes"
                 echo "Proxy names and locations are available online:"
                 echo -e "${EColor}https://support.nordvpn.com/hc/en-us/articles/20195967385745${Color_Off}"
                 echo
                 ;;
             "Obfuscated Servers")
-                heading "Obfuscated Servers" "txt"
-                jq -r '.[] | select(.groups[].title == "Obfuscated Servers") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
-                echo
-                echo "Obfuscated Servers: $( jq -r '.[] | select(.groups[].title == "Obfuscated Servers") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -u | wc -l )"
-                echo
+                allservers_group "Obfuscated Servers"
                 ;;
             "P2P Servers")
-                heading "P2P Servers" "txt"
-                jq -r '.[] | select(.groups[].title == "P2P") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
-                echo
-                echo "P2P Servers: $( jq -r '.[] | select(.groups[].title == "P2P") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -u | wc -l )"
-                echo
+                allservers_group "P2P"
                 ;;
             "Dedicated-IP Servers")
-                heading "Dedicated-IP Servers" "txt"
-                jq -r '.[] | select(.groups[].title == "Dedicated IP") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
-                echo
-                echo "Dedicated-IP Servers: $( jq -r '.[] | select(.groups[].title == "Dedicated IP") | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -u | wc -l )"
-                echo
+                allservers_group "Dedicated IP"
                 ;;
-            #
-            # "technologies": "IKEv2/IPSec" "OpenVPN UDP" "OpenVPN TCP" "HTTP Proxy (SSL)" "HTTP CyberSec Proxy (SSL)" "Wireguard"
-            # jq -r '.[] | select(.technologies[] | select(.name == "IKEv2/IPSec")) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
-            #
+            "IKEv2/IPSec")
+                allservers_technology "IKEv2/IPSec"
+                ;;
+            "HTTPS Proxy")
+                allservers_technology "HTTP Proxy (SSL)" "quotes"
+                ;;
+            "HTTPS CyberSec Proxy")
+                allservers_technology "HTTP CyberSec Proxy (SSL)" "quotes"
+                ;;
+            "OpenVPN UDP")
+                allservers_technology "OpenVPN UDP"
+                ;;
+            "OpenVPN TCP")
+                allservers_technology "OpenVPN TCP"
+                ;;
+            "WireGuard")
+                allservers_technology "Wireguard"
+                ;;
             "Virtual Locations")
                 virtual_locations
                 ;;
@@ -3698,7 +3708,7 @@ function allservers_menu {
                     heading "Servers in $searchcountry sorted by Hostname" "txt"
                     jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -V -k1
                     echo
-                    echo "$searchcountry servers: $( jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | .hostname' "$nordserversfile" | sort -u | wc -l )"
+                    echo "$searchcountry Servers = $( jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | .hostname' "$nordserversfile" | sort -u | wc -l )"
                     echo
                 fi
                 ;;
@@ -3718,7 +3728,7 @@ function allservers_menu {
                     heading "Servers in $searchcity" "txt"
                     jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -V
                     echo
-                    echo "$searchcity servers: $( jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -u | wc -l )"
+                    echo "$searchcity Servers = $( jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -u | wc -l )"
                     echo
                 fi
                 ;;
