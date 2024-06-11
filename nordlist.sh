@@ -1,9 +1,7 @@
 #!/bin/bash
-# shellcheck disable=SC2129,SC2154
-# individual redirects, var assigned
 #
-# Tested with NordVPN Version 3.18.1 on Linux Mint 21.3
-# May 17, 2024
+# Tested with NordVPN Version 3.18.2 on Linux Mint 21.3
+# June 11, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -87,8 +85,8 @@ torwhere=""
 # Specify your Dedicated_IP location. (Optional)
 # If you have a Dedicated IP you can specify your server, eg. "ca1692"
 # Otherwise you can connect to the server group in a supported region.
-# eg. dediwhere="Tokyo" or dediwhere="Johannesburg"
-dediwhere=""
+# eg. dipwhere="Tokyo" or dipwhere="Johannesburg"
+dipwhere=""
 #
 # Specify your Auto-Connect location. (Optional)
 # eg. acwhere="Australia" or acwhere="Sydney"
@@ -120,10 +118,6 @@ meshnetdir="/home/$USER/Downloads"
 # Use the absolute path, no trailing slash (/)
 wgdir="/home/$USER/Downloads"
 #
-# Specify the absolute path and filename to save a copy of the
-# nordvpnd.service logs.  Create the file in: Settings - Logs
-nordlogfile="/home/$USER/Downloads/nord_logs.txt"
-#
 # Specify the absolute path and filename to store a .json of all the
 # NordVPN servers (about 20MB). Avoids API server timeouts.  Create the
 # list at:  Tools - NordVPN API - All VPN Servers
@@ -133,6 +127,12 @@ nordserversfile="/home/$USER/Downloads/nord_allservers.json"
 # favorite NordVPN servers.  eg. Low ping servers or streaming servers.
 # Create the list in: 'Favorites'
 nordfavoritesfile="/home/$USER/Downloads/nord_favorites.txt"
+#
+# Specify the absolute path and filename to save a copy of the
+# nordvpnd.service logs.  Create the file in: Settings - Logs
+nordlogfile="/home/$USER/Downloads/nord_logs.txt"
+# Also show this number of lines from the tail of the log.
+loglines="50"
 #
 # Change the terminal window titlebar text while the script is running.
 # Leave this blank to keep the titlebar unchanged.
@@ -171,6 +171,7 @@ exitload="n"
 exitip="n"
 #
 # Reload the "Bash Sensors" Cinnamon applet when the script exits.
+# This will change the icon color (for connection status) immediately.
 # Only for the Cinnamon DE with "Bash Sensors" installed. "y" or "n"
 exitappletb="n"
 #
@@ -216,8 +217,8 @@ upmenu="0"
 fast1="n"
 #
 # Automatically change these settings without prompting:  Firewall,
-# Routing, Analytics, KillSwitch, TPLite, Notify, AutoConnect, IPv6,
-# LAN-Discovery
+# Routing, Analytics, KillSwitch, TPLite, Notify, Tray, AutoConnect,
+# IPv6, LAN-Discovery
 fast2="n"
 #
 # Automatically change these settings which also disconnect the VPN:
@@ -278,12 +279,14 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4799 (function main_menu).
+# The Main Menu starts on line 4875 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
 #
 # ==End================================================================
+#
+declare -A nordlist_apps    # populated in function app_exists
 #
 function allowlist_commands {
     # Add your allowlist configuration commands here.
@@ -345,6 +348,9 @@ function set_defaults {
     #if [[ "$notify" == "disabled" ]]; then nordvpn set notify enabled; fi
     if [[ "$notify" == "enabled" ]]; then nordvpn set notify disabled; fi
     #
+    #if [[ "$tray" == "disabled" ]]; then nordvpn set tray enabled; fi
+    #if [[ "$tray" == "enabled" ]]; then nordvpn set tray disabled; fi
+    #
     #if [[ "$autoconnect" == "disabled" ]]; then nordvpn set autoconnect enabled $acwhere; fi
     if [[ "$autoconnect" == "enabled" ]]; then nordvpn set autoconnect disabled; fi
     #
@@ -380,7 +386,7 @@ EOF
     echo -ne "${Color_Off}"
 }
 function ascii_custom {
-    if ! (( "$figlet_exists" )) || ! (( "$lolcat_exists" )); then
+    if ! app_exists "figlet" || ! app_exists "lolcat"; then
         ascii_static
         return
     fi
@@ -389,7 +395,7 @@ function ascii_custom {
     #
     asciitext="$city"
     #
-    if (( "$meshrouting" )); then
+    if "$meshrouting"; then
         # when routing through meshnet
         asciitext="Meshnet Routing"
     fi
@@ -414,22 +420,29 @@ function ascii_custom {
         figlet -t -f "standard" "NordVPN"
     fi
 }
+function indicators_show {
+    # Changes made here will be reflected in main_logo and settings_menu
+    # All indicators: $techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns$ld$al$fst
+    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns$ld$al$fst"
+}
 function main_logo {
-    # the ascii and stats shown above the main_menu and on script exit
+    # The ascii and stats shown above the main_menu and on script exit.
     set_vars
     if [[ "$1" != "stats_only" ]]; then
         # Specify  ascii_static or ascii_custom on the line below.
         ascii_custom
     fi
-    if (( "$meshrouting" )); then
+    if "$usingssh"; then
+        echo -ne "$sshi "
+    fi
+    if "$meshrouting"; then
         echo -e "$connectedcl ${SVColor}$nordhost ${IPColor}$ipaddr${Color_Off}"
     else
         echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr ${Color_Off}$fav"
     fi
-    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$ld$al$fst$sshi"
+    indicators_show
     echo -e "$transferc ${UPColor}$uptime${Color_Off}"
-    if [[ -n $transferc ]]; then echo; fi
-    # all indicators: $techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$ld$al$fst$sshi
+    if [[ -n "$transferc" ]]; then echo; fi
 }
 function heading {
     # The text or ASCII that displays after a menu selection is made.
@@ -438,7 +451,7 @@ function heading {
     # $3 = "alt" - use alternate color for regular text
     #
     clear -x
-    if ! (( "$figlet_exists" )) || ! (( "$lolcat_exists" )) || [[ "$2" == "txt" ]]; then
+    if ! app_exists "figlet" || ! app_exists "lolcat" || [[ "$2" == "txt" ]]; then
         echo
         if [[ "$3" == "alt" ]]; then
             echo -e "${H2Color}=== $1 ===${Color_Off}"
@@ -596,9 +609,9 @@ function set_vars {
     connected=$( nstatus_search "Status" | tr '[:upper:]' '[:lower:]' )
     nordhost=$( nstatus_search "Hostname" )
     server=$( echo "$nordhost" | cut -f1 -d'.' )
+    ipaddr=$( nstatus_search "IP:" )
     country=$( nstatus_search "Country" )
     city=$( nstatus_search "City" )
-    ipaddr=$( nstatus_search "IP:" )
     protocol2=$( nstatus_search "protocol" | tr '[:lower:]' '[:upper:]' )
     transferd=$( nstatus_search "Transfer" "line" | cut -f 2-3 -d' ' )  # download stat with units
     transferu=$( nstatus_search "Transfer" "line" | cut -f 5-6 -d' ' )  # upload stat with units
@@ -616,6 +629,7 @@ function set_vars {
     tplite=$( nsettings_search "Threat" )
     obfuscate=$( nsettings_search "Obfuscate" )
     notify=$( nsettings_search "Notify" )
+    tray=$( nsettings_search "Tray" )
     autoconnect=$( nsettings_search "Auto" )
     ipversion6=$( nsettings_search "IPv6" )
     meshnet=$( nsettings_search "Meshnet" | tr -d '\n' )
@@ -699,6 +713,12 @@ function set_vars {
         no="${DIColor}[NO]${Color_Off}"
     fi
     #
+    if [[ "$tray" == "enabled" ]]; then
+        tr="${EIColor}[T]${Color_Off}"
+    else
+        tr="${DIColor}[T]${Color_Off}"
+    fi
+    #
     if [[ "$autoconnect" == "enabled" ]]; then
         ac="${EIColor}[AC]${Color_Off}"
     else
@@ -745,19 +765,19 @@ function set_vars {
         fst=""
     fi
     #
-    if (( "$usingssh" )); then
+    if "$usingssh"; then
         sshi="${DIColor}[${FIColor}SSH${DIColor}]${Color_Off}"
     else
         sshi=""
     fi
     #
     if [[ "$connected" == "connected" ]] && [[ "$meshnet" == "enabled" ]] && [[ "$nordhost" != *"nordvpn.com"* ]]; then
-        meshrouting="1"
+        meshrouting="true"
     else
-        meshrouting=""
+        meshrouting="false"
     fi
     #
-    if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]] && [[ "$server" == "$dediwhere" ]]; then
+    if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]] && [[ "$server" == "$dipwhere" ]]; then
         fav="${FVColor}(Dedicated-IP)${Color_Off}"
     elif [[ "$connected" == "connected" ]] && [[ -f "$nordfavoritesfile" ]] && grep -q -i "$server" "$nordfavoritesfile"; then
         fav="${FVColor}(Favorite)${Color_Off}"
@@ -856,7 +876,7 @@ function status {
     if [[ "$exitip" =~ ^[Yy]$ ]]; then
         ipinfo_curl
         if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ -n "$extip" ]]; then
-            if [[ "$technology" == "openvpn" ]] || (( "$meshrouting" )); then
+            if [[ "$technology" == "openvpn" ]] || "$meshrouting"; then
                 # ping the external IP when using OpenVPN or Meshnet Routing
                 ping_host "$extip" "stats" "External IP"
                 echo
@@ -873,14 +893,14 @@ function status {
 function reload_applet {
     # reload Cinnamon Desktop applets
     #
-    if (( "$usingssh" )); then return; fi
+    if "$usingssh"; then return; fi
     if [[ "$exitappletb" =~ ^[Yy]$ ]]; then
-        # reload 'bash-sensors@pkkk'
+        # reload 'bash-sensors@pkkk' - changes the icon color (for connection status) immediately.
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
         wait
     fi
     if [[ "$exitappletn" =~ ^[Yy]$ ]]; then
-        # reload 'network@cinnamon.org' (to remove extra 'nordlynx' entries)
+        # reload 'network@cinnamon.org' - removes extra 'nordlynx' entries.
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'network@cinnamon.org' string:'APPLET'
         wait
     fi
@@ -915,20 +935,34 @@ function openlink {
     # $2 = "ask"  - ask first
     # $3 = "exit" - exit after opening
     #
-    if (( "$usingssh" )); then
+    if "$usingssh"; then
         echo
         echo -e "$sshi ${FColor}The script is running over SSH${Color_Off}"
         echo
     fi
-    if [[ "$2" == "ask" ]] || (( "$usingssh" )); then
+    if [[ "$2" == "ask" ]] || "$usingssh"; then
         read -n 1 -r -p "$(echo -e "Open ${EColor}$1${Color_Off} ? (y/n) ")"; echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             return
         fi
     fi
-    if [[ "$1" =~ ^https?:// ]] && [[ "$newfirefox" =~ ^[Yy]$ ]] && ! (( "$usingssh" )); then
+    if [[ "$1" =~ ^https?:// ]] && [[ "$newfirefox" =~ ^[Yy]$ ]] && ! "$usingssh"; then
+        # open urls in a new firefox window if the option is enabled
         nohup "$(command -v firefox)" --new-window "$1" > /dev/null 2>&1 &
+    elif [[ "$1" == *.conf || "$1" == *.sh || "$1" == *.txt ]] && "$usingssh"; then
+        # open these types of files in the terminal when using ssh
+        # WireGuard configs, nordlist.sh, favorites.txt, nord_logs.txt
+        # check for default editor otherwise use nano
+        if [[ -n "$VISUAL" ]]; then
+            editor="$VISUAL"
+        elif [[ -n "$EDITOR" ]]; then
+            editor="$EDITOR"
+        else
+            editor="nano"
+        fi
+        "$editor" "$1"
     else
+        # use system default method
         nohup xdg-open "$1" > /dev/null 2>&1 &
     fi
     if [[ "$3" == "exit" ]]; then
@@ -962,7 +996,6 @@ function countdown_timer {
 }
 function parent_menu {
     # $1 = $1 or $2 (back) of the calling function - disable upmenu if a return is required
-    # "Main" "Country" "Settings" "Group" "Tools" "Nord API" "Meshnet" "Favorites" "All Servers" "Speed Test"
     #
     if [[ "$REPLY" == "$upmenu" ]]; then
         if [[ "$1" == "back" ]]; then
@@ -1507,7 +1540,7 @@ function group_connect {
             echo "Connect to your assigned server, or test the performance of the"
             echo "server group before purchasing a Dedicated-IP.  Please refer to:"
             echo "https://support.nordvpn.com/hc/en-us/articles/19507808024209"
-            location="$dediwhere"
+            location="$dipwhere"
             ;;
     esac
     echo
@@ -1748,6 +1781,9 @@ function change_setting {
         "notify")
             chgname="Notify"; chgvar="$notify"; chgind="$no"
             ;;
+        "tray")
+            chgname="the Tray"; chgvar="$tray"; chgind="$tr"
+            ;;
         "autoconnect")
             chgname="Auto-Connect"; chgvar="$autoconnect"; chgind="$ac"; chgloc="$acwhere"
             ;;
@@ -1939,10 +1975,19 @@ function tplite_setting {
 function notify_setting {
     heading "Notify"
     echo
-    echo "Send OS notifications when the VPN status changes"
-    echo "and on Meshnet file transfer events."
+    echo "Send OS notifications when the VPN status changes, and"
+    echo "on Meshnet file transfer events."
     echo
     change_setting "notify"
+}
+function tray_setting {
+    heading "Tray"
+    parent="Settings"
+    echo
+    echo "Enable or disable the NordVPN icon in the system tray."
+    echo "The icon provides quick access to basic controls and VPN status details."
+    echo
+    change_setting "tray"
 }
 function autoconnect_setting {
     heading "AutoConnect"
@@ -2716,16 +2761,15 @@ function customdns_menu {
                 echo
                 ;;
             "Flush DNS Cache")
-                # https://nordvpn.com/blog/flush-dns/
                 echo
-                if (( "$systemdresolve_exists" )); then
+                if command -v "resolvectl" &> /dev/null; then
                     sudo echo
-                    sudo systemd-resolve --statistics | grep "Current Cache Size"
+                    sudo resolvectl statistics | grep "Current Cache Size"
                     echo -e "${WColor}  == Flush ==${Color_Off}"
-                    sudo systemd-resolve --flush-caches
-                    sudo systemd-resolve --statistics | grep "Current Cache Size"
+                    sudo resolvectl flush-caches
+                    sudo resolvectl statistics | grep "Current Cache Size"
                 else
-                    echo -e "${WColor}systemd-resolve not found${Color_Off}"
+                    echo -e "${WColor}resolvectl not found${Color_Off}"
                     echo "For alternate methods see: https://nordvpn.com/blog/flush-dns/"
                 fi
                 echo
@@ -2786,7 +2830,7 @@ function allowlist_setting {
     startline=$(grep -m1 -n "allowlist_start" "$0" | cut -f1 -d':')
     endline=$(( $(grep -m1 -n "allowlist_end" "$0" | cut -f1 -d':') - 1 ))
     numlines=$(( endline - startline ))
-    if (( "$highlight_exists" )); then
+    if app_exists "highlight"; then
         highlight -l -O xterm256 "$0" | head -n "$endline" | tail -n "$numlines"
     else
         cat -n "$0" | head -n "$endline" | tail -n "$numlines"
@@ -3282,15 +3326,25 @@ function service_logs {
         echo -e "${EColor}Completed $( wc -l < "$nordlogfile" ) lines \u2705${Color_Off}" # unicode checkmark
         echo
     fi
+    echo
+    echo "Last $loglines lines:"
+    echo -e "${LColor}journalctl -u nordvpnd | tail -n $loglines${Color_Off}"
+    echo
+    journalctl -u nordvpnd | tail -n "$loglines"
+    echo
+    echo
+    # priority 4 (warning) or more severe
+    # Note that "[Warning] TELIO" log entries appear to be Priority 6 and won't be listed
+    echo "Warnings and Errors:"
+    echo -e "${LColor}journalctl -u nordvpnd -p 0..4${Color_Off}"
+    echo
+    journalctl -u nordvpnd -p 0..4
+    echo
+    echo
     if [[ -f "$nordlogfile" ]]; then
-        echo -e "${LColor}grep -E 'Warning|Error' '$nordlogfile' | grep -v 'TELIO' | tail -n 30${Color_Off}"
-        echo
-        #grep -E "Warning|Error" "$nordlogfile" | grep -v "TELIO" | tail -n 30
-        # use color for Warning|Error
-        # shellcheck disable=SC2059     # ignore info about printf color codes, doesn't work with %s
-        grep -E "Warning|Error" "$nordlogfile" | grep -v "TELIO" | tail -n 30 | sed -E "s/Warning/$(printf "${FIColor}")&$(printf "${Color_Off}")/Ig; s/Error/$(printf "${WColor}")&$(printf "${Color_Off}")/Ig"
-        echo
         openlink "$nordlogfile" "ask"
+    else
+        read -n 1 -s -r -p "Press any key to continue... "; echo
     fi
     settings_menu
 }
@@ -3317,7 +3371,7 @@ function rate_server {
     done
 }
 function server_load {
-    if [[ "$nordhost" == *"onion"* ]] || (( "$meshrouting" )); then
+    if [[ "$nordhost" == *"onion"* ]] || "$meshrouting"; then
         echo -e "${LColor}$nordhost${Color_Off} - Unable to check the server load."
         echo
         return
@@ -3338,8 +3392,7 @@ function server_load {
         else
             # servers may be added or removed
             echo -e "${WColor}No id found for '$nordhost'${Color_Off}"
-            echo "Try updating $nordserversfile"
-            echo "(Tools - NordVPN API - All VPN Servers)"
+            echo "Try updating $(basename "$nordserversfile") (Tools - NordVPN API - All VPN Servers)"
         fi
     else
         echo -e "${WColor}$nordserversfile not found${Color_Off}"
@@ -3456,7 +3509,7 @@ function favorites_verify {
             echo
             if [[ "$REPLY" =~ ^[Yy]$ ]]; then
                 # delete the line using awk.  tried using 'sed -i' but had problems with special characters
-                awk -v pattern="$line" '$0 != pattern' "$nordfavoritesfile" >temp && mv temp "$nordfavoritesfile"
+                awk -v pattern="$line" '$0 != pattern' "$nordfavoritesfile" >favtemp && mv favtemp "$nordfavoritesfile"
                 echo -e "$line ${WColor}deleted${Color_Off}"
                 echo
             else
@@ -3535,12 +3588,16 @@ function virtual_check {
             echo -e "${DColor}$element${Color_Off} is in the ${H2Color}json output${Color_Off} but not in the ${H1Color}nordvirtual array${Color_Off}"
         fi
     done
+    echo
     if "$mismatch"; then
-        echo
         echo -e "${WColor}** Virtual location mismatch **${Color_Off}"
-        echo "Please update the server list and then the nordvirtual array."
-        echo
+        echo "Please update $(basename "$nordserversfile") and then the nordvirtual array."
+    else
+        echo -e "${EColor}Virtual locations match. \u2705${Color_Off}"
+        echo "Countries and Cities listed in the nordvirtual array match the"
+        echo "virtual locations listed in $(basename "$nordserversfile")."
     fi
+    echo
 }
 function virtual_locations {
     heading "Virtual Locations" "txt"
@@ -3614,7 +3671,7 @@ function allservers_menu {
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             touch "$nordserversfile"
-            curl --silent "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
+            curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
             echo -e "Saved as: ${EColor}$nordserversfile${Color_Off}"
         else
             REPLY="$upmenu"
@@ -3973,7 +4030,7 @@ function wireguard_gen {
     wgconfig="${wgcity}_${server}.conf"     # Filename
     wgfull="${wgdir}/${wgconfig}"           # Full path and filename
     #
-    if ! (( "$wg_exists" )); then
+    if ! app_exists "wg"; then
         echo -e "${WColor}WireGuard-Tools could not be found.${Color_Off}"
         echo "Please install WireGuard and WireGuard-Tools."
         echo "eg. 'sudo apt install wireguard wireguard-tools'"
@@ -4022,31 +4079,34 @@ function wireguard_gen {
     publickey=$(sudo wg showconf nordlynx | grep 'PublicKey = .*')
     endpoint=$(sudo wg showconf nordlynx | grep 'Endpoint = .*')
     #
-    echo "# $server.nordvpn.com $ipaddr" > "$wgfull"
-    echo "# $city $country" >> "$wgfull"
-    echo >> "$wgfull"
-    echo "[Interface]" >> "$wgfull"
-    echo "Address = ${address}/32" >> "$wgfull"
-    echo "${privatekey}" >> "$wgfull"
-    #
-    echo "DNS = 103.86.96.100, 103.86.99.100" >> "$wgfull"  # Regular DNS
-    # echo "DNS = 103.86.96.96, 103.86.99.99" >> "$wgfull"  # Threat Protection Lite DNS
-    #
-    wireguard_ks    # Prompt to add Linux iptables Kill Switch
-    #
-    echo >> "$wgfull"
-    echo "[Peer]" >> "$wgfull"
-    echo "${endpoint}" >> "$wgfull"
-    echo "${publickey}" >> "$wgfull"
-    echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgfull"
-    echo "PersistentKeepalive = 25" >> "$wgfull"
+    # shellcheck disable=SC2129 # individual redirects
+    {
+        echo "# $server.nordvpn.com $ipaddr" > "$wgfull"
+        echo "# $city $country" >> "$wgfull"
+        echo >> "$wgfull"
+        echo "[Interface]" >> "$wgfull"
+        echo "Address = ${address}/32" >> "$wgfull"
+        echo "${privatekey}" >> "$wgfull"
+        #
+        echo "DNS = 103.86.96.100, 103.86.99.100" >> "$wgfull"  # Regular DNS
+        # echo "DNS = 103.86.96.96, 103.86.99.99" >> "$wgfull"  # Threat Protection Lite DNS
+        #
+        wireguard_ks    # Prompt to add Linux iptables Kill Switch
+        #
+        echo >> "$wgfull"
+        echo "[Peer]" >> "$wgfull"
+        echo "${endpoint}" >> "$wgfull"
+        echo "${publickey}" >> "$wgfull"
+        echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgfull"
+        echo "PersistentKeepalive = 25" >> "$wgfull"
+    }
     #
     echo
     echo -e "${EColor}Completed \u2705${Color_Off}" # unicode checkmark
     echo
     echo -e "Saved as ${LColor}$wgfull${Color_Off}"
     echo
-    if (( "$highlight_exists" )); then
+    if app_exists "highlight"; then
         highlight -O xterm256 "$wgfull"
     else
         cat "$wgfull"
@@ -4077,7 +4137,7 @@ function speedtest_iperf3 {
     echo "Meshnet Peers, LAN Peers, Remote Peers, etc."
     echo "Start the server on one device, then run the tests from another."
     echo
-    if ! (( "$iperf3_exists" )); then
+    if ! app_exists "iperf3"; then
         echo -e "${WColor}iperf3 could not be found.${Color_Off}"
         echo "Please install iperf3.  https://iperf.fr/ "
         echo "eg. 'sudo apt install iperf3'"
@@ -4158,7 +4218,7 @@ function speedtest_menu {
     echo "Perform download and upload tests using the speedtest-cli"
     echo "or iperf3.  Open links to run browser-based speed tests."
     echo
-    if ! (( "$speedtestcli_exists" )); then
+    if ! app_exists "speedtest-cli"; then
         echo -e "${WColor}speedtest-cli could not be found.${Color_Off}"
         echo "Please install speedtest-cli"
         echo "eg. 'sudo apt install speedtest-cli'"
@@ -4166,7 +4226,7 @@ function speedtest_menu {
     fi
     PS3=$'\n''Select a test: '
     COLUMNS="$menuwidth"
-    submspeed=( "Download & Upload" "Download Only" "Upload Only" "Single DL" "List" "Latency & Load" "iperf3" "wget" "speedtest.net"  "speedof.me" "fast.com" "linode.com" "digitalocean.com" "nperf.com" "Exit" )
+    submspeed=( "Download & Upload" "Download Only" "Upload Only" "Single DL" "Server List" "Latency & Load" "iperf3" "wget" "speedtest.net"  "speedof.me" "fast.com" "linode.com" "digitalocean.com" "nperf.com" "Exit" )
     select spd in "${submspeed[@]}"
     do
         parent_menu
@@ -4187,9 +4247,23 @@ function speedtest_menu {
                 echo
                 speedtest-cli --single --no-upload
                 ;;
-            "List")
-                echo
+            "Server List")
+                heading "SpeedTest Servers" "txt"
                 speedtest-cli --list
+                echo
+                echo "Enter the Server ID# to run a standard test."
+                echo
+                echo -e "${FColor}(Leave blank to quit)${Color_Off}"
+                echo
+                read -r -p "Server ID: "
+                if [[ -n $REPLY ]]; then
+                    echo
+                    speedtest-cli --server "$REPLY"
+                    echo
+                else
+                    echo -e "${DColor}(Skipped)${Color_Off}"
+                    echo
+                fi
                 ;;
             "Latency & Load")
                 echo
@@ -4424,7 +4498,7 @@ function script_info {
     startline=$(grep -m1 -n "Customization" "$0" | cut -f1 -d':')
     endline=$(grep -m1 -n "=End=" "$0" | cut -f1 -d':')
     numlines=$(( endline - startline + 2 ))
-    if (( "$highlight_exists" )); then
+    if app_exists "highlight"; then
         highlight -l -O xterm256 "$0" | head -n "$endline" | tail -n "$numlines"
     else
         cat -n "$0" | head -n "$endline" | tail -n "$numlines"
@@ -4433,6 +4507,7 @@ function script_info {
     echo "Need to edit the script to change these settings."
     echo
     openlink "$0" "ask" "exit"
+    settings_menu
 }
 function quick_connect {
     # This is an alternate method of connecting to the Nord recommended server.
@@ -4659,10 +4734,10 @@ function settings_menu {
     heading "Settings"
     parent="Main"
     echo
-    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$ac$ip6$mn$dns$ld$al$fst$sshi"
+    indicators_show
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
@@ -4676,6 +4751,7 @@ function settings_menu {
             "TPLite")       tplite_setting;;
             "Obfuscate")    obfuscate_setting;;
             "Notify")       notify_setting;;
+            "Tray")         tray_setting;;
             "AutoConnect")  autoconnect_setting;;
             "IPv6")         ipv6_setting;;
             "Meshnet")      meshnet_menu "Settings";;
@@ -4760,7 +4836,7 @@ function main_disconnect {
     # disconnect option from the main menu
     heading "Disconnect"
     echo
-    if [[ "$connected" == "connected" ]] && ! (( "$meshrouting" )); then
+    if [[ "$connected" == "connected" ]] && ! "$meshrouting"; then
         if [[ "$rate_prompt" =~ ^[Yy]$ ]]; then
             rate_server
             echo
@@ -4929,34 +5005,33 @@ function main_menu {
     done
     exit
 }
-function check_depends {
-    # https://stackoverflow.com/questions/16553089/dynamic-variable-names-in-bash
-    # creates variables with value 0 or 1, eg $nordvpn_exists = 1
+function app_exists {
+    # check if nordvpn and third party applications are installed
+    # $1 = app to check.  use "start" to initialize the array
     #
-    # check silently
-    for program in nordvpn systemd-resolve #iptables systemctl firefox
-    do
-        name=$( echo "$program" | tr -d '-' )       # remove hyphens
-        if command -v "$program" &> /dev/null; then
-            printf -v "${name}_exists" '%s' '1'
+    if [[ "$1" == "start" ]]; then
+        # populate the nordlist_apps array and echo the results on script startup
+        #
+        applications=( "wg" "jq" "curl" "figlet" "lolcat" "iperf3" "nordvpn" "highlight" "speedtest-cli" )
+        #
+        echo -e "${LColor}App Check${Color_Off}"
+        for app in "${applications[@]}"; do
+            if command -v "$app" &> /dev/null; then
+                nordlist_apps["$app"]="true"
+                echo -e "${EIColor}Y${Color_Off} $app"
+            else
+                nordlist_apps["$app"]="false"
+                echo -e "${DIColor}N${Color_Off} $app"
+            fi
+        done
+    else
+        # check the nordlist_apps array to confirm the program is available
+        if [[ "${nordlist_apps[$1]}" == "true" ]]; then
+            return 0    # success
         else
-            printf -v "${name}_exists" '%s' '0'
+            return 1    # failure
         fi
-    done
-    #
-    # echo results
-    echo -e "${LColor}App Check${Color_Off}"
-    for program in wg jq curl figlet lolcat iperf3 highlight speedtest-cli
-    do
-        name=$( echo "$program" | tr -d '-' )       # remove hyphens
-        if command -v "$program" &> /dev/null; then
-            echo -e "${EIColor}Y${Color_Off} $program"
-            printf -v "${name}_exists" '%s' '1'
-        else
-            echo -e "${DIColor}N${Color_Off} $program"
-            printf -v "${name}_exists" '%s' '0'
-        fi
-    done
+    fi
 }
 function start {
     # commands to run when the script first starts
@@ -4966,7 +5041,9 @@ function start {
         # Check if the script is being run in an ssh session
         echo -e "${FColor}(The script is running over SSH)${Color_Off}"
         echo
-        usingssh="1"
+        usingssh="true"
+    else
+        usingssh="false"
     fi
     if (( BASH_VERSINFO < 4 )); then
         echo "Bash Version $BASH_VERSION"
@@ -4976,15 +5053,15 @@ function start {
     fi
     if [[ -n "$titlebartext" ]]; then
         # Change the terminal window titlebar text. Tested with gnome-terminal.
-        if (( "$usingssh" )); then
+        if "$usingssh"; then
             echo -ne "\033]2;$titlebartext $USER@$HOSTNAME\007"
         else
             echo -ne "\033]2;$titlebartext\007"
         fi
     fi
-    check_depends
+    app_exists "start"
     echo
-    if (( "$nordvpn_exists" )); then
+    if app_exists "nordvpn"; then
         nordvpn --version
         echo
     else
@@ -5027,17 +5104,71 @@ start
 # =====================================================================
 # =====================================================================
 # Notes
+# ======
+#
+# Bash-Sensors Applet for Cinnamon Desktop (Recommended)
+#
+#   Shows the NordVPN connection status in the panel and runs nordlist.sh when clicked.
+#   Mint-Menu - "Applets" - Download tab - "Bash-Sensors" - Install - Manage tab - (+)Add to panel
+#   https://cinnamon-spices.linuxmint.com/applets/view/231
+#
+#   To use the icons from https://github.com/ph202107/nordlist/tree/main/icons
+#   Download the icons to your device and modify "PATH_TO_ICON" in the command below.
+#   Green = Connected, Red = Disconnected.  Screenshot:  https://github.com/ph202107/nordlist/blob/main/screenshots
+#       Title:  NordVPN
+#       Refresh Interval:  15 seconds or choose
+#       Shell:  bash
+#       Command 1: blank
+#       Two Line Mode:  Off
+#       Dynamic Icon:  On
+#       Static Icon or Command:
+#           if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then echo "PATH_TO_ICON/nord.round.green.png"; else echo "PATH_TO_ICON/nord.round.red.png"; fi
+#       Dynamic Tooltip:  On
+#       Tooltip Command:
+#           To show the connection status and city:
+#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
+#           To show the entire output of "nordvpn status":
+#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
+#       Command on Applet Click:
+#           gnome-terminal -- bash -c "/PATH/TO/SCRIPT/nordlist.sh; exec bash"
+#       Display Output:  Off
+#       Command on Startup:  blank
+#
+#   To use unicode symbols
+#   Green Checkmark = Connected, Red X = Disconnected
+#   Alternate Symbols: https://unicode-table.com/en/sets/check/
+#       Title:  NordVPN
+#       Refresh Interval:  15 seconds or choose
+#       Shell:  bash
+#       Command 1:
+#           if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then echo -e "\u2705"; else echo -e "\u274c"; fi
+#       Two Line Mode:  Off
+#       Dynamic Icon:  Off
+#       Static Icon or Command: blank
+#       Dynamic Tooltip:  On
+#       Tooltip Command:
+#           To show the connection status and city:
+#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
+#           To show the entire output of "nordvpn status":
+#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
+#       Command on Applet Click:
+#           gnome-terminal -- bash -c "/PATH/TO/SCRIPT/nordlist.sh; exec bash"
+#       Display Output:  Off
+#       Command on Startup:  blank
+#
+#   Command to reload the Bash-Sensors applet:
+#       dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+#
+# =====================================================================
 #
 # Add repository and install:
 #   cd ~/Downloads
 #   wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
 #   sudo apt install ~/Downloads/nordvpn-release_1.0.0_all.deb
-#       or: sudo dpkg -i ~/Downloads/nordvpn-release_1.0.0_all.deb
 #   sudo apt update
 #   sudo apt install nordvpn
 #
 # Alternate install method:
-#   When using "purge", the NordVPN repository should remain after using this method once.
 #   sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
 #   or
 #   sh <(wget -qO - https://downloads.nordcdn.com/apps/linux/install.sh)
@@ -5061,11 +5192,7 @@ start
 #   Show versions:
 #       apt list -a nordvpn
 #   Example:
-#       sudo apt install nordvpn=3.14.2
-#
-# GPG error: https//repo.nordvpn.com: The following signatures couldn't be verified
-# because the public key is not available: NO_PUBKEY
-#   sudo wget https://repo.nordvpn.com/gpg/nordvpn_public.asc -O - | sudo apt-key add -
+#       sudo apt install nordvpn=3.15.1
 #
 # 'Whoops! /run/nordvpn/nordvpnd.sock not found.'
 #   sudo systemctl start nordvpnd.service
@@ -5073,30 +5200,6 @@ start
 # 'Permission denied accessing /run/nordvpn/nordvpnd.sock'
 #   sudo usermod -aG nordvpn $USER
 #   reboot
-#
-# 'Your account has expired. Renew your subscription now to continue
-# enjoying the ultimate privacy and security with NordVPN.'
-#   delete: /var/lib/nordvpn/data/settings.dat
-#   delete: /home/username/.config/nordvpn/nordvpn.conf
-#   nordvpn login
-#
-# Nord Account login without a GUI
-#   nordvpn login --token <token>
-#   To create a token, login to your Nord Account and navigate to:
-#   Services - NordVPN - Manual Setup - Generate New Token
-#
-#   'man nordvpn' Note 2
-#   SSH = in the SSH session connected to the device
-#   Computer = on the computer you're using to SSH into the device
-#       SSH
-#           1. Run 'nordvpn login' and copy the URL
-#       Computer
-#           2. Open the copied URL in your web browser
-#           3. Complete the login procedure
-#           4. Right click on the 'Continue' button and select 'Copy link'
-#       SSH
-#           5. Run 'nordvpn login --callback <copied link>'
-#           6. Run 'nordvpn account' to verify that the login was successful
 #
 # Whoops! Connection failed. Please try again. If the problem persists, contact our customer support.
 #   Change technology setting and retest.  NordLynx to OpenVPN or vice versa.
@@ -5119,6 +5222,16 @@ start
 #       journalctl -xe
 #       On Error "can't find gateway" - check DNS settings
 #
+# GPG error: https//repo.nordvpn.com: The following signatures couldn't be verified
+# because the public key is not available: NO_PUBKEY
+#   sudo wget https://repo.nordvpn.com/gpg/nordvpn_public.asc -O - | sudo apt-key add -
+#
+# 'Your account has expired. Renew your subscription now to continue
+#   enjoying the ultimate privacy and security with NordVPN.'
+#   delete: /var/lib/nordvpn/data/settings.dat
+#   delete: /home/username/.config/nordvpn/nordvpn.conf
+#   nordvpn login
+#
 # OpenVPN config files
 #   https://support.nordvpn.com/Connectivity/Linux/1061938702/How-to-connect-to-NordVPN-using-Linux-Network-Manager.htm
 #   https://downloads.nordcdn.com/configs/archives/servers/ovpn.zip
@@ -5138,116 +5251,4 @@ start
 #   https://forums.linuxmint.com/viewtopic.php?p=2387296#p2387296
 #   Blocked by default:  https://nordvpn.com/blog/nordvpn-implements-ipv6-leak-protection
 #   May 2022 - IPv6 capable servers:  us9591 us9592 uk1875 uk1876
-#
-# Manage NordVPN OpenVPN connections
-#   https://github.com/jotyGill/openpyn-nordvpn
-#
-# OpenVPN Control Script
-#   https://gist.github.com/aivanise/58226db6491f3339cbfa645a9dc310c0
-#
-# Reconnect Scripts
-#   https://github.com/mmnaseri/nordvpn-reconnect
-#   https://forum.manjaro.org/t/nordvpn-bin-breaks-every-4-hours/80927/16
-#   https://redd.it/povx2x
-#
-# NordVPN Linux GUI
-#   https://github.com/imatefx/nordvpn-gui
-#   https://github.com/GoBig87/NordVpnLinuxGUI
-#   https://github.com/morpheusthewhite/nordpy
-#   https://github.com/JimR21/nordvpn-linux-gui
-#   https://github.com/byoso/Nord-Manager
-#   https://github.com/insan271/gui-nordvpn-linux
-#   https://github.com/vfosterm/NordVPN-NetworkManager-Gui
-#
-# Output recommended servers with option to ping each server
-#   https://github.com/trishmapow/nordvpn-tools
-#
-# NordVPN status and settings tray app.
-#   https://github.com/dvilelaf/NordIndicator
-#
-# Cinnamon Applets (Cinnamon Desktop Environment)
-#   NordVPN Indicator
-#       https://cinnamon-spices.linuxmint.com/applets/view/331
-#   VPN Look-Out Applet
-#       https://cinnamon-spices.linuxmint.com/applets/view/305
-#
-#   Bash Sensors (Recommended)
-#       Shows the NordVPN connection status in the panel and runs nordlist.sh when clicked.
-#       Mint-Menu - "Applets" - Download tab - "Bash-Sensors" - Install - Manage tab - (+)Add to panel
-#       https://cinnamon-spices.linuxmint.com/applets/view/231
-#
-#       To use the NordVPN icons from https://github.com/ph202107/nordlist/tree/main/icons
-#       Download the icons to your device and modify "PATH_TO_ICON" in the command below.
-#       Green = Connected, Red = Disconnected.  Screenshot:  https://github.com/ph202107/nordlist/blob/main/screenshots
-#           Title:  NordVPN
-#           Refresh Interval:  15 seconds or choose
-#           Shell:  bash
-#           Command 1: blank
-#           Two Line Mode:  Off
-#           Dynamic Icon:  On
-#           Static Icon or Command:
-#               if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then echo "PATH_TO_ICON/nord.round.green.png"; else echo "PATH_TO_ICON/nord.round.red.png"; fi
-#           Dynamic Tooltip:  On
-#           Tooltip Command:
-#               To show the connection status and city:
-#                   echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
-#               To show the entire output of "nordvpn status":
-#                   echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
-#           Command on Applet Click:
-#               gnome-terminal -- bash -c "echo -e '\033]2;'NORD'\007'; PATH_TO_SCRIPT/nordlist.sh; exec bash"
-#           Display Output:  Off
-#           Command on Startup:  blank
-#
-#       To use unicode symbols
-#       Green Checkmark = Connected, Red X = Disconnected
-#       Alternate Symbols: https://unicode-table.com/en/sets/check/
-#           Title:  NordVPN
-#           Refresh Interval:  15 seconds or choose
-#           Shell:  bash
-#           Command 1:
-#               if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then echo -e "\u2705"; else echo -e "\u274c"; fi
-#           Two Line Mode:  Off
-#           Dynamic Icon:  Off
-#           Static Icon or Command: blank
-#           Dynamic Tooltip:  On
-#           Tooltip Command:
-#               To show the connection status and city:
-#                   echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
-#               To show the entire output of "nordvpn status":
-#                   echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
-#           Command on Applet Click:
-#               gnome-terminal -- bash -c "echo -e '\033]2;'NORD'\007'; PATH_TO_SCRIPT/nordlist.sh; exec bash"
-#           Display Output:  Off
-#           Command on Startup:  blank
-#
-#       Command to reload the Bash Sensors applet:
-#           dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
-#
-# Other Troubleshooting
-#   systemctl status nordvpnd.service
-#   systemctl status nordvpn.service
-#   journalctl -u nordvpnd.service
-#   journalctl -u nordvpnd > ~/Downloads/nordlog.txt
-#   journalctl -xe
-#   sudo service network-manager restart
-#   sudo service nordvpnd restart
-#   sudo systemctl restart nordvpnd.service
-#   sudo systemctl restart nordvpn.service
-#   sudo systemctl restart networking
-#
-# Change Window Title (gnome terminal)
-#   Add function to bashrc. Usage: $ set-title NORD
-#   nano ~/.bashrc
-#       function set-title {
-#         if [[ -z "$ORIG" ]]; then
-#           ORIG=$PS1
-#         fi
-#         TITLE="\[\e]2;$*\a\]"
-#         PS1=${ORIG}${TITLE}
-#       }
-#
-# Startup Script (10s delay)
-#   Show nordvpn status, move terminal to workspace 2 and rename.
-#       gnome-terminal -- bash -c "nordvpn status; exec bash"
-#       wmctrl -r "myusername" -t 1 && wmctrl -r "myusername" -T "NORD"
 #
