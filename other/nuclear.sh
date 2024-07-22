@@ -2,7 +2,7 @@
 #
 # Basic script to upgrade, reinstall, or downgrade the NordVPN client.
 #
-# Only tested on Linux Mint 21.3.  The script flushes iptables and
+# Only tested on Linux Mint.  The script flushes iptables and
 # deletes directories, review carefully before use.  Do not use.
 #
 # Choose the NordVPN app version to install
@@ -10,8 +10,8 @@
 #
 nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.14.2"      # 29 Jul 2022 Works on Ubuntu 18.04, Mint 19.3
-#nord_version="nordvpn=3.15.0"      # 18 Oct 2022 Added login token, routing, fwmark, analytics
-#nord_version="nordvpn=3.15.1"      # 28 Nov 2022 Fix for older distros. Changes to "nordvpn status"
+#nord_version="nordvpn=3.15.0"      # 18 Oct 2022 Added login token, routing, fwmark, analytics.  Incompatible with Ubuntu 18.04, Mint 19.3
+#nord_version="nordvpn=3.15.1"      # 28 Nov 2022 Fix for older distros. Changes to "nordvpn status".  Last version to work with Ubuntu 18.04, Mint 19.3
 #nord_version="nordvpn=3.15.2"      # 06 Dec 2022 Fix for meshnet unavailable
 #nord_version="nordvpn=3.15.3"      # 29 Dec 2022 Fix for crash after suspend
 #nord_version="nordvpn=3.15.4"      # 26 Jan 2023 Faster meshnet connections
@@ -26,13 +26,15 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.16.7"      # 31 Oct 2023 Improved help, fixed Meshnet high CPU
 #nord_version="nordvpn=3.16.8"      # 14 Nov 2023 Improved Meshnet speeds
 #nord_version="nordvpn=3.16.9"      # 06 Dec 2023 Minor tweaks and fixes
-#nord_version="nordvpn=3.17.0"      # 16 Jan 2024 Meshnet peer rename, clear transfer history
-#nord_version="nordvpn=3.17.1"      # 12 Feb 2024 /etc/resolv.conf DNS fix, bug fixes
+#nord_version="nordvpn=3.17.0"      # 16 Jan 2024 Meshnet peer rename, clear transfer history. DNS leak issue: https://github.com/NordSecurity/nordvpn-linux/issues/243
+#nord_version="nordvpn=3.17.1"      # 12 Feb 2024 /etc/resolv.conf DNS fix, bug fixes. IPv6 issue: https://github.com/NordSecurity/nordvpn-linux/issues/243
 #nord_version="nordvpn=3.17.2"      # 14 Feb 2024 bug fix for IPv6 issue in 3.17.1
-#nord_version="nordvpn=3.17.3"      # 28 Mar 2024 Fixed meshnet routing and OpenVPN
-#nord_version="nordvpn=3.17.4"      # 05 Apr 2024 Fixed DNS leak in 3.17.3
-#nord_version="nordvpn=3.18.0"      # 09 May 2024 Tray icon. Fix Meshnet Routing kill switch. 
-#nord_version="nordvpn=3.18.1"      # 10 May 2024 Fix potential security vulnerabilities. 
+#nord_version="nordvpn=3.17.3"      # 28 Mar 2024 Fixed meshnet routing and OpenVPN. DNS leak issue: https://github.com/NordSecurity/nordvpn-linux/issues/343
+#nord_version="nordvpn=3.17.4"      # 05 Apr 2024 Fixed DNS leak in 3.17.3. Lan-discovery issue: https://github.com/NordSecurity/nordvpn-linux/issues/371
+#nord_version="nordvpn=3.18.0"      # 09 May 2024 Tray icon. Fix Meshnet Routing kill switch.
+#nord_version="nordvpn=3.18.1"      # 10 May 2024 Fix potential security vulnerabilities. Allowlist issue: https://github.com/NordSecurity/nordvpn-linux/issues/406
+#nord_version="nordvpn=3.18.2"      # 11 Jun 2024 Fix allowlist and lan-discovery. Option to disable Tray. Snapstore available. Allowlist issue: https://github.com/NordSecurity/nordvpn-linux/issues/461
+#nord_version="nordvpn=3.18.3"      # 22 Jul 2024 Bug fixes. Option to disable virtual locations.
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/
@@ -48,7 +50,8 @@ function default_settings {
     #
     # After installation is complete, these settings will be applied
     #
-    #nordvpn allowlist add subnet 192.168.1.0/24
+    #nordvpn set lan-discovery enabled
+    #nordvpn set tray disabled
     #nordvpn set killswitch enabled
     #nordvpn connect --group P2P United_States
     #
@@ -57,10 +60,10 @@ function linecolor {
     # echo a colored line of text
     # $1=color  $2=text
     case $1 in
-        "green")   echo -e "\033[0;92m$2\033[0m";;  # light green
-        "yellow")  echo -e "\033[0;93m$2\033[0m";;  # light yellow
-        "cyan")    echo -e "\033[0;96m$2\033[0m";;  # light cyan
-        "red")     echo -e "\033[1;31m$2\033[0m";;  # bold red
+        "green")   echo -e "\033[0;92m${2}\033[0m";;  # light green
+        "yellow")  echo -e "\033[0;93m${2}\033[0m";;  # light yellow
+        "cyan")    echo -e "\033[0;96m${2}\033[0m";;  # light cyan
+        "red")     echo -e "\033[1;31m${2}\033[0m";;  # bold red
     esac
 }
 function linebreak {
@@ -193,11 +196,12 @@ function changelog {
     zcat "$nordchangelog" | head -n 15
     echo
     linecolor "green" "https://nordvpn.com/blog/nordvpn-linux-release-notes/"
+    linecolor "green" "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/"
 }
 function reload_cinnapplet {
     # reload the "bash-sensors" Cinnamon applet
-    # changes the icon color (for connection status) immediately
-    # does nothing if there's no applet or if it's not used with nordvpn
+    # changes the icon color for connection status immediately
+    # does nothing if there is no applet or if it's not used with nordvpn
     #
     directory="/home/$USER/.cinnamon/configs/bash-sensors@pkkk"
     desktop_env="$(echo "$XDG_CURRENT_DESKTOP" | tr '[:upper:]' '[:lower:]')"
@@ -210,6 +214,18 @@ function reload_cinnapplet {
             dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
         fi
     fi
+}
+function edit_script {
+    # check for a default editor otherwise use nano
+    if [[ -n "$VISUAL" ]]; then
+        editor="$VISUAL"
+    elif [[ -n "$EDITOR" ]]; then
+        editor="$EDITOR"
+    else
+        editor="nano"
+    fi
+    "$editor" "$0"
+    exit
 }
 #
 clear -x
@@ -247,8 +263,7 @@ echo
 read -n 1 -r -p "Go nuclear? (y/n/E) "; echo
 echo
 if [[ $REPLY =~ ^[Ee]$ ]]; then
-    nano "$0"
-    exit
+    edit_script
 elif [[ $REPLY =~ ^[Yy]$ ]]; then
     trashnord
     installnord
@@ -275,6 +290,3 @@ fi
 #
 # Alternate install method:
 #  sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
-#
-# https://nordvpn.com/blog/nordvpn-linux-release-notes/
-# https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/
