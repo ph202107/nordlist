@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.18.2 on Linux Mint 21.3
-# June 11, 2024
+# Tested with NordVPN Version 3.18.3 on Linux Mint 21.3
+# July 22, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -218,7 +218,7 @@ fast1="n"
 #
 # Automatically change these settings without prompting:  Firewall,
 # Routing, Analytics, KillSwitch, TPLite, Notify, Tray, AutoConnect,
-# IPv6, LAN-Discovery
+# IPv6, LAN-Discovery, Virtual-Location
 fast2="n"
 #
 # Automatically change these settings which also disconnect the VPN:
@@ -257,7 +257,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # This list is subject to change and must be updated manually.
 # Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
 nordvirtual=(
-"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lagos" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Lima" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nigeria" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
+"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lagos" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Lima" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nigeria" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
 )
 #
 # =====================================================================
@@ -279,7 +279,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 4875 (function main_menu).
+# The Main Menu starts on line 392 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -366,7 +366,166 @@ function set_defaults {
     #if [[ "$landiscovery" == "disabled" ]]; then nordvpn set lan-discovery enabled; fi
     #if [[ "$landiscovery" == "enabled" ]]; then nordvpn set lan-discovery disabled; fi
     #
+    #if [[ "$virtual" == "disabled" ]]; then nordvpn set virtual-location enabled; fi
+    #if [[ "$virtual" == "enabled" ]]; then nordvpn set virtual-location disabled; fi
+    #
     echo
+}
+function main_menu {
+    if [[ "$1" == "start" ]]; then
+        echo -e "${EIColor}Welcome to nordlist!${Color_Off}"
+    elif [[ "$fast1" =~ ^[Yy]$ ]] || [[ "$REPLY" == "$upmenu" ]]; then
+        echo
+    else
+        echo; echo
+        read -n 1 -s -r -p "Press any key for the menu... "; echo
+    fi
+    echo
+    #
+    clear -x
+    main_logo
+    parent="Main"
+    COLUMNS="$menuwidth"
+    PS3=$'\n''Choose an option: '
+    #
+    # =================================================================
+    # ====== MAIN MENU ================================================
+    # =================================================================
+    #
+    # To modify the list, for example changing Vancouver to Melbourne:
+    # change "Vancouver" in both the first (horizontal) and the
+    # second (vertical) list to "Melbourne", and where it says
+    # "nordvpn connect Vancouver" change it to
+    # "nordvpn connect Melbourne". That's it.
+    #
+    # An almost unlimited number of menu items can be added.
+    # Submenu functions can be added to the main menu for easier access.
+    #
+    mainmenu=( "Vancouver" "Seattle" "Chicago" "Denver" "Atlanta" "US_Cities" "CA_Cities" "P2P-USA" "P2P-Canada" "Discord" "QuickConnect" "Random" "Favorites" "Countries" "Groups" "Settings" "Tools" "Meshnet" "Disconnect" "Exit" )
+    #
+    select opt in "${mainmenu[@]}"
+    do
+        parent_menu
+        case $opt in
+            "Vancouver")
+                main_header
+                nordvpn connect Vancouver
+                status
+                break
+                ;;
+            "Seattle")
+                main_header
+                nordvpn connect Seattle
+                status
+                break
+                ;;
+            "Chicago")
+                main_header
+                nordvpn connect Chicago
+                status
+                break
+                ;;
+            "Denver")
+                main_header
+                nordvpn connect Denver
+                status
+                break
+                ;;
+            "Atlanta")
+                main_header
+                nordvpn connect Atlanta
+                status
+                break
+                ;;
+            "US_Cities")
+                # city menu for United_States
+                xcountry="United_States"
+                city_menu "Main"
+                ;;
+            "CA_Cities")
+                # city menu for Canada
+                xcountry="Canada"
+                city_menu "Main"
+                ;;
+            "P2P-USA")
+                # force a disconnect and apply default settings
+                main_header "defaults"
+                nordvpn connect --group p2p United_States
+                status
+                break
+                ;;
+            "P2P-Canada")
+                # force a disconnect and apply default settings
+                main_header "defaults"
+                nordvpn connect --group p2p Canada
+                status
+                break
+                ;;
+            "Discord")
+                # I use this entry to connect to a specific server which can help
+                # avoid repeat authentication requests. It then opens a URL.
+                # It may be useful for other sites or applications.
+                # Example: NordVPN discord  https://discord.gg/83jsvGqpGk
+                #
+                spec_server="us8247"
+                spec_url="https://discord.gg/83jsvGqpGk"
+                #
+                main_header
+                echo -e "Server: ${LColor}$spec_server${Color_Off}"
+                echo -e "URL: ${EColor}$spec_url${Color_Off}"
+                echo
+                nordvpn connect "$spec_server"
+                status
+                openlink "$spec_url"
+                break
+                ;;
+            "Hostname")
+                # can add to mainmenu
+                # connect to specific servers by name
+                host_connect
+                ;;
+            "QuickConnect")
+                # alternative to "nordvpn connect"
+                quick_connect
+                ;;
+            "Random")
+                # connect to a random city worldwide
+                random_worldwide
+                ;;
+            "Favorites")
+                # connect from a list of individual server names
+                favorites_menu
+                ;;
+            "Countries")
+                country_menu
+                ;;
+            "Groups")
+                group_menu
+                ;;
+            "Settings")
+                settings_menu
+                ;;
+            "Tools")
+                tools_menu
+                ;;
+            "Meshnet")
+                meshnet_menu
+                ;;
+            "Disconnect")
+                main_disconnect
+                ;;
+            "Exit")
+                heading "Goodbye!"
+                status
+                break
+                ;;
+            *)
+                invalid_option "${#mainmenu[@]}" "TopMenu"
+                main_menu
+                ;;
+        esac
+    done
+    exit
 }
 function ascii_static {
     # This ASCII will display above the main menu if figlet or lolcat is not installed.
@@ -422,8 +581,8 @@ function ascii_custom {
 }
 function indicators_show {
     # Changes made here will be reflected in main_logo and settings_menu
-    # All indicators: $techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns$ld$al$fst
-    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns$ld$al$fst"
+    # All indicators: $techpro$fw$rt$an$ks$tp$ob$no$tr$ac$i6$mn$dns$ld$vi$al$fst
+    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$i6$mn$dns$ld$vi$al$fst"
 }
 function main_logo {
     # The ascii and stats shown above the main_menu and on script exit.
@@ -636,6 +795,7 @@ function set_vars {
     customdns=$( nsettings_search "DNS" )                                       # disabled or not=disabled
     dns_servers=$( nsettings_search "DNS" "line" | tr '[:lower:]' '[:upper:]' ) # Server IPs, includes "DNS: "
     landiscovery=$( nsettings_search "Discover" )
+    virtual=$( nsettings_search "Virtual" )
     allowlist=$( printf '%s\n' "${nsettings[@]}" | grep -A100 -i "allowlist" )
     #
     # Prefer common spelling.
@@ -726,9 +886,9 @@ function set_vars {
     fi
     #
     if [[ "$ipversion6" == "enabled" ]]; then
-        ip6="${EIColor}[IP6]${Color_Off}"
+        i6="${EIColor}[I6]${Color_Off}"
     else
-        ip6="${DIColor}[IP6]${Color_Off}"
+        i6="${DIColor}[I6]${Color_Off}"
     fi
     #
     if [[ "$meshnet" == "enabled" ]]; then
@@ -751,6 +911,12 @@ function set_vars {
     else
         ld="${DIColor}[LD]${Color_Off}"
         landiscoveryc="${DColor}$landiscovery${Color_Off}"
+    fi
+    #
+    if [[ "$virtual" == "enabled" ]]; then
+        vi="${EIColor}[V]${Color_Off}"
+    else
+        vi="${DIColor}[V]${Color_Off}"
     fi
     #
     if [[ -n "${allowlist[*]}" ]]; then # not empty
@@ -777,7 +943,7 @@ function set_vars {
         meshrouting="false"
     fi
     #
-    if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]] && [[ "$server" == "$dipwhere" ]]; then
+    if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]] && [[ "${server,,}" == "${dipwhere,,}" ]]; then
         fav="${FVColor}(Dedicated-IP)${Color_Off}"
     elif [[ "$connected" == "connected" ]] && [[ -f "$nordfavoritesfile" ]] && grep -q -i "$server" "$nordfavoritesfile"; then
         fav="${FVColor}(Favorite)${Color_Off}"
@@ -1444,20 +1610,20 @@ function killswitch_enable {
     echo
 }
 function killswitch_groups {
-    if [[ "$killswitch" == "disabled" ]]; then
-        if [[ "$fast5" =~ ^[Yy]$ ]]; then
-            echo -e "${FColor}[F]ast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
-            killswitch_enable
-        elif [[ "$exitkillswitch" =~ ^[Yy]$ ]]; then
-            echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
-            killswitch_enable
-        else
-            if [[ "$firewall" == "disabled" ]]; then
-                echo -e "${WColor}Enabling the Kill Switch will also enable the Firewall.${Color_Off}"
-                echo
-            fi
-            change_setting "killswitch" "back"
+    if [[ "$killswitch" == "enabled" ]]; then return; fi
+    #
+    if [[ "$fast5" =~ ^[Yy]$ ]]; then
+        echo -e "${FColor}[F]ast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
+        killswitch_enable
+    elif [[ "$exitkillswitch" =~ ^[Yy]$ ]]; then
+        echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
+        killswitch_enable
+    else
+        if [[ "$firewall" == "disabled" ]]; then
+            echo -e "${WColor}Enabling the Kill Switch will also enable the Firewall.${Color_Off}"
+            echo
         fi
+        change_setting "killswitch" "back"
     fi
 }
 function group_location {
@@ -1788,13 +1954,16 @@ function change_setting {
             chgname="Auto-Connect"; chgvar="$autoconnect"; chgind="$ac"; chgloc="$acwhere"
             ;;
         "ipv6")
-            chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6"
+            chgname="IPv6"; chgvar="$ipversion6"; chgind="$i6"
             ;;
         "meshnet")
             chgname="Meshnet"; chgvar="$meshnet"; chgind="$mn"
             ;;
         "lan-discovery")
             chgname="LAN-Discovery"; chgvar="$landiscovery"; chgind="$ld"
+            ;;
+        "virtual-location")
+            chgname="Virtual-Location"; chgvar="$virtual"; chgind="$vi"
             ;;
         *)
             echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo
@@ -1982,7 +2151,6 @@ function notify_setting {
 }
 function tray_setting {
     heading "Tray"
-    parent="Settings"
     echo
     echo "Enable or disable the NordVPN icon in the system tray."
     echo "The icon provides quick access to basic controls and VPN status details."
@@ -2029,6 +2197,19 @@ function landiscovery_setting {
         echo
     fi
     change_setting "lan-discovery"
+}
+function virtual_setting {
+    heading "Virtual-Location"
+    echo
+    echo "Enable or disable the use of virtual servers."
+    echo
+    echo "Virtual servers let you connect to more places worldwide."
+    echo "Physical servers are placed outside the virtual location"
+    echo "but are configured to use an IP address from that location."
+    echo
+    echo "Refer to: https://nordvpn.com/blog/new-nordvpn-virtual-servers/"
+    echo
+    change_setting "virtual-location"
 }
 function obfuscate_setting {
     # not available when using NordLynx
@@ -4258,6 +4439,8 @@ function speedtest_menu {
                 read -r -p "Server ID: "
                 if [[ -n $REPLY ]]; then
                     echo
+                    echo -e "${LColor}speedtest-cli --server $REPLY${Color_Off}"
+                    echo
                     speedtest-cli --server "$REPLY"
                     echo
                 else
@@ -4340,7 +4523,7 @@ function tools_menu {
         PS3=$'\n''Choose an option (VPN Off): '
     fi
     COLUMNS="$menuwidth"
-    submtools=( "NordVPN API" "Speed Tests" "WireGuard" "External IP" "Server Load" "Rate VPN Server" "Ping VPN Server" "Ping Test" "My TraceRoute" "Nord DNS Test" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipinfo.io" "ipregistry.co" "ip2location.io" "ipaddress.my" "ipx.ac" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
+    submtools=( "NordVPN API" "Speed Tests" "WireGuard" "External IP" "Server Load" "Rate VPN Server" "Ping VPN Server" "Ping Test" "My TraceRoute" "Nord DNS Test" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipinfo.io" "iplocation.net" "ipregistry.co" "ip2location.io" "ipaddress.my" "ipx.ac" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
     select tool in "${submtools[@]}"
     do
         parent_menu
@@ -4423,6 +4606,7 @@ function tools_menu {
             "dnscheck.tools")   openlink "https://dnscheck.tools/";;
             "test-ipv6.com")    openlink "https://test-ipv6.com/";;
             "ipinfo.io")        openlink "https://ipinfo.io/";;
+            "iplocation.net")   openlink "https://www.iplocation.net/ip-lookup";;
             "ipregistry.co")    openlink "https://ipregistry.co/";;
             "ip2location.io")   openlink "https://www.ip2location.io/";;
             "ipaddress.my")     openlink "https://www.ipaddress.my/";;
@@ -4737,36 +4921,37 @@ function settings_menu {
     indicators_show
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
         case $sett in
-            "Technology")   technology_setting;;
-            "Protocol")     protocol_setting;;
-            "Firewall")     firewall_setting;;
-            "Routing")      routing_setting;;
-            "Analytics")    analytics_setting;;
-            "KillSwitch")   killswitch_setting;;
-            "TPLite")       tplite_setting;;
-            "Obfuscate")    obfuscate_setting;;
-            "Notify")       notify_setting;;
-            "Tray")         tray_setting;;
-            "AutoConnect")  autoconnect_setting;;
-            "IPv6")         ipv6_setting;;
-            "Meshnet")      meshnet_menu "Settings";;
-            "Custom-DNS")   customdns_menu;;
-            "LAN-Discovery") landiscovery_setting;;
-            "Allowlist")    allowlist_setting;;
-            "Account")      account_menu;;
-            "Restart")      restart_service;;
-            "Reset")        reset_app;;
-            "IPTables")     iptables_menu;;
-            "Logs")         service_logs;;
-            "Script")       script_info;;
-            "Defaults")     set_defaults_ask;;
-            "Exit")         main_menu;;
-            *)              invalid_option "${#submsett[@]}" "$parent";;
+            "Technology")       technology_setting;;
+            "Protocol")         protocol_setting;;
+            "Firewall")         firewall_setting;;
+            "Routing")          routing_setting;;
+            "Analytics")        analytics_setting;;
+            "KillSwitch")       killswitch_setting;;
+            "TPLite")           tplite_setting;;
+            "Obfuscate")        obfuscate_setting;;
+            "Notify")           notify_setting;;
+            "Tray")             tray_setting;;
+            "AutoConnect")      autoconnect_setting;;
+            "IPv6")             ipv6_setting;;
+            "Meshnet")          meshnet_menu "Settings";;
+            "Custom-DNS")       customdns_menu;;
+            "LAN-Discovery")    landiscovery_setting;;
+            "Virtual")          virtual_setting;;
+            "Allowlist")        allowlist_setting;;
+            "Account")          account_menu;;
+            "Restart")          restart_service;;
+            "Reset")            reset_app;;
+            "IPTables")         iptables_menu;;
+            "Logs")             service_logs;;
+            "Script")           script_info;;
+            "Defaults")         set_defaults_ask;;
+            "Exit")             main_menu;;
+            *)                  invalid_option "${#submsett[@]}" "$parent";;
         esac
     done
 }
@@ -4850,159 +5035,6 @@ function main_disconnect {
     fi
     disconnect_vpn "force" "check_ks"
     status
-    exit
-}
-function main_menu {
-    if [[ "$1" == "start" ]]; then
-        echo -e "${EIColor}Welcome to nordlist!${Color_Off}"
-        echo
-    elif [[ "$fast1" =~ ^[Yy]$ ]] || [[ "$REPLY" == "$upmenu" ]]; then
-        echo
-        echo
-    else
-        echo
-        echo
-        read -n 1 -s -r -p "Press any key for the menu... "; echo
-        echo
-    fi
-    #
-    clear -x
-    main_logo
-    COLUMNS="$menuwidth"
-    parent="Main"
-    #
-    # =================================================================
-    # ====== MAIN MENU ================================================
-    # =================================================================
-    #
-    # To modify the list, for example changing Vancouver to Melbourne:
-    # change "Vancouver" in both the first(horizontal) and second(vertical)
-    # list to "Melbourne", and where it says
-    # "nordvpn connect Vancouver" change it to
-    # "nordvpn connect Melbourne". That's it.
-    #
-    # An almost unlimited number of menu items can be added.
-    # Submenu functions can be added to the main menu for easier access.
-    #
-    PS3=$'\n''Choose an option: '
-    #
-    mainmenu=( "Vancouver" "Seattle" "Chicago" "Denver" "Atlanta" "US_Cities" "CA_Cities" "P2P-USA" "P2P-Canada" "Discord" "QuickConnect" "Random" "Favorites" "Countries" "Groups" "Settings" "Tools" "Meshnet" "Disconnect" "Exit" )
-    #
-    select opt in "${mainmenu[@]}"
-    do
-        parent_menu
-        case $opt in
-            "Vancouver")
-                main_header
-                nordvpn connect Vancouver
-                status
-                break
-                ;;
-            "Seattle")
-                main_header
-                nordvpn connect Seattle
-                status
-                break
-                ;;
-            "Chicago")
-                main_header
-                nordvpn connect Chicago
-                status
-                break
-                ;;
-            "Denver")
-                main_header
-                nordvpn connect Denver
-                status
-                break
-                ;;
-            "Atlanta")
-                main_header
-                nordvpn connect Atlanta
-                status
-                break
-                ;;
-            "US_Cities")
-                # city menu for United_States
-                xcountry="United_States"
-                city_menu "Main"
-                ;;
-            "CA_Cities")
-                # city menu for Canada
-                xcountry="Canada"
-                city_menu "Main"
-                ;;
-            "P2P-USA")
-                # force a disconnect and apply default settings
-                main_header "defaults"
-                nordvpn connect --group p2p United_States
-                status
-                break
-                ;;
-            "P2P-Canada")
-                # force a disconnect and apply default settings
-                main_header "defaults"
-                nordvpn connect --group p2p Canada
-                status
-                break
-                ;;
-            "Discord")
-                # I use this entry to connect to a specific server which can help
-                # avoid repeat authentication requests. It then opens a URL.
-                # It may be useful for other sites or applications.
-                # Example: NordVPN discord  https://discord.gg/83jsvGqpGk
-                main_header
-                nordvpn connect us8247
-                status
-                openlink "https://discord.gg/83jsvGqpGk"
-                break
-                ;;
-            "Hostname")
-                # can add to mainmenu
-                # connect to specific servers by name
-                host_connect
-                ;;
-            "QuickConnect")
-                # alternative to "nordvpn connect"
-                quick_connect
-                ;;
-            "Random")
-                # connect to a random city worldwide
-                random_worldwide
-                ;;
-            "Favorites")
-                # connect from a list of individual server names
-                favorites_menu
-                ;;
-            "Countries")
-                country_menu
-                ;;
-            "Groups")
-                group_menu
-                ;;
-            "Settings")
-                settings_menu
-                ;;
-            "Tools")
-                tools_menu
-                ;;
-            "Meshnet")
-                meshnet_menu
-                ;;
-            "Disconnect")
-                main_disconnect
-                ;;
-            "Exit")
-                heading "Goodbye!"
-                status
-                break
-                ;;
-            *)
-                invalid_option "${#mainmenu[@]}" "TopMenu"
-                main_menu
-                ;;
-        esac
-    done
     exit
 }
 function app_exists {
