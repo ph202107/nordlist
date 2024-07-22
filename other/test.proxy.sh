@@ -4,7 +4,7 @@
 # Uses 'curl' via the proxy to retrieve the external IP information.
 #
 # NordVPN Service Credentials (required)
-# These are not the same as your NordAccount email/password.
+# These are not the same as the NordAccount email/password.
 # https://my.nordaccount.com - Services - NordVPN - Manual Setup
 user=""
 pass=""
@@ -58,8 +58,10 @@ function list_socks5 {
         "stockholm.se.socks.nordhold.net"
         "us.socks.nordhold.net"
         "new-york.us.socks.nordhold.net"
+        "san-francisco.us.socks.nordhold.net"
+        "detroit.us.socks.nordhold.net"
         #
-        # Server list retrieved via NordVPN Public API on 14 May 2024
+        # Server list retrieved via NordVPN Public API on 22 Jul 2024
         # Subject to change
         "socks-nl1.nordvpn.com (Amsterdam)"
         "socks-nl2.nordvpn.com (Amsterdam)"
@@ -77,6 +79,16 @@ function list_socks5 {
         "socks-us1.nordvpn.com (Dallas)"
         "socks-us2.nordvpn.com (Dallas)"
         "socks-us3.nordvpn.com (Dallas)"
+        "socks-us34.nordvpn.com (Detroit)"
+        "socks-us35.nordvpn.com (Detroit)"
+        "socks-us36.nordvpn.com (Detroit)"
+        "socks-us37.nordvpn.com (Detroit)"
+        "socks-us38.nordvpn.com (Detroit)"
+        "socks-us39.nordvpn.com (Detroit)"
+        "socks-us40.nordvpn.com (Detroit)"
+        "socks-us41.nordvpn.com (Detroit)"
+        "socks-us42.nordvpn.com (Detroit)"
+        "socks-us43.nordvpn.com (Detroit)"
         "socks-us11.nordvpn.com (Los Angeles)"
         "socks-us12.nordvpn.com (Los Angeles)"
         "socks-us13.nordvpn.com (Los Angeles)"
@@ -88,6 +100,16 @@ function list_socks5 {
         "socks-us31.nordvpn.com (New York)"
         "socks-us32.nordvpn.com (New York)"
         "socks-us33.nordvpn.com (New York)"
+        "socks-us44.nordvpn.com (San Francisco)"
+        "socks-us45.nordvpn.com (San Francisco)"
+        "socks-us46.nordvpn.com (San Francisco)"
+        "socks-us47.nordvpn.com (San Francisco)"
+        "socks-us48.nordvpn.com (San Francisco)"
+        "socks-us49.nordvpn.com (San Francisco)"
+        "socks-us50.nordvpn.com (San Francisco)"
+        "socks-us51.nordvpn.com (San Francisco)"
+        "socks-us52.nordvpn.com (San Francisco)"
+        "socks-us53.nordvpn.com (San Francisco)"
         "socks-se10.nordvpn.com (Stockholm)"
         "socks-se11.nordvpn.com (Stockholm)"
         "socks-se12.nordvpn.com (Stockholm)"
@@ -116,6 +138,18 @@ function linecolor {
         "cyan")    echo -e "\033[0;96m$2\033[0m";;  # light cyan
         "red")     echo -e "\033[1;31m$2\033[0m";;  # bold red
     esac
+}
+function edit_script {
+    # check for a default editor otherwise use nano
+    if [[ -n "$VISUAL" ]]; then
+        editor="$VISUAL"
+    elif [[ -n "$EDITOR" ]]; then
+        editor="$EDITOR"
+    else
+        editor="nano"
+    fi
+    "$editor" "$0"
+    exit
 }
 #
 if [[ -z "${user}" ]] || [[ -z "${pass}" ]]; then
@@ -149,7 +183,7 @@ do
         echo
         exit
     elif [[ "${xproxy}" == "Edit Script" ]]; then
-        nano "$0"
+        edit_script
         exit
     elif (( 1 <= REPLY )) && (( REPLY <= ${#proxylist[@]} )); then
         #
