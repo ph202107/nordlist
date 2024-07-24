@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.18.3 on Linux Mint 21.3
-# July 22, 2024
+# July 23, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -1232,6 +1232,7 @@ function create_list {
     esac
 }
 function country_names_modify {
+    # Create the modcountrylist array.
     # Add an asterisk if the country is listed in the 'nordvirtual' array.
     # Shorten long names so the "Countries" menu fits better in the terminal window.
     #
@@ -1239,10 +1240,14 @@ function country_names_modify {
     # iterate over elements in countrylist
     for mcountry in "${countrylist[@]}"
     do
-        # check if the country is in the nordvirtual array
-        if printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${mcountry,,}"; then
-            # add an asterisk to the country name
-            mcountry="${mcountry}*"
+        # only add an asterisk if the virtual-location setting is enabled (or missing)
+        if [[ "$virtual" != "disabled" ]]; then
+            # check if the country is in the nordvirtual array
+            # Laos API/CLI name mismatch.  Strip the apostrophe for comparison.
+            if printf "%s\n" "${nordvirtual[@],,}" | tr -d "'" | grep -q -x -i "${mcountry,,}"; then
+                # add an asterisk to the country name
+                mcountry="${mcountry}*"
+            fi
         fi
         # shorten long country names if the option is enabled
         if [[ -n "$charlimit" ]]; then
@@ -1250,7 +1255,7 @@ function country_names_modify {
             if (( charlimit < 6 )); then charlimit="6"; fi
             #
             # special case
-            mcountry="${mcountry/Lao_People\'S_Democratic_Republic/Laos}"
+            mcountry="${mcountry/Lao_Peoples_Democratic_Republic/Laos}"
             #
             # general substitutions
             mcountry="${mcountry/United/Utd}"
@@ -1282,15 +1287,19 @@ function country_names_modify {
     done
 }
 function city_names_modify {
+    # Create the modcitylist array.
     # Add an asterisk if the city is listed in the 'nordvirtual' array.
     #
     modcitylist=()
     for mcity in "${citylist[@]}"
     do
-        # check if the city is in the nordvirtual array
-        if printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${mcity,,}"; then
-            # add an asterisk to the city name
-            mcity="${mcity}*"
+        # only add an asterisk if the virtual-location setting is enabled (or missing)
+        if [[ "$virtual" != "disabled" ]]; then
+            # check if the city is in the nordvirtual array
+            if printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${mcity,,}"; then
+                # add an asterisk to the city name
+                mcity="${mcity}*"
+            fi
         fi
         # add the modified city name to modcitylist. includes "Random" "Best" "Exit"
         modcitylist+=( "$mcity" )
