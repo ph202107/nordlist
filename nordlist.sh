@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.18.3 on Linux Mint 21.3
-# July 23, 2024
+# July 24, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -766,6 +766,7 @@ function set_vars {
     # When disconnected, $connected is the only variable from nstatus
     # When meshnet is enabled, the transfer stats will not be zeroed on VPN reconnect.
     connected=$( nstatus_search "Status" | tr '[:upper:]' '[:lower:]' )
+    servername=$( nstatus_search "Server" )
     nordhost=$( nstatus_search "Hostname" )
     server=$( echo "$nordhost" | cut -f1 -d'.' )
     ipaddr=$( nstatus_search "IP:" )
@@ -947,7 +948,7 @@ function set_vars {
         fav="${FVColor}(Dedicated-IP)${Color_Off}"
     elif [[ "$connected" == "connected" ]] && [[ -f "$nordfavoritesfile" ]] && grep -q -i "$server" "$nordfavoritesfile"; then
         fav="${FVColor}(Favorite)${Color_Off}"
-    elif [[ "$connected" == "connected" ]] && [[ "$virtual" != "disabled" ]] && printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "$(echo "${city,,}" | tr ' ' '_')"; then
+    elif [[ "$connected" == "connected" ]] && [[ "${servername,,}" == *"virtual"* ]]; then
         fav="${FVColor}(Virtual)${Color_Off}"
     else
         fav=""
