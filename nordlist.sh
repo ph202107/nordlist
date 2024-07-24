@@ -947,7 +947,7 @@ function set_vars {
         fav="${FVColor}(Dedicated-IP)${Color_Off}"
     elif [[ "$connected" == "connected" ]] && [[ -f "$nordfavoritesfile" ]] && grep -q -i "$server" "$nordfavoritesfile"; then
         fav="${FVColor}(Favorite)${Color_Off}"
-    elif [[ "$connected" == "connected" ]] && printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "$(echo "${city,,}" | tr ' ' '_')"; then
+    elif [[ "$connected" == "connected" ]] && [[ "$virtual" != "disabled" ]] && printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "$(echo "${city,,}" | tr ' ' '_')"; then
         fav="${FVColor}(Virtual)${Color_Off}"
     else
         fav=""
