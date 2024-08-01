@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.18.3 on Linux Mint 21.3
-# July 24, 2024
+# August 1, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -132,7 +132,7 @@ nordfavoritesfile="/home/$USER/Downloads/nord_favorites.txt"
 # nordvpnd.service logs.  Create the file in: Settings - Logs
 nordlogfile="/home/$USER/Downloads/nord_logs.txt"
 # Also show this number of lines from the tail of the log.
-loglines="50"
+loglines="100"
 #
 # Change the terminal window titlebar text while the script is running.
 # Leave this blank to keep the titlebar unchanged.
@@ -1241,14 +1241,10 @@ function country_names_modify {
     # iterate over elements in countrylist
     for mcountry in "${countrylist[@]}"
     do
-        # only add an asterisk if the virtual-location setting is enabled (or missing)
-        if [[ "$virtual" != "disabled" ]]; then
-            # check if the country is in the nordvirtual array
-            # Laos API/CLI name mismatch.  Strip the apostrophe for comparison.
-            if printf "%s\n" "${nordvirtual[@],,}" | tr -d "'" | grep -q -x -i "${mcountry,,}"; then
-                # add an asterisk to the country name
-                mcountry="${mcountry}*"
-            fi
+        # Laos API/CLI name mismatch.  Strip the apostrophe for comparison.
+        if [[ "$virtual" == "enabled" ]] && printf "%s\n" "${nordvirtual[@],,}" | tr -d "'" | grep -q -x -i "${mcountry,,}"; then
+            # add an asterisk to the country name
+            mcountry="${mcountry}*"
         fi
         # shorten long country names if the option is enabled
         if [[ -n "$charlimit" ]]; then
@@ -1294,13 +1290,9 @@ function city_names_modify {
     modcitylist=()
     for mcity in "${citylist[@]}"
     do
-        # only add an asterisk if the virtual-location setting is enabled (or missing)
-        if [[ "$virtual" != "disabled" ]]; then
-            # check if the city is in the nordvirtual array
-            if printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${mcity,,}"; then
-                # add an asterisk to the city name
-                mcity="${mcity}*"
-            fi
+        if [[ "$virtual" == "enabled" ]] && printf "%s\n" "${nordvirtual[@],,}" | grep -q -x -i "${mcity,,}"; then
+            # add an asterisk to the city name
+            mcity="${mcity}*"
         fi
         # add the modified city name to modcitylist. includes "Random" "Best" "Exit"
         modcitylist+=( "$mcity" )
@@ -1561,23 +1553,23 @@ function host_connect {
     echo
     echo -e "${FColor}(Leave blank to quit)${Color_Off}"
     echo
-    read -r -p "Enter the server name (eg. us9364): " servername
-    if [[ -z $servername ]]; then
+    read -r -p "Enter the server name (eg. us9364): " connecthost
+    if [[ -z $connecthost ]]; then
         echo -e "${DColor}(Skipped)${Color_Off}"
         echo
         return
-    elif [[ "$servername" == *"socks"* ]]; then
+    elif [[ "$connecthost" == *"socks"* ]]; then
         echo
         echo -e "${WColor}Unable to connect to SOCKS servers${Color_Off}"
         echo
         return
-    elif [[ "$servername" == *"nord"* ]]; then
-        servername=$( echo "$servername" | cut -f1 -d'.' )
+    elif [[ "$connecthost" == *"nord"* ]]; then
+        connecthost=$( echo "$connecthost" | cut -f1 -d'.' )
     fi
     disconnect_vpn
-    echo "Connect to $servername"
+    echo "Connect to $connecthost"
     echo
-    nordvpn connect "$servername"
+    nordvpn connect "$connecthost"
     status
     # add testing commands here
     #
