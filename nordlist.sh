@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.18.3 on Linux Mint 21.3
-# August 1, 2024
+# Tested with NordVPN Version 3.18.4 on Linux Mint 21.3
+# August 19, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -257,7 +257,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # This list is subject to change and must be updated manually.
 # Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
 nordvirtual=(
-"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lagos" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Lima" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nigeria" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Peru" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
+"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lagos" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nigeria" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
 )
 #
 # =====================================================================
@@ -2833,7 +2833,7 @@ function meshnet_menu {
                 echo "Restarting the service may help resolve problems with populating"
                 echo "the peer list or with excessively slow transfer speeds."
                 echo
-                read -n 1 -r -p "Disconnect the VPN and restart the nordvpn service? (y/n) "; echo
+                read -n 1 -r -p "Disconnect the VPN and restart the nordvpnd service? (y/n) "; echo
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     if [[ "$killswitch" == "enabled" ]]; then
@@ -3085,6 +3085,8 @@ function login_token {
         echo -e "${DColor}(Skipped)${Color_Off}"
     else
         echo
+        echo -e "${LColor}nordvpn login --token '$logintoken'${Color_Off}"
+        echo
         nordvpn login --token "$logintoken"
     fi
     echo
@@ -3102,6 +3104,8 @@ function login_browser {
     if [[ -z $callbackurl ]]; then
         echo -e "${DColor}(Skipped)${Color_Off}"
     else
+        echo
+        echo -e "${LColor}nordvpn login --callback '$callbackurl'${Color_Off}"
         echo
         nordvpn login --callback "$callbackurl"
     fi
@@ -3134,11 +3138,11 @@ function logout_nord {
     # https://github.com/NordSecurity/nordvpn-linux/issues/8
     #
     if nordvpn logout --help | grep -q -i "persist-token"; then
-        echo "nordvpn logout --persist-token"
+        echo -e "${LColor}nordvpn logout --persist-token${Color_Off}"
         echo
         nordvpn logout --persist-token
     else
-        echo "nordvpn logout"
+        echo -e "${LColor}nordvpn logout${Color_Off}"
         echo
         nordvpn logout
     fi
@@ -3253,13 +3257,12 @@ function restart_service {
     parent="Settings"
     if [[ "$1" != "back" ]]; then
         heading "Restart"
-        echo "Restart nordvpn services."
+        echo "Restart the nordvpnd service."
+        echo
     fi
-    echo -e "${WColor}"
-    echo "Send commands:"
-    echo "sudo systemctl restart nordvpnd.service"
-    echo "sudo systemctl restart nordvpn.service"
-    echo -e "${Color_Off}"
+    echo "Send command:"
+    echo -e "${WColor}sudo systemctl restart nordvpnd.service${Color_Off}"
+    echo
     if [[ "$1" == "back" ]]; then
         REPLY="y"
     else
@@ -3269,7 +3272,6 @@ function restart_service {
     parent_menu "$1"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         sudo systemctl restart nordvpnd.service
-        sudo systemctl restart nordvpn.service
         echo
         echo "Please wait 10s."
         echo
@@ -3282,7 +3284,7 @@ function restart_service {
     fi
     main_menu
     #
-    # norduserd, nordfileshared
+    # nordvpn.service, norduserd, nordfileshared
 }
 function reset_app {
     heading "Reset Nord"
@@ -3290,14 +3292,15 @@ function reset_app {
     echo
     echo "Reset the NordVPN app to default settings."
     echo "Requires NordVPN Account login to reconnect."
+    echo
+    echo -n "Send commands:"
     echo -e "${WColor}"
-    echo "Send commands:"
     echo "nordvpn set killswitch disabled"
     echo "nordvpn disconnect"
     echo "nordvpn logout"
     echo "nordvpn allowlist remove all"
     echo "nordvpn set defaults"
-    echo "Restart nordvpn services"
+    echo "Restart nordvpnd service"
     echo "nordvpn login"
     echo "Apply your default configuration"
     echo -e "${Color_Off}"
@@ -4206,10 +4209,14 @@ function wireguard_gen {
     echo "Generate a WireGuard config file from your currently active"
     echo "NordLynx connection.  Requires WireGuard/WireGuard-Tools."
     echo "Commands require sudo.  Optional iptables Kill Switch for use"
-    echo "on Linux systems only.  Note: Keep your Private Key secure."
+    echo "on Linux systems only.  Filenames limited to 15 characters."
+    echo "Note: Keep your Private Key secure."
     echo
     set_vars
-    wgcity=$( echo "$city" | tr -d ' ' )
+    # limit config file name to 15 characters excluding extension.  truncate city name if necessary.
+    max_wgcity=$(( 15 - ${#server} - 1 ))   # calculate max length for city name.  minus 1 for underscore
+    wgcity=$(echo "$city" | tr -d ' ' | cut -c 1-$max_wgcity)
+    #
     wgconfig="${wgcity}_${server}.conf"     # Filename
     wgfull="${wgdir}/${wgconfig}"           # Full path and filename
     #
