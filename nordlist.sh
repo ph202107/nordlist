@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.18.4 on Linux Mint 21.3
-# August 19, 2024
+# Tested with NordVPN Version 3.18.5 on Linux Mint 21.3
+# September 5, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -579,10 +579,49 @@ function ascii_custom {
         figlet -t -f "standard" "NordVPN"
     fi
 }
-function indicators_show {
+function indicators_display {
     # Changes made here will be reflected in main_logo and settings_menu
-    # All indicators: $techpro$fw$rt$an$ks$tp$ob$no$tr$ac$i6$mn$dns$ld$vi$al$fst
-    echo -e "$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$i6$mn$dns$ld$vi$al$fst"
+    # [NordLynx UDP][FW][RT][AN][KS][TP][OB][NO][TR][AC][IP6][MN][DNS][LD][VL][AL][F][SSH] = 84 columns
+    #
+    indall="$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns$ld$vl$al$fst$sshi"
+    strip_indall=$(echo -e "$indall" | sed -r 's/\x1B\[[0-9;]*[mK]//g') # strip the color codes
+    indall_length="${#strip_indall}"
+    #
+    if (( "$(tput cols)" > indall_length )); then
+        # Single line indicators
+        echo -e "$indall"
+        return
+    fi
+    # Double line indicators
+    # <indline1              >
+    # <fill1><indline2><fill2>
+    #
+    indline1="$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns"
+    indline2="$ld$vl$al$fst$sshi"
+    #
+    fill1_char=" "          # fill character used at the start of line 2
+    fill2_char="\u00B7"     # fill character used at the end of line 2 (unicode 'middle dot')
+    #
+    # strip the color codes (ChatGPT 4)
+    strip_line1=$(echo -e "$indline1" | sed -r 's/\x1B\[[0-9;]*[mK]//g')
+    strip_line2=$(echo -e "$indline2" | sed -r 's/\x1B\[[0-9;]*[mK]//g')
+    strip_techpro=$(echo -e "$techpro" | sed -r 's/\x1B\[[0-9;]*[mK]//g')
+    #
+    line1_length="${#strip_line1}"
+    line2_length="${#strip_line2}"
+    fill1_length="${#strip_techpro}"    # align the indicators next to technology/protocol
+    #fill1_length="0"                   # use no fill at the start of line2
+    fill2_length="$(( line1_length - fill1_length - line2_length ))"
+    #
+    if (( fill1_length > 0 )); then
+        fill1=$(printf "${IFColor}${fill1_char}%.0s${Color_Off}" $(seq 1 "$fill1_length"))
+    else
+        fill1=""
+    fi
+    fill2=$(printf "${IFColor}${fill2_char}%.0s${Color_Off}" $(seq 1 "$fill2_length"))
+    #
+    echo -e "$indline1"
+    echo -e "$fill1$indline2$fill2"
 }
 function main_logo {
     # The ascii and stats shown above the main_menu and on script exit.
@@ -591,15 +630,12 @@ function main_logo {
         # Specify  ascii_static or ascii_custom on the line below.
         ascii_custom
     fi
-    if "$usingssh"; then
-        echo -ne "$sshi "
-    fi
     if "$meshrouting"; then
         echo -e "$connectedcl ${SVColor}$nordhost ${IPColor}$ipaddr${Color_Off}"
     else
         echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr ${Color_Off}$fav"
     fi
-    indicators_show
+    indicators_display
     echo -e "$transferc ${UPColor}$uptime${Color_Off}"
     if [[ -n "$transferc" ]]; then echo; fi
 }
@@ -723,6 +759,7 @@ function set_colors {
     SVColor=${Color_Off}    # Server name
     IPColor=${Color_Off}    # IP address
     FVColor=${LCyan}        # Favorite|Dedicated-IP|Virtual label
+    IFColor=${DGrey}        # Indicators line two fill color
     DLColor=${Green}        # Download stat
     ULColor=${Yellow}       # Upload stat
     UPColor=${Cyan}         # Uptime stat
@@ -875,9 +912,9 @@ function set_vars {
     fi
     #
     if [[ "$tray" == "enabled" ]]; then
-        tr="${EIColor}[T]${Color_Off}"
+        tr="${EIColor}[TR]${Color_Off}"
     else
-        tr="${DIColor}[T]${Color_Off}"
+        tr="${DIColor}[TR]${Color_Off}"
     fi
     #
     if [[ "$autoconnect" == "enabled" ]]; then
@@ -887,9 +924,9 @@ function set_vars {
     fi
     #
     if [[ "$ipversion6" == "enabled" ]]; then
-        i6="${EIColor}[I6]${Color_Off}"
+        ip6="${EIColor}[IP6]${Color_Off}"
     else
-        i6="${DIColor}[I6]${Color_Off}"
+        ip6="${DIColor}[IP6]${Color_Off}"
     fi
     #
     if [[ "$meshnet" == "enabled" ]]; then
@@ -915,9 +952,9 @@ function set_vars {
     fi
     #
     if [[ "$virtual" == "enabled" ]]; then
-        vi="${EIColor}[V]${Color_Off}"
+        vl="${EIColor}[VL]${Color_Off}"
     else
-        vi="${DIColor}[V]${Color_Off}"
+        vl="${DIColor}[VL]${Color_Off}"
     fi
     #
     if [[ -n "${allowlist[*]}" ]]; then # not empty
@@ -1953,10 +1990,10 @@ function change_setting {
             chgname="the Tray"; chgvar="$tray"; chgind="$tr"
             ;;
         "autoconnect")
-            chgname="Auto-Connect"; chgvar="$autoconnect"; chgind="$ac"; chgloc="$acwhere"
+            chgname="Auto-Connect"; chgvar="$autoconnect"; chgind="$ac"; chgloc="$acwhere2"
             ;;
         "ipv6")
-            chgname="IPv6"; chgvar="$ipversion6"; chgind="$i6"
+            chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6"
             ;;
         "meshnet")
             chgname="Meshnet"; chgvar="$meshnet"; chgind="$mn"
@@ -1965,7 +2002,7 @@ function change_setting {
             chgname="LAN-Discovery"; chgvar="$landiscovery"; chgind="$ld"
             ;;
         "virtual-location")
-            chgname="Virtual-Location"; chgvar="$virtual"; chgind="$vi"
+            chgname="Virtual-Location"; chgvar="$virtual"; chgind="$vl"
             ;;
         *)
             echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo
@@ -2161,6 +2198,7 @@ function tray_setting {
 }
 function autoconnect_setting {
     heading "AutoConnect"
+    parent="Settings"
     echo "Automatically connect to the VPN on startup."
     echo
     if [[ "$obfuscate" == "enabled" ]]; then
@@ -2168,8 +2206,16 @@ function autoconnect_setting {
         echo "     location must support obfuscation."
         echo
     fi
-    if [[ "$autoconnect" == "disabled" ]] && [[ -n $acwhere ]]; then
-        echo -e "Auto-Connect location: ${LColor}$acwhere${Color_Off}"
+    if [[ "$autoconnect" == "disabled" ]]; then
+        if [[ -n $acwhere ]]; then
+            echo -e "${FColor}Default location: ${LColor}$acwhere${Color_Off}"
+        else
+            echo -e "${FColor}Default location: ${LColor}Automatic${Color_Off}"
+        fi
+        echo
+        read -r -p "Specify a location or hit 'Enter' for default: "
+        parent_menu
+        acwhere2=${REPLY:-$acwhere}
         echo
     fi
     change_setting "autoconnect"
@@ -4927,7 +4973,7 @@ function settings_menu {
     heading "Settings"
     parent="Main"
     echo
-    indicators_show
+    indicators_display
     echo
     PS3=$'\n''Choose a Setting: '
     submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
