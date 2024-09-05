@@ -34,11 +34,12 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.18.0"      # 09 May 2024 Tray icon. Fix Meshnet Routing kill switch.
 #nord_version="nordvpn=3.18.1"      # 10 May 2024 Fix potential security vulnerabilities. Allowlist issue: https://github.com/NordSecurity/nordvpn-linux/issues/406
 #nord_version="nordvpn=3.18.2"      # 11 Jun 2024 Fix allowlist and lan-discovery. Option to disable Tray. Snapstore available. Allowlist issue: https://github.com/NordSecurity/nordvpn-linux/issues/461
-#nord_version="nordvpn=3.18.3"      # 22 Jul 2024 Bug fixes. Option to disable virtual locations.
+#nord_version="nordvpn=3.18.3"      # 22 Jul 2024 Bug fixes. Option to disable virtual locations. Allowlist issue:  https://github.com/NordSecurity/nordvpn-linux/issues/512
+#nord_version="nordvpn=3.18.4"      # 19 Aug 2024 Bug fixes - routing, tray, dedicated-ip, gateway, allowlist.
+#nord_version="nordvpn=3.18.5"      # 05 Sep 2024 Internal changes.
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
-# To create a token visit https://my.nordaccount.com/
-# Services - NordVPN - Manual Setup - Generate New Token
+# To create a token visit https://my.nordaccount.com/ - Services - NordVPN - Manual Setup - Generate New Token
 logintoken=""
 expires="Permanent"
 #
@@ -52,6 +53,8 @@ function default_settings {
     #
     #nordvpn set lan-discovery enabled
     #nordvpn set tray disabled
+    #nordvpn set notify disabled
+    #nordvpn set virtual-location disabled
     #nordvpn set killswitch enabled
     #nordvpn connect --group P2P United_States
     #
@@ -89,7 +92,6 @@ function trashnord {
     fi
     wait
     sudo systemctl stop nordvpnd.service
-    sudo systemctl stop nordvpn.service
     wait
     linebreak "Flush iptables"
     flushtables
@@ -268,8 +270,8 @@ elif [[ $REPLY =~ ^[Yy]$ ]]; then
     trashnord
     installnord
     loginnord
-    default_settings
     changelog
+    default_settings
 else
     linebreak
     linecolor "red" "*** ABORT ***"
