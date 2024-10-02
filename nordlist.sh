@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.18.5 on Linux Mint 21.3
-# September 5, 2024
+# Tested with NordVPN Version 3.19.0 on Linux Mint 21.3
+# October 2, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -218,7 +218,7 @@ fast1="n"
 #
 # Automatically change these settings without prompting:  Firewall,
 # Routing, Analytics, KillSwitch, TPLite, Notify, Tray, AutoConnect,
-# IPv6, LAN-Discovery, Virtual-Location
+# IPv6, LAN-Discovery, Virtual-Location, Post-Quantum
 fast2="n"
 #
 # Automatically change these settings which also disconnect the VPN:
@@ -279,7 +279,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 392 (function main_menu).
+# The Main Menu starts on line 396 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -316,6 +316,7 @@ function set_defaults {
     # - Obfuscate requires OpenVPN
     # - TPLite disables CustomDNS and vice versa
     # - LAN-Discovery will remove private subnets from Allowlist
+    # - Post Quantum VPN requires NordLynx, and Meshnet disabled
     #
     # For each setting uncomment one of the two choices (or neither).
     #
@@ -328,7 +329,7 @@ function set_defaults {
     disconnect_vpn "force"
     #
     if [[ "$technology" == "openvpn" ]]; then if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi; nordvpn set technology nordlynx; set_vars; fi
-    #if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; set_vars; fi
+    #if [[ "$technology" == "nordlynx" ]]; then if [[ "$postquantum" == "enabled" ]]; then nordvpn set post-quantum disabled; fi; nordvpn set technology openvpn; set_vars; fi
     #
     if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi
     #if [[ "$protocol" == "UDP" ]]; then nordvpn set protocol TCP; fi
@@ -369,6 +370,9 @@ function set_defaults {
     #if [[ "$virtual" == "disabled" ]]; then nordvpn set virtual-location enabled; fi
     #if [[ "$virtual" == "enabled" ]]; then nordvpn set virtual-location disabled; fi
     #
+    #if [[ "$postquantum" == "disabled" ]]; then nordvpn set post-quantum enabled; fi
+    #if [[ "$postquantum" == "enabled" ]]; then nordvpn set post-quantum disabled; fi
+    #
     echo
 }
 function main_menu {
@@ -392,21 +396,33 @@ function main_menu {
     # ====== MAIN MENU ================================================
     # =================================================================
     #
-    # To modify the list, for example changing Vancouver to Melbourne:
-    # change "Vancouver" in both the first (horizontal) and the
-    # second (vertical) list to "Melbourne", and where it says
-    # "nordvpn connect Vancouver" change it to
-    # "nordvpn connect Melbourne". That's it.
+    # To modify the menu, for example changing Vancouver to Melbourne:
+    #  - In the (Menu Array) below
+    #       replace "Vancouver" with "Melbourne"
+    #  - In the (Case Statement) below
+    #       also replace "Vancouver" with "Melbourne"
+    #       and replace: "nordvpn connect Vancouver"
+    #       with:        "nordvpn connect Melbourne"
+    # No other changes are necessary.
+    #
+    # Each option in the Menu Array should have a matching case.
+    # Spelling and capitalization must match exactly in both places.
     #
     # An almost unlimited number of menu items can be added.
     # Submenu functions can be added to the main menu for easier access.
     #
+    # =====  (Menu Array)  =====
+    # These are the options that will be displayed on the main menu.
     mainmenu=( "Vancouver" "Seattle" "Chicago" "Denver" "Atlanta" "US_Cities" "CA_Cities" "P2P-USA" "P2P-Canada" "Discord" "QuickConnect" "Random" "Favorites" "Countries" "Groups" "Settings" "Tools" "Meshnet" "Disconnect" "Exit" )
     #
     select opt in "${mainmenu[@]}"
     do
         parent_menu
         case $opt in
+        #
+        # =====  (Case Statement)  =====
+        # These are the commands that run when a menu option is selected.
+        #
             "Vancouver")
                 main_header
                 nordvpn connect Vancouver
@@ -581,9 +597,9 @@ function ascii_custom {
 }
 function indicators_display {
     # Changes made here will be reflected in main_logo and settings_menu
-    # [NordLynx UDP][FW][RT][AN][KS][TP][OB][NO][TR][AC][IP6][MN][DNS][LD][VL][AL][F][SSH] = 84 columns
+    # [NordLynx UDP][FW][RT][AN][KS][TP][OB][NO][TR][AC][IP6][MN][DNS][LD][VL][PQ][AL][F][SSH] = 88 columns
     #
-    indall="$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns$ld$vl$al$fst$sshi"
+    indall="$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns$ld$vl$pq$al$fst$sshi"
     strip_indall=$(echo -e "$indall" | sed -r 's/\x1B\[[0-9;]*[mK]//g') # strip the color codes
     indall_length="${#strip_indall}"
     #
@@ -597,7 +613,7 @@ function indicators_display {
     # <fill1><indline2><fill2>
     #
     indline1="$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns"
-    indline2="$ld$vl$al$fst$sshi"
+    indline2="$ld$vl$pq$al$fst$sshi"
     #
     fill1_char=" "          # fill character used at the start of line 2
     fill2_char="\u00B7"     # fill character used at the end of line 2 (unicode 'middle dot')
@@ -816,6 +832,7 @@ function set_vars {
     #
     # "nordvpn settings"
     # $protocol and $obfuscate are not listed when using NordLynx
+    # $postquantum is not listed when using OpenVPN
     technology=$( nsettings_search "Technology" )
     protocol=$( nsettings_search "Protocol" | tr '[:lower:]' '[:upper:]' )
     firewall=$( nsettings_search "Firewall:" )
@@ -834,6 +851,7 @@ function set_vars {
     dns_servers=$( nsettings_search "DNS" "line" | tr '[:lower:]' '[:upper:]' ) # Server IPs, includes "DNS: "
     landiscovery=$( nsettings_search "Discover" )
     virtual=$( nsettings_search "Virtual" )
+    postquantum=$( nsettings_search "quantum" )
     allowlist=$( printf '%s\n' "${nsettings[@]}" | grep -A100 -i "allowlist" )
     #
     # Prefer common spelling.
@@ -953,8 +971,16 @@ function set_vars {
     #
     if [[ "$virtual" == "enabled" ]]; then
         vl="${EIColor}[VL]${Color_Off}"
+        virtualc="${EColor}$virtual${Color_Off}"
     else
         vl="${DIColor}[VL]${Color_Off}"
+        virtualc="${DColor}$virtual${Color_Off}"
+    fi
+    #
+    if [[ "$postquantum" == "enabled" ]]; then
+        pq="${EIColor}[PQ]${Color_Off}"
+    else
+        pq="${DIColor}[PQ]${Color_Off}"
     fi
     #
     if [[ -n "${allowlist[*]}" ]]; then # not empty
@@ -1571,12 +1597,15 @@ function city_count {
     echo
     echo "(*) = The location is listed in the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))."
     echo
+    if [[ "$virtual" == "disabled" ]]; then
+        echo -e "$vl Virtual-Location is $virtualc."
+        echo
+    fi
     if [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Obfuscate is $obfuscatec."
         echo "These locations have Obfuscation support."
         echo
     fi
-    echo
 }
 function host_connect {
     heading "Hostname"
@@ -1749,22 +1778,25 @@ function group_connect {
             ;;
     esac
     echo
-    echo -e "Current settings: $techpro$fw$ks$ob"
+    echo -e "Current settings: $techpro$fw$ks$ob$pq"
     echo
     echo "To connect to the $1 group the following"
     echo "changes will be made (if necessary):"
     echo -e "${LColor}"
     echo "Disconnect the VPN."
     if [[ "$1" == "Obfuscated_Servers" ]]; then
+        echo "Disable Post-Quantum."
         echo "Set Technology to OpenVPN."
         echo "Choose the Protocol."
         echo "Set Obfuscate to enabled."
     elif [[ "$1" == "Dedicated_IP" ]]; then
+        echo "Disable Post-Quantum."
         echo "Set Technology to OpenVPN."
         echo "Choose the Protocol."
         echo "Set Obfuscate to disabled."
     else
         echo "Choose the Technology & Protocol."
+        echo "Set NordLynx Post-Quantum (choice)."
         echo "Set Obfuscate to disabled."
     fi
     echo "Enable the Kill Switch (choice)."
@@ -1786,11 +1818,13 @@ function group_connect {
         disconnect_vpn "force"
         case "$1" in
             "Obfuscated_Servers")
+                if [[ "$postquantum" == "enabled" ]]; then nordvpn set post-quantum disabled; wait; echo; fi
                 if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; wait; echo; fi
                 protocol_ask
                 if [[ "$obfuscate" == "disabled" ]]; then nordvpn set obfuscate enabled; wait; echo; fi
                 ;;
             "Dedicated_IP")
+                if [[ "$postquantum" == "enabled" ]]; then nordvpn set post-quantum disabled; wait; echo; fi
                 if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; wait; echo; fi
                 protocol_ask
                 if [[ "$obfuscate" == "enabled" ]]; then nordvpn set obfuscate disabled; wait; echo; fi
@@ -1825,9 +1859,12 @@ function technology_setting {
         echo
         disconnect_warning
         echo "OpenVPN is an open-source VPN protocol that is required"
-        echo " for Obfuscated servers, a Dedicated-IP, and to use TCP."
+        echo "for Obfuscated servers, a Dedicated-IP, and to use TCP."
+        echo "Post-Quantum encryption is not supported with OpenVPN."
+        echo
         echo "NordLynx is built around the WireGuard VPN protocol"
-        echo " and may be faster with less overhead."
+        echo "and may be faster with less overhead."
+        echo "NordLynx supports the use of Post-Quantum encryption."
         echo
     fi
     echo -e "Currently using $technologydc."
@@ -1853,7 +1890,14 @@ function technology_setting {
                 echo
             fi
             nordvpn set technology nordlynx; wait
+            echo
+            set_vars
+            change_setting "post-quantum" "back"
         else
+            if [[ "$postquantum" == "enabled" ]]; then
+                nordvpn set post-quantum disabled; wait
+                echo
+            fi
             nordvpn set technology openvpn; wait
             echo
             protocol_ask
@@ -1861,10 +1905,14 @@ function technology_setting {
     else
         echo
         echo -e "Continue to use $technologydc."
+        echo
         set_vars
-        if [[ "$technology" == "openvpn" ]] && [[ "$connected" != "connected" ]]; then
-            echo
-            protocol_ask
+        if [[ "$connected" != "connected" ]]; then
+            if [[ "$technology" == "openvpn" ]]; then
+                protocol_ask
+            elif [[ "$technology" == "nordlynx" ]]; then
+                change_setting "post-quantum" "back"
+            fi
         fi
     fi
     if [[ "$1" == "back" ]]; then
@@ -1968,46 +2016,20 @@ function change_setting {
     fi
     chgloc=""
     case "$1" in
-        "firewall")
-            chgname="the Firewall"; chgvar="$firewall"; chgind="$fw"
-            ;;
-        "routing")
-            chgname="Routing"; chgvar="$routing"; chgind="$rt"
-            ;;
-        "analytics")
-            chgname="Analytics"; chgvar="$analytics"; chgind="$an"
-            ;;
-        "killswitch")
-            chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks"
-            ;;
-        "threatprotectionlite")
-            chgname="Threat Protection Lite"; chgvar="$tplite"; chgind="$tp"
-            ;;
-        "notify")
-            chgname="Notify"; chgvar="$notify"; chgind="$no"
-            ;;
-        "tray")
-            chgname="the Tray"; chgvar="$tray"; chgind="$tr"
-            ;;
-        "autoconnect")
-            chgname="Auto-Connect"; chgvar="$autoconnect"; chgind="$ac"; chgloc="$acwhere2"
-            ;;
-        "ipv6")
-            chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6"
-            ;;
-        "meshnet")
-            chgname="Meshnet"; chgvar="$meshnet"; chgind="$mn"
-            ;;
-        "lan-discovery")
-            chgname="LAN-Discovery"; chgvar="$landiscovery"; chgind="$ld"
-            ;;
-        "virtual-location")
-            chgname="Virtual-Location"; chgvar="$virtual"; chgind="$vl"
-            ;;
-        *)
-            echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo
-            return
-            ;;
+        "firewall")             chgname="the Firewall"; chgvar="$firewall"; chgind="$fw";;
+        "routing")              chgname="Routing"; chgvar="$routing"; chgind="$rt";;
+        "analytics")            chgname="Analytics"; chgvar="$analytics"; chgind="$an";;
+        "killswitch")           chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks";;
+        "threatprotectionlite") chgname="Threat Protection Lite"; chgvar="$tplite"; chgind="$tp";;
+        "notify")               chgname="Notify"; chgvar="$notify"; chgind="$no";;
+        "tray")                 chgname="the Tray"; chgvar="$tray"; chgind="$tr";;
+        "autoconnect")          chgname="Auto-Connect"; chgvar="$autoconnect"; chgind="$ac"; chgloc="$acwhere2";;
+        "ipv6")                 chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6";;
+        "meshnet")              chgname="Meshnet"; chgvar="$meshnet"; chgind="$mn";;
+        "lan-discovery")        chgname="LAN-Discovery"; chgvar="$landiscovery"; chgind="$ld";;
+        "virtual-location")     chgname="Virtual-Location"; chgvar="$virtual"; chgind="$vl";;
+        "post-quantum")         chgname="Post-Quantum VPN"; chgvar="$postquantum"; chgind="$pq";;
+        *)                      echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo; return;;
     esac
     #
     if [[ "$chgvar" == "enabled" ]]; then
@@ -2058,6 +2080,7 @@ function change_setting {
                     ;;
                 "meshnet")
                     echo -e "${WColor}Wait 30s to refresh the peer list.${Color_Off}"
+                    echo "Try disconnecting VPN if Meshnet fails to enable."
                     echo
                     ;;
             esac
@@ -2258,6 +2281,42 @@ function virtual_setting {
     echo "Refer to: https://nordvpn.com/blog/new-nordvpn-virtual-servers/"
     echo
     change_setting "virtual-location"
+}
+function postquantum_setting {
+    heading "Post-Quantum"
+    echo "When Post-Quantum VPN is enabled, your connection uses cutting-edge"
+    echo "cryptography designed to resist quantum computer attacks."
+    echo "Not compatible with OpenVPN or Meshnet."
+    echo
+    if [[ "$technology" == "openvpn" ]] || [[ "$meshnet" == "enabled" ]] ; then
+        echo -e "The Technology is set to $technologydc."
+        echo -e "$mn Meshnet is $meshnetc."
+        echo
+        echo "To enable Post-Quantum VPN you must use NordLynx Technology and"
+        echo "have Meshnet disabled."
+        echo; echo
+        read -n 1 -s -r -p "Press any key to continue... "; echo
+        settings_menu
+    fi
+    # https://github.com/NordSecurity/nordvpn-linux/issues/637
+    if [[ "$connected" == "connected" ]] && [[ "$postquantum" == "disabled" ]]; then
+        echo -e "${WColor}Note:${Color_Off}"
+        echo "https://github.com/NordSecurity/nordvpn-linux/issues/637"
+        echo "Post-Quantum may need to be enabled during the intial handshake, and"
+        echo -e "the VPN is already $connectedc."
+        echo
+        read -n 1 -r -p "Disconnect the VPN now? (y/n) "; echo
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            disconnect_vpn "force" "check_ks"
+        else
+            echo -e "After enabling the post-quantum setting, ${WColor}Reconnect to VPN${Color_Off}"
+            echo "at your earliest convenience."
+            echo
+        fi
+        echo
+    fi
+    change_setting "post-quantum"
 }
 function obfuscate_setting {
     # not available when using NordLynx
@@ -2715,6 +2774,14 @@ function meshnet_menu {
             "Enable/Disable")
                 clear -x
                 echo
+                if [[ "$postquantum" == "enabled" ]]; then
+                    echo -e "${WColor}Meshnet is not compatible with Post-Quantum VPN.${Color_Off}"
+                    echo
+                    change_setting "post-quantum" "back"
+                    if [[ "$postquantum" == "enabled" ]]; then
+                        meshnet_menu
+                    fi
+                fi
                 change_setting "meshnet" "back"
                 meshnet_menu
                 ;;
@@ -2882,10 +2949,7 @@ function meshnet_menu {
                 read -n 1 -r -p "Disconnect the VPN and restart the nordvpnd service? (y/n) "; echo
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    if [[ "$killswitch" == "enabled" ]]; then
-                        change_setting "killswitch" "back"
-                    fi
-                    disconnect_vpn "force"
+                    disconnect_vpn "force" "check_ks"
                     restart_service "back"
                 fi
                 ;;
@@ -4578,7 +4642,7 @@ function tools_menu {
         PS3=$'\n''Choose an option (VPN Off): '
     fi
     COLUMNS="$menuwidth"
-    submtools=( "NordVPN API" "Speed Tests" "WireGuard" "External IP" "Server Load" "Rate VPN Server" "Ping VPN Server" "Ping Test" "My TraceRoute" "Nord DNS Test" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipinfo.io" "iplocation.net" "ipregistry.co" "ip2location.io" "ipaddress.my" "ipx.ac" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
+    submtools=( "NordVPN API" "Speed Tests" "WireGuard" "External IP" "Server Load" "Rate VPN Server" "Ping VPN Server" "Ping Test" "My TraceRoute" "Nord DNS Test" "ipleak cli" "ipleak.net" "dnsleaktest.com" "dnscheck.tools" "test-ipv6.com" "ipinfo.io" "iplocation.net" "ipregistry.co" "ip2location.io" "ipaddress.my" "locatejs.com" "browserleaks.com" "bash.ws" "Change Host" "World Map" "Outage Map" "Down Detector" "Exit" )
     select tool in "${submtools[@]}"
     do
         parent_menu
@@ -4665,7 +4729,6 @@ function tools_menu {
             "ipregistry.co")    openlink "https://ipregistry.co/";;
             "ip2location.io")   openlink "https://www.ip2location.io/";;
             "ipaddress.my")     openlink "https://www.ipaddress.my/";;
-            "ipx.ac")           openlink "https://ipx.ac/";;
             "locatejs.com")     openlink "https://locatejs.com/";;
             "browserleaks.com") openlink "https://browserleaks.com/";;
             "bash.ws")          openlink "https://bash.ws/";;
@@ -4976,7 +5039,7 @@ function settings_menu {
     indicators_display
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual" "Post-Quantum" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
@@ -4997,6 +5060,7 @@ function settings_menu {
             "Custom-DNS")       customdns_menu;;
             "LAN-Discovery")    landiscovery_setting;;
             "Virtual")          virtual_setting;;
+            "Post-Quantum")     postquantum_setting;;
             "Allowlist")        allowlist_setting;;
             "Account")          account_menu;;
             "Restart")          restart_service;;
