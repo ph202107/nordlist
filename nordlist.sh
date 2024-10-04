@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.19.0 on Linux Mint 21.3
-# October 2, 2024
+# October 4, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -2083,6 +2083,12 @@ function change_setting {
                     echo "Try disconnecting VPN if Meshnet fails to enable."
                     echo
                     ;;
+                "post-quantum")
+                    if [[ "$connected" == "connected" ]]; then
+                        echo -e "${WColor}Reconnect to VPN${Color_Off} to start using Post-Quantum encryption."
+                        echo
+                    fi
+                    ;;
             esac
             #
             if [[ -n $chgloc ]]; then
@@ -2105,6 +2111,12 @@ function change_setting {
                 "routing")
                     echo -e "${WColor}Disabling all traffic routing.${Color_Off}"
                     echo
+                    ;;
+                "post-quantum")
+                    if [[ "$connected" == "connected" ]]; then
+                        echo -e "${WColor}Disconnect or reconnect to VPN${Color_Off} to stop using Post-Quantum encryption."
+                        echo
+                    fi
                     ;;
             esac
             #
@@ -2287,6 +2299,8 @@ function postquantum_setting {
     echo "When Post-Quantum VPN is enabled, your connection uses cutting-edge"
     echo "cryptography designed to resist quantum computer attacks."
     echo "Not compatible with OpenVPN or Meshnet."
+    echo "Refer to:"
+    echo "https://nordvpn.com/blog/nordvpn-linux-post-quantum-encryption-support/"
     echo
     if [[ "$technology" == "openvpn" ]] || [[ "$meshnet" == "enabled" ]] ; then
         echo -e "The Technology is set to $technologydc."
@@ -2298,23 +2312,17 @@ function postquantum_setting {
         read -n 1 -s -r -p "Press any key to continue... "; echo
         settings_menu
     fi
-    # https://github.com/NordSecurity/nordvpn-linux/issues/637
-    if [[ "$connected" == "connected" ]] && [[ "$postquantum" == "disabled" ]]; then
-        echo -e "${WColor}Note:${Color_Off}"
-        echo "https://github.com/NordSecurity/nordvpn-linux/issues/637"
-        echo "Post-Quantum may need to be enabled during the intial handshake, and"
-        echo -e "the VPN is already $connectedc."
+    if [[ "$connected" == "connected" ]]; then
+        # https://github.com/NordSecurity/nordvpn-linux/issues/637
+        echo -e "${WColor}Note:${Color_Off} The VPN is $connectedc."
+        echo "Enabling or disabling Post-Quantum also requires reconnecting to VPN."
         echo
-        read -n 1 -r -p "Disconnect the VPN now? (y/n) "; echo
+        read -n 1 -r -p "$(echo -e "${WColor}Disconnect${Color_Off} the VPN now? (y/n) ")"; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             disconnect_vpn "force" "check_ks"
-        else
-            echo -e "After enabling the post-quantum setting, ${WColor}Reconnect to VPN${Color_Off}"
-            echo "at your earliest convenience."
-            echo
+            set_vars
         fi
-        echo
     fi
     change_setting "post-quantum"
 }
@@ -2780,6 +2788,14 @@ function meshnet_menu {
                     change_setting "post-quantum" "back"
                     if [[ "$postquantum" == "enabled" ]]; then
                         meshnet_menu
+                    fi
+                    if [[ "$connected" == "connected" ]]; then
+                        read -n 1 -r -p "$(echo -e "${WColor}Disconnect${Color_Off} the VPN now? (y/n) ")"; echo
+                        echo
+                        if [[ $REPLY =~ ^[Yy]$ ]]; then
+                            disconnect_vpn "force" "check_ks"
+                            set_vars
+                        fi
                     fi
                 fi
                 change_setting "meshnet" "back"
