@@ -37,6 +37,8 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.18.3"      # 22 Jul 2024 Bug fixes. Option to disable virtual locations. Allowlist issue:  https://github.com/NordSecurity/nordvpn-linux/issues/512
 #nord_version="nordvpn=3.18.4"      # 19 Aug 2024 Bug fixes - routing, tray, dedicated-ip, gateway, allowlist.
 #nord_version="nordvpn=3.18.5"      # 05 Sep 2024 Internal changes.
+#nord_version="nordvpn=3.19.0"      # 30 Sep 2024 Post-Quantum VPN added.
+#nord_version="nordvpn=3.19.1"      # 19 Nov 2024 Bugfixes. Meshnet fileshare library changed.
 #
 # v3.15.0+ can login using a token. Leave blank for earlier versions.
 # To create a token visit https://my.nordaccount.com/ - Services - NordVPN - Manual Setup - Generate New Token
@@ -55,8 +57,9 @@ function default_settings {
     #nordvpn set tray disabled
     #nordvpn set notify disabled
     #nordvpn set virtual-location disabled
-    #nordvpn set killswitch enabled
+    #nordvpn set post-quantum enabled
     #nordvpn connect --group P2P United_States
+    #nordvpn set killswitch enabled
     #
 }
 function linecolor {
@@ -112,7 +115,7 @@ function installnord {
         linecolor "green" "Adding the NordVPN repository."
         echo
         cd "/home/$USER/Downloads" || exit
-        wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
+        wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn-release/nordvpn-release_1.0.0_all.deb
         echo
         sudo apt install "/home/$USER/Downloads/nordvpn-release_1.0.0_all.deb" -y
     fi
@@ -198,7 +201,7 @@ function changelog {
     zcat "$nordchangelog" | head -n 15
     echo
     linecolor "green" "https://nordvpn.com/blog/nordvpn-linux-release-notes/"
-    linecolor "green" "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/"
+    linecolor "green" "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/"
 }
 function reload_cinnapplet {
     # reload the "bash-sensors" Cinnamon applet
