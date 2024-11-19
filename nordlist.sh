@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.19.0 on Linux Mint 21.3
-# October 4, 2024
+# Tested with NordVPN Version 3.19.1 on Linux Mint 21.3
+# November 19, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -13,7 +13,6 @@
 # https://github.com/ph202107/nordlist/tree/main/screenshots
 #
 # https://github.com/ph202107/nordlist
-# /u/pennyhoard20 on reddit
 # Suggestions/feedback welcome
 #
 # =====================================================================
@@ -159,6 +158,10 @@ exitlogo="y"
 # and the VPN is connected.  "y" or "n"
 exitkillswitch="n"
 #
+# Prompt to disable the Kill Switch when the script exits and
+# the VPN is disconnected.  "y" or "n"
+exitks_prompt="y"
+#
 # Ping the connected server when the script exits.  "y" or "n"
 exitping="n"
 #
@@ -257,7 +260,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # This list is subject to change and must be updated manually.
 # Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
 nordvirtual=(
-"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lagos" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nigeria" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
+"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Taipei" "Taiwan" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
 )
 #
 # =====================================================================
@@ -267,6 +270,7 @@ nordvirtual=(
 # Change the main menu figlet ASCII style in "function ascii_custom"
 # Change the figlet ASCII style for headings in "function heading"
 # Change the text and indicator colors in "function set_colors"
+# Change the indicator layout in "function indicators_display"
 #
 # =====================================================================
 # Allowlist & Default Settings
@@ -279,7 +283,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 396 (function main_menu).
+# The Main Menu starts on line 400 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -979,8 +983,11 @@ function set_vars {
     #
     if [[ "$postquantum" == "enabled" ]]; then
         pq="${EIColor}[PQ]${Color_Off}"
+        postquantumc="${EColor}$postquantum${Color_Off}"
     else
         pq="${DIColor}[PQ]${Color_Off}"
+        # $postquantum not listed when using openvpn
+        postquantumc="${DColor}disabled${Color_Off}"
     fi
     #
     if [[ -n "${allowlist[*]}" ]]; then # not empty
@@ -1101,6 +1108,12 @@ function status {
         fi
         if [[ "$exitload" =~ ^[Yy]$ ]]; then
             server_load
+        fi
+    else
+        # VPN disconnected
+        if [[ "$exitks_prompt" =~ ^[Yy]$ ]] && [[ "$killswitch" == "enabled" ]]; then
+            echo -e "${WColor}** Reminder **${Color_Off}"
+            change_setting "killswitch" "back"
         fi
     fi
     if [[ "$exitip" =~ ^[Yy]$ ]]; then
@@ -1860,14 +1873,17 @@ function technology_setting {
         disconnect_warning
         echo "OpenVPN is an open-source VPN protocol that is required"
         echo "for Obfuscated servers, a Dedicated-IP, and to use TCP."
-        echo "Post-Quantum encryption is not supported with OpenVPN."
+        echo "Post-Quantum VPN is not compatible with OpenVPN."
         echo
         echo "NordLynx is built around the WireGuard VPN protocol"
         echo "and may be faster with less overhead."
-        echo "NordLynx supports the use of Post-Quantum encryption."
+        echo "NordLynx supports the use of Post-Quantum VPN."
         echo
     fi
     echo -e "Currently using $technologydc."
+    if [[ "$technology" == "nordlynx" ]]; then
+        echo -e "$pq Post-Quantum VPN is $postquantumc."
+    fi
     echo
     if [[ "$fast3" =~ ^[Yy]$ ]] && [[ "$1" != "back" ]]; then
         echo -e "${FColor}[F]ast3 is enabled.  Changing the Technology.${Color_Off}"
@@ -2080,7 +2096,7 @@ function change_setting {
                     ;;
                 "meshnet")
                     echo -e "${WColor}Wait 30s to refresh the peer list.${Color_Off}"
-                    echo "Try disconnecting VPN if Meshnet fails to enable."
+                    echo "Try disconnecting the VPN if Meshnet fails to enable."
                     echo
                     ;;
                 "post-quantum")
@@ -2275,8 +2291,10 @@ function landiscovery_setting {
     echo "192.168.0.0/16  172.16.0.0/12  10.0.0.0/8  169.254.0.0/16"
     echo
     if [[ -n "${allowlist[*]}" ]]; then
-        echo -e "$al Note: Enabling LAN-Discovery will remove any manually-added"
-        echo "     private subnets from the allowlist."
+        echo -e "${WColor}Note:${Color_Off} Enabling LAN-Discovery will remove private subnets from the allowlist."
+        echo
+        echo -e "$al Current Allowlist:"
+        printf '%s\n' "${allowlist[@]}"
         echo
     fi
     change_setting "lan-discovery"
@@ -2295,33 +2313,40 @@ function virtual_setting {
     change_setting "virtual-location"
 }
 function postquantum_setting {
+    # disconnect VPN when changing setting.  https://github.com/NordSecurity/nordvpn-linux/issues/637
+    # if $postquantum is enabled, the technology is NordLynx and Meshnet is disabled
+    # $postquantum has no value when using OpenVPN
     heading "Post-Quantum"
     echo "When Post-Quantum VPN is enabled, your connection uses cutting-edge"
     echo "cryptography designed to resist quantum computer attacks."
-    echo "Not compatible with OpenVPN or Meshnet."
-    echo "Refer to:"
+    echo "Not compatible with OpenVPN or Meshnet.  Refer to:"
     echo "https://nordvpn.com/blog/nordvpn-linux-post-quantum-encryption-support/"
     echo
-    if [[ "$technology" == "openvpn" ]] || [[ "$meshnet" == "enabled" ]] ; then
-        echo -e "The Technology is set to $technologydc."
-        echo -e "$mn Meshnet is $meshnetc."
+    if [[ "$connected" == "connected" ]] || [[ "$technology" == "openvpn" ]] || [[ "$meshnet" == "enabled" ]] ; then
+        echo -e "$pq Post-Quantum VPN is $postquantumc."
         echo
-        echo "To enable Post-Quantum VPN you must use NordLynx Technology and"
-        echo "have Meshnet disabled."
-        echo; echo
-        read -n 1 -s -r -p "Press any key to continue... "; echo
-        settings_menu
-    fi
-    if [[ "$connected" == "connected" ]]; then
-        # https://github.com/NordSecurity/nordvpn-linux/issues/637
-        echo -e "${WColor}Note:${Color_Off} The VPN is $connectedc."
-        echo "Enabling or disabling Post-Quantum also requires reconnecting to VPN."
+        echo -e "The VPN is $connectedc."
+        if [[ "$postquantum" == "enabled" ]]; then
+            echo
+            echo -e "${WColor}To disable Post-Quantum VPN you must disconnect from VPN.${Color_Off}"
+        else
+            echo -e "The Technology is set to $technologydc."
+            echo -e "$mn Meshnet is $meshnetc."
+            echo
+            echo -e "${WColor}To enable Post-Quantum VPN you must disconnect from VPN and"
+            echo -e "use NordLynx Technology with Meshnet disabled.${Color_Off}"
+        fi
         echo
-        read -n 1 -r -p "$(echo -e "${WColor}Disconnect${Color_Off} the VPN now? (y/n) ")"; echo
         echo
+        read -n 1 -r -p "Proceed? (y/n) "; echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             disconnect_vpn "force" "check_ks"
+            if [[ "$technology" == "openvpn" ]]; then if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi; nordvpn set technology nordlynx; fi
+            if [[ "$meshnet" == "enabled" ]]; then nordvpn set meshnet disabled; fi
             set_vars
+            echo
+        else
+            settings_menu
         fi
     fi
     change_setting "post-quantum"
@@ -2783,19 +2808,15 @@ function meshnet_menu {
                 clear -x
                 echo
                 if [[ "$postquantum" == "enabled" ]]; then
+                    echo -e "$pq Post-Quantum VPN is $postquantumc."
                     echo -e "${WColor}Meshnet is not compatible with Post-Quantum VPN.${Color_Off}"
+                    echo "Disable Post-Quantum before enabling Meshnet."
                     echo
-                    change_setting "post-quantum" "back"
-                    if [[ "$postquantum" == "enabled" ]]; then
+                    read -n 1 -r -p "Go to the 'Post-Quantum' setting? (y/n) "; echo
+                    if [[ $REPLY =~ ^[Yy]$ ]]; then
+                        postquantum_setting
+                    else
                         meshnet_menu
-                    fi
-                    if [[ "$connected" == "connected" ]]; then
-                        read -n 1 -r -p "$(echo -e "${WColor}Disconnect${Color_Off} the VPN now? (y/n) ")"; echo
-                        echo
-                        if [[ $REPLY =~ ^[Yy]$ ]]; then
-                            disconnect_vpn "force" "check_ks"
-                            set_vars
-                        fi
                     fi
                 fi
                 change_setting "meshnet" "back"
@@ -3342,7 +3363,7 @@ function account_menu {
                 ;;
             "Nord Repo")
                 echo
-                openlink "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main" "ask"
+                openlink "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/" "ask"
                 ;;
             "NordAccount")
                 echo
@@ -5330,7 +5351,7 @@ start
 #
 # Add repository and install:
 #   cd ~/Downloads
-#   wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/nordvpn-release_1.0.0_all.deb
+#   wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn-release/nordvpn-release_1.0.0_all.deb
 #   sudo apt install ~/Downloads/nordvpn-release_1.0.0_all.deb
 #   sudo apt update
 #   sudo apt install nordvpn
