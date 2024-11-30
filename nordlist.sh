@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.19.1 on Linux Mint 21.3
-# November 19, 2024
+# Tested with NordVPN Version 3.19.2 on Linux Mint 21.3
+# November 30, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
