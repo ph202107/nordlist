@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.19.2 on Linux Mint 21.3
-# November 30, 2024
+# December 3, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -245,9 +245,9 @@ fast6p="UDP"    # specify the protocol.  fast6p="UDP" or fast6p="TCP"
 # connect to that country instead of choosing a city.
 fast7="n"
 #
-# By default the [F] indicator will be set when any of the 'fast'
+# By default the 'F' indicator will be set when any of the 'fast'
 # options are enabled.
-# Modify 'allfast' if you want to display the [F] indicator only when
+# Modify 'allfast' if you want to display the 'F' indicator only when
 # specific 'fast' options are enabled.
 allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 #
@@ -600,48 +600,27 @@ function ascii_custom {
     fi
 }
 function indicators_display {
-    # Changes made here will be reflected in main_logo and settings_menu
-    # [NordLynx UDP][FW][RT][AN][KS][TP][OB][NO][TR][AC][IP6][MN][DNS][LD][VL][PQ][AL][F][SSH] = 88 columns
+    # The "nordvpn settings" enabled/disabled indicators shown on the main menu, settings menu, and group connect
+    # $1 = "group" - group menu indicators
     #
-    indall="$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns$ld$vl$pq$al$fst$sshi"
-    strip_indall=$(echo -e "$indall" | sed -r 's/\x1B\[[0-9;]*[mK]//g') # strip the color codes
-    indall_length="${#strip_indall}"
+    # Use any symbol to separate the indicators.  Set a color in function set_colors.
+    #indsep=" "         # blank space
+    #indsep="\u00B7"    # unicode middle-dot
+    indsep="\u2758"     # unicode vertical line
     #
-    if (( "$(tput cols)" > indall_length )); then
-        # Single line indicators
-        echo -e "$indall"
-        return
-    fi
-    # Double line indicators
-    # <indline1              >
-    # <fill1><indline2><fill2>
-    #
-    indline1="$techpro$fw$rt$an$ks$tp$ob$no$tr$ac$ip6$mn$dns"
-    indline2="$ld$vl$pq$al$fst$sshi"
-    #
-    fill1_char=" "          # fill character used at the start of line 2
-    fill2_char="\u00B7"     # fill character used at the end of line 2 (unicode 'middle dot')
-    #
-    # strip the color codes (ChatGPT 4)
-    strip_line1=$(echo -e "$indline1" | sed -r 's/\x1B\[[0-9;]*[mK]//g')
-    strip_line2=$(echo -e "$indline2" | sed -r 's/\x1B\[[0-9;]*[mK]//g')
-    strip_techpro=$(echo -e "$techpro" | sed -r 's/\x1B\[[0-9;]*[mK]//g')
-    #
-    line1_length="${#strip_line1}"
-    line2_length="${#strip_line2}"
-    fill1_length="${#strip_techpro}"    # align the indicators next to technology/protocol
-    #fill1_length="0"                   # use no fill at the start of line2
-    fill2_length="$(( line1_length - fill1_length - line2_length ))"
-    #
-    if (( fill1_length > 0 )); then
-        fill1=$(printf "${IFColor}${fill1_char}%.0s${Color_Off}" $(seq 1 "$fill1_length"))
+    if [[ "$1" == "group" ]]; then
+        echo -n "Current settings: "
+        indall=( "$techpro" "$fw" "$ks" "$ob" "$pq" )
     else
-        fill1=""
+        # shellcheck disable=SC2206 # word splitting (display only. $fst and $sshi may be empty)
+        indall=( $techpro $fw $rt $an $ks $tp $ob $no $tr $ac $ip6 $mn $dns $ld $vl $pq $al $fst $sshi )
     fi
-    fill2=$(printf "${IFColor}${fill2_char}%.0s${Color_Off}" $(seq 1 "$fill2_length"))
     #
-    echo -e "$indline1"
-    echo -e "$fill1$indline2$fill2"
+    for ind in "${indall[@]}";
+    do
+        echo -ne "${ind}${ISColor}${indsep}${Color_Off}"
+    done
+    echo -ne "\b \n"  # backspace to remove the final separator
 }
 function main_logo {
     # The ascii and stats shown above the main_menu and on script exit.
@@ -761,8 +740,8 @@ function set_colors {
     EIColor=${BGreen}       # Enabled indicator
     DColor=${LRed}          # Disabled text
     DIColor=${BRed}         # Disabled indicator
-    FColor=${LYellow}       # [F]ast text
-    FIColor=${BYellow}      # [F]ast indicator
+    FColor=${LYellow}       # Fast text
+    FIColor=${BYellow}      # Fast indicator
     TColor=${BPurple}       # Technology and Protocol text
     TIColor=${BPurple}      # Technology and Protocol indicator
     #
@@ -779,7 +758,7 @@ function set_colors {
     SVColor=${Color_Off}    # Server name
     IPColor=${Color_Off}    # IP address
     FVColor=${LCyan}        # Favorite|Dedicated-IP|Virtual label
-    IFColor=${DGrey}        # Indicators line two fill color
+    ISColor=${Color_Off}    # Indicators separator
     DLColor=${Green}        # Download stat
     ULColor=${Yellow}       # Upload stat
     UPColor=${Cyan}         # Uptime stat
@@ -871,7 +850,7 @@ function set_vars {
     fi
     protocoldc="${TColor}$protocold${Color_Off}"
     #
-    techpro="${TIColor}[$technologyd $protocold]${Color_Off}"
+    techpro="${TIColor}$technologyd\u00B7$protocold${Color_Off}"
     #
     if [[ "$connected" == "connected" ]]; then
         connectedc="${CNColor}$connected${Color_Off}"
@@ -884,126 +863,126 @@ function set_vars {
     fi
     #
     if [[ "$firewall" == "enabled" ]]; then
-        fw="${EIColor}[FW]${Color_Off}"
+        fw="${EIColor}FW${Color_Off}"
         firewallc="${EColor}$firewall${Color_Off}"
     else
-        fw="${DIColor}[FW]${Color_Off}"
+        fw="${DIColor}FW${Color_Off}"
         firewallc="${DColor}$firewall${Color_Off}"
     fi
     #
     if [[ "$routing" == "enabled" ]]; then
-        rt="${EIColor}[RT]${Color_Off}"
+        rt="${EIColor}RT${Color_Off}"
         routingc="${EColor}$routing${Color_Off}"
     else
-        rt="${DIColor}[RT]${Color_Off}"
+        rt="${DIColor}RT${Color_Off}"
         routingc="${DColor}$routing${Color_Off}"
     fi
     #
     if [[ "$analytics" == "enabled" ]]; then
-        an="${EIColor}[AN]${Color_Off}"
+        an="${EIColor}AN${Color_Off}"
     else
-        an="${DIColor}[AN]${Color_Off}"
+        an="${DIColor}AN${Color_Off}"
     fi
     #
     if [[ "$killswitch" == "enabled" ]]; then
-        ks="${EIColor}[KS]${Color_Off}"
+        ks="${EIColor}KS${Color_Off}"
         killswitchc="${EColor}$killswitch${Color_Off}"
     else
-        ks="${DIColor}[KS]${Color_Off}"
+        ks="${DIColor}KS${Color_Off}"
         killswitchc="${DColor}$killswitch${Color_Off}"
     fi
     #
     if [[ "$tplite" == "enabled" ]]; then
-        tp="${EIColor}[TP]${Color_Off}"
+        tp="${EIColor}TP${Color_Off}"
     else
-        tp="${DIColor}[TP]${Color_Off}"
+        tp="${DIColor}TP${Color_Off}"
     fi
     #
     if [[ "$obfuscate" == "enabled" ]]; then
-        ob="${EIColor}[OB]${Color_Off}"
+        ob="${EIColor}OB${Color_Off}"
         obfuscatec="${EColor}$obfuscate${Color_Off}"
     else
-        ob="${DIColor}[OB]${Color_Off}"
+        ob="${DIColor}OB${Color_Off}"
         obfuscatec="${DColor}$obfuscate${Color_Off}"
     fi
     #
     if [[ "$notify" == "enabled" ]]; then
-        no="${EIColor}[NO]${Color_Off}"
+        no="${EIColor}NO${Color_Off}"
     else
-        no="${DIColor}[NO]${Color_Off}"
+        no="${DIColor}NO${Color_Off}"
     fi
     #
     if [[ "$tray" == "enabled" ]]; then
-        tr="${EIColor}[TR]${Color_Off}"
+        tr="${EIColor}TR${Color_Off}"
     else
-        tr="${DIColor}[TR]${Color_Off}"
+        tr="${DIColor}TR${Color_Off}"
     fi
     #
     if [[ "$autoconnect" == "enabled" ]]; then
-        ac="${EIColor}[AC]${Color_Off}"
+        ac="${EIColor}AC${Color_Off}"
     else
-        ac="${DIColor}[AC]${Color_Off}"
+        ac="${DIColor}AC${Color_Off}"
     fi
     #
     if [[ "$ipversion6" == "enabled" ]]; then
-        ip6="${EIColor}[IP6]${Color_Off}"
+        ip6="${EIColor}IP6${Color_Off}"
     else
-        ip6="${DIColor}[IP6]${Color_Off}"
+        ip6="${DIColor}IP6${Color_Off}"
     fi
     #
     if [[ "$meshnet" == "enabled" ]]; then
-        mn="${EIColor}[MN]${Color_Off}"
+        mn="${EIColor}MN${Color_Off}"
         meshnetc="${EColor}$meshnet${Color_Off}"
     else
-        mn="${DIColor}[MN]${Color_Off}"
+        mn="${DIColor}MN${Color_Off}"
         meshnetc="${DColor}$meshnet${Color_Off}"
     fi
     #
     if [[ "$customdns" == "disabled" ]]; then # reversed
-        dns="${DIColor}[DNS]${Color_Off}"
+        dns="${DIColor}DNS${Color_Off}"
     else
-        dns="${EIColor}[DNS]${Color_Off}"
+        dns="${EIColor}DNS${Color_Off}"
     fi
     #
     if [[ "$landiscovery" == "enabled" ]]; then
-        ld="${EIColor}[LD]${Color_Off}"
+        ld="${EIColor}LD${Color_Off}"
         landiscoveryc="${EColor}$landiscovery${Color_Off}"
     else
-        ld="${DIColor}[LD]${Color_Off}"
+        ld="${DIColor}LD${Color_Off}"
         landiscoveryc="${DColor}$landiscovery${Color_Off}"
     fi
     #
     if [[ "$virtual" == "enabled" ]]; then
-        vl="${EIColor}[VL]${Color_Off}"
+        vl="${EIColor}VL${Color_Off}"
         virtualc="${EColor}$virtual${Color_Off}"
     else
-        vl="${DIColor}[VL]${Color_Off}"
+        vl="${DIColor}VL${Color_Off}"
         virtualc="${DColor}$virtual${Color_Off}"
     fi
     #
     if [[ "$postquantum" == "enabled" ]]; then
-        pq="${EIColor}[PQ]${Color_Off}"
+        pq="${EIColor}PQ${Color_Off}"
         postquantumc="${EColor}$postquantum${Color_Off}"
     else
-        pq="${DIColor}[PQ]${Color_Off}"
+        pq="${DIColor}PQ${Color_Off}"
         # $postquantum not listed when using openvpn
         postquantumc="${DColor}disabled${Color_Off}"
     fi
     #
     if [[ -n "${allowlist[*]}" ]]; then # not empty
-        al="${EIColor}[AL]${Color_Off}"
+        al="${EIColor}AL${Color_Off}"
     else
-        al="${DIColor}[AL]${Color_Off}"
+        al="${DIColor}AL${Color_Off}"
     fi
     #
     if [[ ${allfast[*]} =~ [Yy] ]]; then
-        fst="${FIColor}[F]${Color_Off}"
+        fst="${FIColor}F${Color_Off}"
     else
         fst=""
     fi
     #
     if "$usingssh"; then
-        sshi="${DIColor}[${FIColor}SSH${DIColor}]${Color_Off}"
+        sshi="${FIColor}SSH${Color_Off}"
     else
         sshi=""
     fi
@@ -1180,7 +1159,7 @@ function openlink {
     #
     if "$usingssh"; then
         echo
-        echo -e "$sshi ${FColor}The script is running over SSH${Color_Off}"
+        echo -e "${FColor}The script is running over SSH${Color_Off}"
         echo
     fi
     if [[ "$2" == "ask" ]] || "$usingssh"; then
@@ -1474,7 +1453,7 @@ function city_menu {
     heading "$xcountry"
     echo
     if [[ "$fast7" =~ ^[Yy]$ ]] && [[ -z "$1" ]]; then
-        echo -e "${FColor}[F]ast7 is enabled. Connect to the country not a city.${Color_Off}"
+        echo -e "${FColor}Fast7 is enabled. Connect to the country not a city.${Color_Off}"
         echo
         echo -e "Connect to ${LColor}$xcountry${Color_Off}."
         disconnect_vpn
@@ -1694,7 +1673,7 @@ function killswitch_groups {
     if [[ "$killswitch" == "enabled" ]]; then return; fi
     #
     if [[ "$fast5" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}[F]ast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
+        echo -e "${FColor}Fast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
         killswitch_enable
     elif [[ "$exitkillswitch" =~ ^[Yy]$ ]]; then
         echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
@@ -1791,7 +1770,7 @@ function group_connect {
             ;;
     esac
     echo
-    echo -e "Current settings: $techpro$fw$ks$ob$pq"
+    indicators_display "group"
     echo
     echo "To connect to the $1 group the following"
     echo "changes will be made (if necessary):"
@@ -1816,7 +1795,7 @@ function group_connect {
     echo -e "Connect to the $1 group ${EColor}$location${Color_Off}"
     if [[ "$fast4" =~ ^[Yy]$ ]]; then
         echo
-        echo -e "${FColor}[F]ast4 is enabled.  Automatically connect.${Color_Off}"
+        echo -e "${FColor}Fast4 is enabled.  Automatically connect.${Color_Off}"
         REPLY="y"
     else
         echo -e "${LColor}(Type ${FIColor}S${LColor} to specify a location)${Color_Off}"
@@ -1886,7 +1865,7 @@ function technology_setting {
     fi
     echo
     if [[ "$fast3" =~ ^[Yy]$ ]] && [[ "$1" != "back" ]]; then
-        echo -e "${FColor}[F]ast3 is enabled.  Changing the Technology.${Color_Off}"
+        echo -e "${FColor}Fast3 is enabled.  Changing the Technology.${Color_Off}"
         REPLY="y"
     elif [[ "$technology" == "openvpn" ]]; then
         read -n 1 -r -p "Change the Technology to NordLynx? (y/n) "; echo
@@ -1966,7 +1945,7 @@ function protocol_setting {
     echo -e "The Protocol is set to $protocoldc."
     echo
     if [[ "$fast3" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}[F]ast3 is enabled.  Changing the Protocol.${Color_Off}"
+        echo -e "${FColor}Fast3 is enabled.  Changing the Protocol.${Color_Off}"
         REPLY="y"
     elif [[ "$protocol" == "UDP" ]]; then
         read -n 1 -r -p "Change the Protocol to TCP? (y/n) "; echo
@@ -1995,7 +1974,7 @@ function protocol_ask {
     echo -e "The Protocol is set to $protocoldc."
     echo
     if [[ "$fast6" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}[F]ast6 is enabled.  Always choose $fast6p.${Color_Off}"
+        echo -e "${FColor}Fast6 is enabled.  Always choose $fast6p.${Color_Off}"
         echo
         if [[ "$protocol" == "UDP" ]] && [[ "$fast6p" == "TCP" ]]; then
             nordvpn set protocol TCP; wait
@@ -2058,7 +2037,7 @@ function change_setting {
     echo -e "$chgind $chgname is $chgvarc."
     echo
     if [[ "$fast2" =~ ^[Yy]$ ]] && [[ "$2" != "back" ]]; then
-        echo -e "${FColor}[F]ast2 is enabled.  Changing the setting.${Color_Off}"
+        echo -e "${FColor}Fast2 is enabled.  Changing the setting.${Color_Off}"
         REPLY="y"
         if [[ "$chgvar" == "enabled" ]] && [[ "$1" == "routing" ]]; then
             # confirmation prompt before disable routing
@@ -2288,7 +2267,7 @@ function landiscovery_setting {
     echo "the VPN, using Meshnet traffic routing, or with the Kill Switch enabled."
     echo
     echo "Automatically allow traffic from these subnets:"
-    echo "192.168.0.0/16  172.16.0.0/12  10.0.0.0/8  169.254.0.0/16"
+    echo "10.0.0.0/8  169.254.0.0/16  172.16.0.0/12  192.168.0.0/16"
     echo
     if [[ -n "${allowlist[*]}" ]]; then
         echo -e "${WColor}Note:${Color_Off} Enabling LAN-Discovery will remove private subnets from the allowlist."
@@ -2384,7 +2363,7 @@ function obfuscate_setting {
     echo -e "$ob Obfuscate is $obfuscatec."
     echo
     if [[ "$fast3" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}[F]ast3 is enabled.  Changing the setting.${Color_Off}"
+        echo -e "${FColor}Fast3 is enabled.  Changing the setting.${Color_Off}"
         REPLY="y"
     elif [[ "$obfuscate" == "enabled" ]]; then
         read -n 1 -r -p "$(echo -e "${DColor}Disable${Color_Off} Obfuscate? (y/n) ")"; echo
