@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.19.2 on Linux Mint 21.3
-# December 3, 2024
+# December 8, 2024
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -260,7 +260,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # This list is subject to change and must be updated manually.
 # Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
 nordvirtual=(
-"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Malta" "Manila" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Taipei" "Taiwan" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
+"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Angola" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Luanda" "Malta" "Manila" "Maputo" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mozambique" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Taipei" "Taiwan" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
 )
 #
 # =====================================================================
@@ -600,27 +600,30 @@ function ascii_custom {
     fi
 }
 function indicators_display {
-    # The "nordvpn settings" enabled/disabled indicators shown on the main menu, settings menu, and group connect
+    # The "nordvpn settings" enabled/disabled indicators shown on the main menu, settings menu, and group connect.
     # $1 = "group" - group menu indicators
     #
     # Use any symbol to separate the indicators.  Set a color in function set_colors.
     #indsep=" "         # blank space
-    #indsep="\u00B7"    # unicode middle-dot
-    indsep="\u2758"     # unicode vertical line
+    #indsep="\u2758"    # unicode vertical line
+    indsep="\u00B7"     # unicode middle-dot
     #
     if [[ "$1" == "group" ]]; then
         echo -n "Current settings: "
         indall=( "$techpro" "$fw" "$ks" "$ob" "$pq" )
     else
-        # shellcheck disable=SC2206 # word splitting (display only. $fst and $sshi may be empty)
-        indall=( $techpro $fw $rt $an $ks $tp $ob $no $tr $ac $ip6 $mn $dns $ld $vl $pq $al $fst $sshi )
+        indall=( "$techpro" "$fw" "$rt" "$an" "$ks" "$tp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$pq" "$al" )
+        if [[ -n "$fst" ]]; then indall+=( "$fst" ); fi
+        if [[ -n "$sshi" ]]; then indall+=( "$sshi" ); fi
     fi
-    #
-    for ind in "${indall[@]}";
-    do
-        echo -ne "${ind}${ISColor}${indsep}${Color_Off}"
+    # array index (starts at zero)
+    for idx in "${!indall[@]}"; do
+        echo -ne "${indall[idx]}"
+        if (( (idx + 1) < "${#indall[@]}" )); then
+            echo -ne "${ISColor}$indsep${Color_Off}"
+        fi
     done
-    echo -ne "\b \n"  # backspace to remove the final separator
+    echo
 }
 function main_logo {
     # The ascii and stats shown above the main_menu and on script exit.
@@ -758,7 +761,7 @@ function set_colors {
     SVColor=${Color_Off}    # Server name
     IPColor=${Color_Off}    # IP address
     FVColor=${LCyan}        # Favorite|Dedicated-IP|Virtual label
-    ISColor=${Color_Off}    # Indicators separator
+    ISColor=${DGrey}        # Indicators separator
     DLColor=${Green}        # Download stat
     ULColor=${Yellow}       # Upload stat
     UPColor=${Cyan}         # Uptime stat
@@ -1043,7 +1046,7 @@ function ipinfo_curl {
         echo
     else
         set_vars
-        echo -n "Request timed out"
+        echo -n "Request failed"
         if [[ "$connected" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
             echo -ne " - $ks"
         fi
@@ -3712,7 +3715,7 @@ function server_load {
     fi
     #
     if [[ -z $sload ]]; then
-        echo "Request timed out."
+        echo "Request failed."
     elif (( sload <= 30 )); then
         echo -e "${EIColor}$sload%${Color_Off}"
     elif (( sload <= 60 )); then
@@ -4854,7 +4857,7 @@ function quick_connect {
     fi
     echo
     if [[ -z $bestserver ]]; then
-        echo -e "Request timed out. Trying: '${LColor}nordvpn connect${Color_Off}'"
+        echo -e "Request failed. Trying: '${LColor}nordvpn connect${Color_Off}'"
         echo
         nordvpn connect
     else
