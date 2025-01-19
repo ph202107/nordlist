@@ -61,7 +61,7 @@ function list_socks5 {
         "san-francisco.us.socks.nordhold.net"
         "detroit.us.socks.nordhold.net"
         #
-        # Server list retrieved via NordVPN Public API on 22 Jul 2024
+        # Server list retrieved via NordVPN Public API on 18 Jan 2025
         # Subject to change
         "socks-nl1.nordvpn.com (Amsterdam)"
         "socks-nl2.nordvpn.com (Amsterdam)"
@@ -73,7 +73,7 @@ function list_socks5 {
         "socks-nl8.nordvpn.com (Amsterdam)"
         "socks-us10.nordvpn.com (Atlanta)"
         "socks-us27.nordvpn.com (Atlanta)"
-        "socks-us7.nordvpn.com (Atlanta)"
+        "socks-us54.nordvpn.com (Atlanta)"
         "socks-us8.nordvpn.com (Atlanta)"
         "socks-us9.nordvpn.com (Atlanta)"
         "socks-us1.nordvpn.com (Dallas)"
