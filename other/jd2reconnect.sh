@@ -4,7 +4,7 @@
 # "reconnect" option.  It can also run standalone or with other apps.
 #
 # The script creates a list of the top 20 Recommended Servers based on
-# your current location.  When the script is called it checks if your
+# your current VPN location. When the script is called it checks if your
 # current server is in the list, deletes that entry, and connects to
 # the next server. When no servers remain it connects to another city
 # and retrieves a new list.
@@ -12,7 +12,7 @@
 # Requires 'curl' and 'jq'
 #   "sudo apt install curl jq"
 # Make sure the script is executable
-#   "chmod +x jd.reconnect.sh"
+#   "chmod +x jd2reconnect.sh"
 #
 # Login and connect to VPN before use.
 #
@@ -39,7 +39,7 @@
 # open a terminal and run 'kill <PID>', then restart JD2.
 #
 # To begin with a fresh server list simply delete the existing one.
-# A new list will be created.
+# A new list will be created based on your current VPN location.
 #
 # The script will populate the list with recommended servers from the
 # NordVPN API. You could also create a custom server list instead.
@@ -148,7 +148,7 @@ function checkserverlist {
 function updateserverlist {
     log "Retrieving a server list from NordVPN API..."
     #
-    if ! curl --silent "https://api.nordvpn.com/v1/servers/recommendations?limit=20" | jq -r '.[].hostname' > "$jdlist"; then
+    if ! curl "https://api.nordvpn.com/v1/servers/recommendations?limit=20" | jq -r '.[].hostname' > "$jdlist"; then
         log "Failed to retrieve a server list from API. Exit." "ERROR"
         exit 1
     fi
@@ -158,8 +158,8 @@ function updateserverlist {
         exit 1
     fi
     echo "EOF" >> "$jdlist"
-    log "Server list retrieved successfully:"
-    log "$jdlist"
+    log "Server list retrieved successfully."
+    log "List: $jdlist"
 }
 function getcurrentinfo {
     # current VPN status information
@@ -196,7 +196,7 @@ function getcurrentinfo {
 function checkuptime {
     # check the current VPN uptime and pause if necessary
     if (( currentuptime < minuptime )); then
-        log "VPN Uptime: ${currentuptime}m  Min: ${minuptime}m  Wait:${waittime}m  PID: $$" "WARNING"
+        log "VPN Uptime: ${currentuptime}m  Min: ${minuptime}m  Wait: ${waittime}m  PID: $$" "WARNING"
         log "Pausing for $waittime minutes before reconnecting."
         log "Run 'kill $$' to stop the script."
     fi
@@ -204,16 +204,16 @@ function checkuptime {
     while (( currentuptime < minuptime )); do
         sleep 60
         getcurrentinfo
-        log "VPN Uptime: ${currentuptime}m  Min: ${minuptime}m  Wait:${waittime}m"
+        log "VPN Uptime: ${currentuptime}m  Min: ${minuptime}m  Wait: ${waittime}m"
         if (( currentuptime >= minuptime )); then
             log "Good to go."
             break
         fi
     done
     log "VPN $norduptime"
-    log "Current Server: $currentcity $shorthost"
 }
 function changeserver {
+    log "Current Server: $currentcity $shorthost"
     # remove the current server from the list
     if grep -q "$currenthost" "$jdlist"; then
         grep -v "$currenthost" "$jdlist" > "${jdlist}.tmp" && mv "${jdlist}.tmp" "$jdlist"
