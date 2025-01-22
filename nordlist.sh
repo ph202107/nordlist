@@ -302,10 +302,10 @@ function set_defaults {
     #setting_disable "killswitch"
     #
     # Required: Choose one of these options for Technology and Protocol
-    set_techpro "NordLynx" "UDP"            # disables obfuscate
-    #set_techpro "OpenVPN" "UDP"            # disables post-quantum
-    #set_techpro "OpenVPN" "TCP"            # disables post-quantum
-    #set_techpro "NordWhisper" "WebTunnel"  # disables obfuscate and post-quantum
+    techpro_set "NordLynx" "UDP"            # disables obfuscate
+    #techpro_set "OpenVPN" "UDP"            # disables post-quantum
+    #techpro_set "OpenVPN" "TCP"            # disables post-quantum
+    #techpro_set "NordWhisper" "WebTunnel"  # disables obfuscate and post-quantum
     #
     #setting_enable "post-quantum"      # requires NordLynx, disables meshnet
     setting_disable "post-quantum"
@@ -1010,10 +1010,10 @@ function disconnect_vpn {
 }
 function ipinfo_curl {
     echo -n "External IP: "
-    response=$( timeout 5 curl --silent "https://ipinfo.io/" )
+    response=$(timeout 5 curl --silent --fail "https://ipinfo.io/")
     #
-    # check if response is empty or invalid JSON
-    if ! echo "$response" | jq empty 2>/dev/null; then
+    # request timeout or fail, or the json is empty
+    if [[ $? -ne 0 || -z "$response" ]] || ! echo "$response" | jq empty 2>/dev/null; then
         set_vars
         echo -n "Request failed"
         if [[ "$status" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
@@ -1827,7 +1827,7 @@ function group_connect {
         main_menu
     fi
 }
-function set_techpro {
+function techpro_set {
     # Set the technology and protocol.  arguments are case insensitive
     # $1 = technology - "nordlynx" "openvpn" "nordwhisper"
     # $2 = protocol - "tcp" "udp" "webtunnel"
@@ -1915,23 +1915,23 @@ function techpro_menu {
         case $xtech in
             "NordLynx-UDP")
                 echo
-                set_techpro "nordlynx" "udp"
+                techpro_set "nordlynx" "udp"
                 setting_change "post-quantum" "back"
                 break
                 ;;
             "OpenVPN-UDP")
                 echo
-                set_techpro "openvpn" "udp"
+                techpro_set "openvpn" "udp"
                 break
                 ;;
             "OpenVPN-TCP")
                 echo
-                set_techpro "openvpn" "tcp"
+                techpro_set "openvpn" "tcp"
                 break
                 ;;
             "NordWhisper-WebTunnel")
                 echo
-                set_techpro "nordwhisper" "webtunnel"
+                techpro_set "nordwhisper" "webtunnel"
                 break
                 ;;
             "Exit")
@@ -2314,7 +2314,7 @@ function postquantum_setting {
         echo
         #
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            set_techpro "nordlynx" "udp"    # will disconnect
+            techpro_set "nordlynx" "udp"    # will disconnect
             setting_disable "meshnet"
             set_vars
         else
