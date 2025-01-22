@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.19.2 on Linux Mint 21.3
-# December 8, 2024
+# Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
+# January 22, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -9,11 +9,11 @@
 # scripting is new to me and I'm learning as I go.  I added a
 # lot of comments to help fellow newbies customize the script.
 #
+# Suggestions and feedback are welcome!  Create a new issue here:
+# https://github.com/ph202107/nordlist
+#
 # Screenshots:
 # https://github.com/ph202107/nordlist/tree/main/screenshots
-#
-# https://github.com/ph202107/nordlist
-# Suggestions/feedback welcome
 #
 # =====================================================================
 # Instructions
@@ -93,7 +93,7 @@ dipwhere=""
 acwhere=""
 #
 # Specify your Custom-DNS servers with a description.
-# Can specify up to 3 IP addresses separated by a space.
+# Can specify up to three DNS IP addresses separated by a space.
 default_dns="103.86.96.100 103.86.99.100"; dnsdesc="Nord"
 #
 # Specify a VPN hostname to use for testing while the VPN is off.
@@ -120,12 +120,12 @@ wgdir="/home/$USER/Downloads"
 # Specify the absolute path and filename to store a .json of all the
 # NordVPN servers (about 20MB). Avoids API server timeouts.  Create the
 # list at:  Tools - NordVPN API - All VPN Servers
-nordserversfile="/home/$USER/Downloads/nord_allservers.json"
+serversfile="/home/$USER/Downloads/nord_allservers.json"
 #
 # Specify the absolute path and filename to store a local list of your
 # favorite NordVPN servers.  eg. Low ping servers or streaming servers.
 # Create the list in: 'Favorites'
-nordfavoritesfile="/home/$USER/Downloads/nord_favorites.txt"
+favoritesfile="/home/$USER/Downloads/nord_favorites.txt"
 #
 # Specify the absolute path and filename to save a copy of the
 # nordvpnd.service logs.  Create the file in: Settings - Logs
@@ -166,7 +166,7 @@ exitks_prompt="y"
 exitping="n"
 #
 # Query the current server load when the script exits.  "y" or "n"
-# Requires 'curl' 'jq' and the local 'nordserversfile' mentioned above.
+# Requires 'curl' 'jq' and the local 'serversfile' mentioned above.
 exitload="n"
 #
 # Show your external IP address when the script exits.  "y" or "n"
@@ -224,32 +224,12 @@ fast1="n"
 # IPv6, LAN-Discovery, Virtual-Location, Post-Quantum
 fast2="n"
 #
-# Automatically change these settings which also disconnect the VPN:
-# Technology, Protocol, Obfuscate
-fast3="n"
-#
-# Automatically disconnect, change settings, and connect to these
-# groups: Obfuscated, Double-VPN, Onion+VPN, P2P, Dedicated-IP
-fast4="n"
-#
-# Always enable the Kill Switch (& Firewall) when connecting to groups.
-# (Does not apply when connecting through the "All_Groups" menu.)
-fast5="n"
-#
-# Always choose the same protocol when asked to choose TCP or UDP.
-# (Unless changing the setting through Settings - Protocol.)
-fast6="n"       # "y" or "n"
-fast6p="UDP"    # specify the protocol.  fast6p="UDP" or fast6p="TCP"
-#
 # When choosing a country from the 'Countries' menu, immediately
 # connect to that country instead of choosing a city.
-fast7="n"
+fast3="n"
 #
-# By default the 'F' indicator will be set when any of the 'fast'
-# options are enabled.
-# Modify 'allfast' if you want to display the 'F' indicator only when
-# specific 'fast' options are enabled.
-allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
+# The 'F' indicator will display when any of these options are enabled:
+allfast=( "$fast1" "$fast2" "$fast3" )
 #
 # =====================================================================
 # Virtual Servers
@@ -260,7 +240,7 @@ allfast=("$fast1" "$fast2" "$fast3" "$fast4" "$fast5" "$fast6" "$fast7")
 # This list is subject to change and must be updated manually.
 # Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
 nordvirtual=(
-"Accra" "Algeria" "Algiers" "Andorra" "Andorra_la_Vella" "Angola" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Luanda" "Malta" "Manila" "Maputo" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mozambique" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Sri_Lanka" "Taipei" "Taiwan" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
+"Accra" "Algeria" "Algiers" "Amman" "Andorra" "Andorra_la_Vella" "Angola" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Bahrain" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dakar" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Jordan" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Kuwait" "Kuwait_City" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Luanda" "Malta" "Manama" "Manila" "Maputo" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mozambique" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Senegal" "Sri_Lanka" "Taipei" "Taiwan" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Tunis" "Tunisia" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
 )
 #
 # =====================================================================
@@ -283,7 +263,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 400 (function main_menu).
+# The Main Menu starts on line 370 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -304,80 +284,70 @@ function allowlist_commands {
     echo
 }
 function set_defaults {
-    echo
     echo -e "${LColor}Apply the default configuration.${Color_Off}"
     echo
     # Calling this function can be useful to change multiple settings
     # at once and get back to a typical configuration.
+    # Note: The VPN will be disconnected
     #
     # Configure as needed and comment-out the line below.
-    echo -e "${WColor}** 'function set_defaults' not configured **${Color_Off}"; echo; return
-    #
-    # Notes:
-    # - The VPN will be disconnected
-    # - Kill Switch requires Firewall
-    # - NordLynx is UDP only
-    # - Obfuscate requires OpenVPN
-    # - TPLite disables CustomDNS and vice versa
-    # - LAN-Discovery will remove private subnets from Allowlist
-    # - Post Quantum VPN requires NordLynx, and Meshnet disabled
+    echo -e "${WColor}** Edit 'function set_defaults' to configure this feature **${Color_Off}"; echo; return
     #
     # For each setting uncomment one of the two choices (or neither).
     #
-    if [[ "$firewall" == "disabled" ]]; then nordvpn set firewall enabled; fi
-    #if [[ "$firewall" == "enabled" ]]; then nordvpn set firewall disabled; fi
+    setting_enable "firewall"           # enables the firewall
+    #setting_disable "firewall"         # disables the firewall. also disables killswitch
     #
-    if [[ "$killswitch" == "disabled" ]]; then nordvpn set killswitch enabled; fi
-    #if [[ "$killswitch" == "enabled" ]]; then nordvpn set killswitch disabled; fi
+    setting_enable "killswitch"         # enables the kill switch. also enables firewall
+    #setting_disable "killswitch"
     #
-    disconnect_vpn "force"
+    # Required: Choose one of these options for Technology and Protocol
+    set_techpro "NordLynx" "UDP"            # disables obfuscate
+    #set_techpro "OpenVPN" "UDP"            # disables post-quantum
+    #set_techpro "OpenVPN" "TCP"            # disables post-quantum
+    #set_techpro "NordWhisper" "WebTunnel"  # disables obfuscate and post-quantum
     #
-    if [[ "$technology" == "openvpn" ]]; then if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi; nordvpn set technology nordlynx; set_vars; fi
-    #if [[ "$technology" == "nordlynx" ]]; then if [[ "$postquantum" == "enabled" ]]; then nordvpn set post-quantum disabled; fi; nordvpn set technology openvpn; set_vars; fi
+    #setting_enable "post-quantum"      # requires NordLynx, disables meshnet
+    setting_disable "post-quantum"
     #
-    if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi
-    #if [[ "$protocol" == "UDP" ]]; then nordvpn set protocol TCP; fi
+    setting_enable "routing"            # typically this setting should be enabled
+    #setting_disable "routing"
     #
-    if [[ "$routing" == "disabled" ]]; then nordvpn set routing enabled; fi
-    #if [[ "$routing" == "enabled" ]]; then nordvpn set routing disabled; fi
+    setting_enable "analytics"
+    #setting_disable "analytics"
     #
-    #if [[ "$analytics" == "disabled" ]]; then nordvpn set analytics enabled; fi
-    #if [[ "$analytics" == "enabled" ]]; then nordvpn set analytics disabled; fi
+    #setting_enable "threatprotectionlite"  # disables Custom-DNS
+    setting_disable "threatprotectionlite"
     #
-    #if [[ "$tplite" == "disabled" ]]; then nordvpn set threatprotectionlite enabled; fi
-    if [[ "$tplite" == "enabled" ]]; then nordvpn set threatprotectionlite disabled; fi
+    #setting_enable "obfuscate"             # requires OpenVPN
+    setting_disable "obfuscate"
     #
-    #if [[ "$obfuscate" == "disabled" ]]; then nordvpn set obfuscate enabled; fi
-    if [[ "$obfuscate" == "enabled" ]]; then nordvpn set obfuscate disabled; fi
+    #setting_enable "notify"
+    setting_disable "notify"
     #
-    #if [[ "$notify" == "disabled" ]]; then nordvpn set notify enabled; fi
-    if [[ "$notify" == "enabled" ]]; then nordvpn set notify disabled; fi
+    #setting_enable "tray"
+    setting_disable "tray"
     #
-    #if [[ "$tray" == "disabled" ]]; then nordvpn set tray enabled; fi
-    #if [[ "$tray" == "enabled" ]]; then nordvpn set tray disabled; fi
+    #setting_enable "ipv6"
+    setting_disable "ipv6"
     #
-    #if [[ "$autoconnect" == "disabled" ]]; then nordvpn set autoconnect enabled $acwhere; fi
-    if [[ "$autoconnect" == "enabled" ]]; then nordvpn set autoconnect disabled; fi
+    #setting_enable "meshnet"           # disables post-quantum
+    #setting_disable "meshnet"
     #
-    #if [[ "$ipversion6" == "disabled" ]]; then nordvpn set ipv6 enabled; fi
-    if [[ "$ipversion6" == "enabled" ]]; then nordvpn set ipv6 disabled; fi
+    setting_enable "lan-discovery"      # will remove private subnets from allowlist
+    #setting_disable "lan-discovery"
     #
-    #if [[ "$meshnet" == "disabled" ]]; then nordvpn set meshnet enabled; fi
-    #if [[ "$meshnet" == "enabled" ]]; then nordvpn set meshnet disabled; fi
+    #setting_enable "virtual-location"
+    setting_disable "virtual-location"
     #
-    #if [[ "$customdns" == "disabled" ]]; then nordvpn set dns $default_dns; fi
-    #if [[ "$customdns" != "disabled" ]]; then nordvpn set dns disabled; fi
+    #setting_enable "autoconnect"       # will use location "$acwhere" if specified above
+    setting_disable "autoconnect"
     #
-    #if [[ "$landiscovery" == "disabled" ]]; then nordvpn set lan-discovery enabled; fi
-    #if [[ "$landiscovery" == "enabled" ]]; then nordvpn set lan-discovery disabled; fi
+    #setting_enable "dns"               # will use the "$default_dns" specified above.  disables threatprotectionlite
+    setting_disable "dns"
     #
-    #if [[ "$virtual" == "disabled" ]]; then nordvpn set virtual-location enabled; fi
-    #if [[ "$virtual" == "enabled" ]]; then nordvpn set virtual-location disabled; fi
+    #allowlist_commands                 # run your allowlist configuration commands
     #
-    #if [[ "$postquantum" == "disabled" ]]; then nordvpn set post-quantum enabled; fi
-    #if [[ "$postquantum" == "enabled" ]]; then nordvpn set post-quantum disabled; fi
-    #
-    echo
 }
 function main_menu {
     if [[ "$1" == "start" ]]; then
@@ -430,31 +400,31 @@ function main_menu {
             "Vancouver")
                 main_header
                 nordvpn connect Vancouver
-                status
+                exit_status
                 break
                 ;;
             "Seattle")
                 main_header
                 nordvpn connect Seattle
-                status
+                exit_status
                 break
                 ;;
             "Chicago")
                 main_header
                 nordvpn connect Chicago
-                status
+                exit_status
                 break
                 ;;
             "Denver")
                 main_header
                 nordvpn connect Denver
-                status
+                exit_status
                 break
                 ;;
             "Atlanta")
                 main_header
                 nordvpn connect Atlanta
-                status
+                exit_status
                 break
                 ;;
             "US_Cities")
@@ -471,14 +441,14 @@ function main_menu {
                 # force a disconnect and apply default settings
                 main_header "defaults"
                 nordvpn connect --group p2p United_States
-                status
+                exit_status
                 break
                 ;;
             "P2P-Canada")
                 # force a disconnect and apply default settings
                 main_header "defaults"
                 nordvpn connect --group p2p Canada
-                status
+                exit_status
                 break
                 ;;
             "Discord")
@@ -487,7 +457,7 @@ function main_menu {
                 # It may be useful for other sites or applications.
                 # Example: NordVPN discord  https://discord.gg/83jsvGqpGk
                 #
-                spec_server="us8247"
+                spec_server="us8247"    # server or location
                 spec_url="https://discord.gg/83jsvGqpGk"
                 #
                 main_header
@@ -495,7 +465,7 @@ function main_menu {
                 echo -e "URL: ${EColor}$spec_url${Color_Off}"
                 echo
                 nordvpn connect "$spec_server"
-                status
+                exit_status
                 openlink "$spec_url"
                 break
                 ;;
@@ -523,7 +493,7 @@ function main_menu {
                 group_menu
                 ;;
             "Settings")
-                settings_menu
+                setting_menu
                 ;;
             "Tools")
                 tools_menu
@@ -536,7 +506,7 @@ function main_menu {
                 ;;
             "Exit")
                 heading "Goodbye!"
-                status
+                exit_status
                 break
                 ;;
             *)
@@ -578,7 +548,7 @@ function ascii_custom {
         # when routing through meshnet
         asciitext="Meshnet Routing"
     fi
-    if [[ "$connected" == "connected" ]]; then
+    if [[ "$status" == "connected" ]]; then
         # Add or remove any figlet fonts, arrange from largest to smallest or by preference.
         for figletfont in slant standard smslant small none
         do
@@ -633,9 +603,9 @@ function main_logo {
         ascii_custom
     fi
     if "$meshrouting"; then
-        echo -e "$connectedcl ${SVColor}$nordhost ${IPColor}$ipaddr${Color_Off}"
+        echo -e "$statuscl ${SVColor}$nordhost ${IPColor}$ipaddr${Color_Off}"
     else
-        echo -e "$connectedcl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr ${Color_Off}$fav"
+        echo -e "$statuscl ${CIColor}$city ${COColor}$country ${SVColor}$server ${IPColor}$ipaddr ${Color_Off}$fav"
     fi
     indicators_display
     echo -e "$transferc ${UPColor}$uptime${Color_Off}"
@@ -745,8 +715,8 @@ function set_colors {
     DIColor=${BRed}         # Disabled indicator
     FColor=${LYellow}       # Fast text
     FIColor=${BYellow}      # Fast indicator
-    TColor=${BPurple}       # Technology and Protocol text
-    TIColor=${BPurple}      # Technology and Protocol indicator
+    TColor=${LGreen}        # Technology-Protocol & Setting text
+    TIColor=${BPurple}      # Technology-Protocol indicator
     #
     WColor=${BRed}          # Warnings, errors, disconnects
     LColor=${LCyan}         # 'Changes' lists and key info text
@@ -802,23 +772,24 @@ function set_vars {
     readarray -t nsettings < <( nordvpn settings | tr -d '\r' | tr '[:upper:]' '[:lower:]' )
     #
     # "nordvpn status"
-    # When disconnected, $connected is the only variable from nstatus
+    # When disconnected, $status is the only variable from nstatus
     # When meshnet is enabled, the transfer stats will not be zeroed on VPN reconnect.
-    connected=$( nstatus_search "Status" | tr '[:upper:]' '[:lower:]' )
+    status=$( nstatus_search "Status" | tr '[:upper:]' '[:lower:]' )
     servername=$( nstatus_search "Server" )
     nordhost=$( nstatus_search "Hostname" )
     server=$( echo "$nordhost" | cut -f1 -d'.' )
     ipaddr=$( nstatus_search "IP:" )
     country=$( nstatus_search "Country" )
     city=$( nstatus_search "City" )
-    protocol2=$( nstatus_search "protocol" | tr '[:lower:]' '[:upper:]' )
+    #technology2=$( nstatus_search "Technology" | tr '[:upper:]' '[:lower:]' )
+    #protocol2=$( nstatus_search "protocol" | tr '[:lower:]' '[:upper:]' )
     transferd=$( nstatus_search "Transfer" "line" | cut -f 2-3 -d' ' )  # download stat with units
     transferu=$( nstatus_search "Transfer" "line" | cut -f 5-6 -d' ' )  # upload stat with units
     uptime=$( nstatus_search "Uptime" "line" | cut -f 1-9 -d' ' )
     #
-    # "nordvpn settings"
-    # $protocol and $obfuscate are not listed when using NordLynx
-    # $postquantum is not listed when using OpenVPN
+    # "nordvpn settings"  (all elements are lowercase)
+    # $protocol and $obfuscate are only listed when using OpenVPN
+    # $postquantum is only listed when using NordLynx
     technology=$( nsettings_search "Technology" )
     protocol=$( nsettings_search "Protocol" | tr '[:lower:]' '[:upper:]' )
     firewall=$( nsettings_search "Firewall:" )
@@ -833,35 +804,41 @@ function set_vars {
     autoconnect=$( nsettings_search "Auto" )
     ipversion6=$( nsettings_search "IPv6" )
     meshnet=$( nsettings_search "Meshnet" | tr -d '\n' )
-    customdns=$( nsettings_search "DNS" )                                       # disabled or not=disabled
-    dns_servers=$( nsettings_search "DNS" "line" | tr '[:lower:]' '[:upper:]' ) # Server IPs, includes "DNS: "
+    customdns=$( nsettings_search "DNS" )                               # disabled or not=disabled
+    dns_servers=$( nsettings_search "DNS" "line" | cut -f 2- -d' ' )    # Server IPs
     landiscovery=$( nsettings_search "Discover" )
     virtual=$( nsettings_search "Virtual" )
     postquantum=$( nsettings_search "quantum" )
     allowlist=$( printf '%s\n' "${nsettings[@]}" | grep -A100 -i "allowlist" )
     #
-    # Prefer common spelling.
-    if [[ "$technology" == "openvpn" ]]; then technologyd="OpenVPN"
-    elif [[ "$technology" == "nordlynx" ]]; then technologyd="NordLynx"
-    fi
-    technologydc="${TColor}$technologyd${Color_Off}"
-    #
-    # To display the protocol for either Technology whether connected or disconnected.
-    if [[ "$connected" == "connected" ]]; then protocold="$protocol2"
-    elif [[ "$technology" == "nordlynx" ]]; then protocold="UDP"
-    else protocold="$protocol"
-    fi
-    protocoldc="${TColor}$protocold${Color_Off}"
-    #
-    techpro="${TIColor}$technologyd\u00B7$protocold${Color_Off}"
-    #
-    if [[ "$connected" == "connected" ]]; then
-        connectedc="${CNColor}$connected${Color_Off}"
-        connectedcl="${CNColor}${connected^}${Color_Off}:"
-        transferc="${DLColor}\u25bc $transferd ${ULColor} \u25b2 $transferu ${Color_Off}"
+    # the technology and protocol to display
+    # nsettings = $technology - all technologies are listed
+    # nstatus = $protocol2 (uncomment) - all protocols are listed but only while connected
+    # nsettings = $protocol - only OpenVPN protocols are listed
+    if [[ "$technology" == "openvpn" ]]; then
+        technologyd="OpenVPN"
+        protocold="$protocol"
+    elif [[ "$technology" == "nordlynx" ]]; then
+        technologyd="NordLynx"
+        protocold="UDP"
+    elif [[ "$technology" == "nordwhisper" ]]; then
+        technologyd="NordWhisper"
+        protocold="WebTunnel"
     else
-        connectedc="${DNColor}$connected${Color_Off}"
-        connectedcl="${DNColor}${connected^}${Color_Off}"
+        technologyd="??"
+        protocold="??"
+    fi
+    #
+    # technology-protocol indicator
+    techpro="${TIColor}${technologyd}\u00B7${protocold}${Color_Off}"
+    #
+    if [[ "$status" == "connected" ]]; then
+        statusc="${CNColor}$status${Color_Off}"         # in color
+        statuscl="${CNColor}${status^}${Color_Off}:"    # in color and capitalized for logo
+        transferc="${DLColor}\u25bc $transferd ${ULColor} \u25b2 $transferu ${Color_Off}"    # up/down triangles
+    else
+        statusc="${DNColor}$status${Color_Off}"
+        statuscl="${DNColor}${status^}${Color_Off}"
         transferc=""
     fi
     #
@@ -906,6 +883,8 @@ function set_vars {
         obfuscatec="${EColor}$obfuscate${Color_Off}"
     else
         ob="${DIColor}OB${Color_Off}"
+        # $obfuscate only listed with OpenVPN
+        obfuscate="disabled"
         obfuscatec="${DColor}$obfuscate${Color_Off}"
     fi
     #
@@ -943,8 +922,12 @@ function set_vars {
     #
     if [[ "$customdns" == "disabled" ]]; then # reversed
         dns="${DIColor}DNS${Color_Off}"
+        customdnsc="${DColor}$customdns${Color_Off}"
     else
         dns="${EIColor}DNS${Color_Off}"
+        # disabled or not=disabled (dns_servers)
+        customdns="enabled"
+        customdnsc="${EColor}$customdns${Color_Off}"
     fi
     #
     if [[ "$landiscovery" == "enabled" ]]; then
@@ -969,7 +952,8 @@ function set_vars {
     else
         pq="${DIColor}PQ${Color_Off}"
         # $postquantum not listed when using openvpn
-        postquantumc="${DColor}disabled${Color_Off}"
+        postquantum="disabled"
+        postquantumc="${DColor}$postquantum${Color_Off}"
     fi
     #
     if [[ -n "${allowlist[*]}" ]]; then # not empty
@@ -990,17 +974,17 @@ function set_vars {
         sshi=""
     fi
     #
-    if [[ "$connected" == "connected" ]] && [[ "$meshnet" == "enabled" ]] && [[ "$nordhost" != *"nordvpn.com"* ]]; then
+    if [[ "$status" == "connected" ]] && [[ "$meshnet" == "enabled" ]] && [[ "$nordhost" != *"nordvpn.com"* ]]; then
         meshrouting="true"
     else
         meshrouting="false"
     fi
     #
-    if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]] && [[ "${server,,}" == "${dipwhere,,}" ]]; then
+    if [[ "$status" == "connected" ]] && [[ "$technology" == "openvpn" ]] && [[ "${server,,}" == "${dipwhere,,}" ]]; then
         fav="${FVColor}(Dedicated-IP)${Color_Off}"
-    elif [[ "$connected" == "connected" ]] && [[ -f "$nordfavoritesfile" ]] && grep -q -i "$server" "$nordfavoritesfile"; then
+    elif [[ "$status" == "connected" ]] && [[ -f "$favoritesfile" ]] && grep -q -i "$server" "$favoritesfile"; then
         fav="${FVColor}(Favorite)${Color_Off}"
-    elif [[ "$connected" == "connected" ]] && [[ "${servername,,}" == *"virtual"* ]]; then
+    elif [[ "$status" == "connected" ]] && [[ "${servername,,}" == *"virtual"* ]]; then
         fav="${FVColor}(Virtual)${Color_Off}"
     else
         fav=""
@@ -1010,24 +994,34 @@ function disconnect_vpn {
     # $1 = "force" - force a disconnect
     # $2 = "check_ks" - prompt to disable the killswitch
     #
-    echo
     if [[ "$disconnect" =~ ^[Yy]$ ]] || [[ "$1" == "force" ]]; then
         set_vars
-        if [[ "$connected" == "connected" ]]; then
+        if [[ "$status" == "connected" ]]; then
             if [[ "$2" == "check_ks" ]] && [[ "$killswitch" == "enabled" ]]; then
                 echo -e "${WColor}** Reminder **${Color_Off}"
-                change_setting "killswitch" "back"
+                setting_change "killswitch" "back"
             fi
             echo -e "${WColor}** Disconnect **${Color_Off}"
             echo
-            nordvpn disconnect; wait
+            nordvpn disconnect
             echo
         fi
     fi
 }
 function ipinfo_curl {
     echo -n "External IP: "
-    response=$( timeout 6 curl --silent "https://ipinfo.io/" )
+    response=$( timeout 5 curl --silent "https://ipinfo.io/" )
+    #
+    # check if response is empty or invalid JSON
+    if ! echo "$response" | jq empty 2>/dev/null; then
+        set_vars
+        echo -n "Request failed"
+        if [[ "$status" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
+            echo -ne " - $ks"
+        fi
+        echo; echo
+        return
+    fi
     #
     extip=$(echo "$response" | jq -r '.ip | if . == null then empty else . end')
     exthost=$(echo "$response" | jq -r '.hostname | if . == null then empty else . end')
@@ -1044,16 +1038,11 @@ function ipinfo_curl {
     elif [[ -n "$extlimit" ]]; then
         echo -e "${WColor}$extlimit${Color_Off}"
         echo
-    else
-        set_vars
-        echo -n "Request failed"
-        if [[ "$connected" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
-            echo -ne " - $ks"
-        fi
-        echo; echo
     fi
 }
-function status {
+function exit_status {
+    # The commands to run before the script exits
+    #
     reload_applet
     echo
     nordvpn settings
@@ -1066,10 +1055,11 @@ function status {
     else
         set_vars
     fi
-    if [[ "$connected" == "connected" ]]; then
+    if [[ "$status" == "connected" ]]; then
         if [[ "$exitkillswitch" =~ ^[Yy]$ ]] && [[ "$killswitch" == "disabled" ]]; then
             echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
-            killswitch_enable
+            echo
+            setting_enable "killswitch"
             if [[ "$exitlogo" =~ ^[Yy]$ ]]; then
                 echo -e "${FColor}Updating the logo.${Color_Off}"
                 clear -x
@@ -1078,7 +1068,7 @@ function status {
         fi
         if [[ "$exitping" =~ ^[Yy]$ ]]; then
             if [[ "$technology" == "openvpn" ]]; then
-                echo -ne "$technologydc - Ping the External IP"
+                echo -ne "$techpro - Ping the External IP"
                 if [[ ! "$exitip" =~ ^[Yy]$ ]]; then
                     echo -ne " (Set ${FColor}exitip=\"y\"${Color_Off} to enable)"
                 fi
@@ -1095,12 +1085,12 @@ function status {
         # VPN disconnected
         if [[ "$exitks_prompt" =~ ^[Yy]$ ]] && [[ "$killswitch" == "enabled" ]]; then
             echo -e "${WColor}** Reminder **${Color_Off}"
-            change_setting "killswitch" "back"
+            setting_change "killswitch" "back"
         fi
     fi
     if [[ "$exitip" =~ ^[Yy]$ ]]; then
         ipinfo_curl
-        if [[ "$connected" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ -n "$extip" ]]; then
+        if [[ "$status" == "connected" ]] && [[ "$exitping" =~ ^[Yy]$ ]] && [[ -n "$extip" ]]; then
             if [[ "$technology" == "openvpn" ]] || "$meshrouting"; then
                 # ping the external IP when using OpenVPN or Meshnet Routing
                 ping_host "$extip" "stats" "External IP"
@@ -1119,6 +1109,7 @@ function reload_applet {
     # reload Cinnamon Desktop applets
     #
     if "$usingssh"; then return; fi
+    #
     if [[ "$exitappletb" =~ ^[Yy]$ ]]; then
         # reload 'bash-sensors@pkkk' - changes the icon color (for connection status) immediately.
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
@@ -1150,7 +1141,7 @@ function ping_host {
 }
 function disconnect_warning {
     set_vars
-    if [[ "$connected" == "connected" ]]; then
+    if [[ "$status" == "connected" ]]; then
         echo -e "${WColor}** Changing this setting will disconnect the VPN **${Color_Off}"
         echo
     fi
@@ -1176,7 +1167,7 @@ function openlink {
         nohup "$(command -v firefox)" --new-window "$1" > /dev/null 2>&1 &
     elif [[ "$1" == *.conf || "$1" == *.sh || "$1" == *.txt ]] && "$usingssh"; then
         # open these types of files in the terminal when using ssh
-        # WireGuard configs, nordlist.sh, favorites.txt, nord_logs.txt
+        # WireGuard configs, nordlist.sh, nord_favorites.txt, nord_logs.txt
         # check for default editor otherwise use nano
         if [[ -n "$VISUAL" ]]; then
             editor="$VISUAL"
@@ -1220,6 +1211,7 @@ function countdown_timer {
     echo
 }
 function parent_menu {
+    # Return to the previous menu
     # $1 = $1 or $2 (back) of the calling function - disable upmenu if a return is required
     #
     if [[ "$REPLY" == "$upmenu" ]]; then
@@ -1233,7 +1225,7 @@ function parent_menu {
             case "$parent" in
                 "Main")         main_menu;;
                 "Country")      country_menu;;
-                "Settings")     settings_menu;;
+                "Settings")     setting_menu;;
                 "Group")        group_menu;;
                 "Tools")        tools_menu;;
                 "Nord API")     nordapi_menu;;
@@ -1264,6 +1256,7 @@ function invalid_option {
     fi
 }
 function create_list {
+    # Create an array containing all countries, cities, or groups
     #
     # remove notices by keyword
     listexclude="update|feature"
@@ -1446,7 +1439,7 @@ function country_menu {
 function city_menu {
     # all available cities in $xcountry
     # $1 = parent menu name - valid options are listed in function parent_menu
-    #      disables fast7 (automatic connect to country)
+    #      disables fast3 (automatic connect to country)
     #
     if [[ -n "$1" ]]; then
         parent="$1"
@@ -1455,13 +1448,14 @@ function city_menu {
     fi
     heading "$xcountry"
     echo
-    if [[ "$fast7" =~ ^[Yy]$ ]] && [[ -z "$1" ]]; then
-        echo -e "${FColor}Fast7 is enabled. Connect to the country not a city.${Color_Off}"
+    if [[ "$fast3" =~ ^[Yy]$ ]] && [[ -z "$1" ]]; then
+        echo -e "${FColor}Fast3 is enabled. Connect to the country not a city.${Color_Off}"
         echo
         echo -e "Connect to ${LColor}$xcountry${Color_Off}."
+        echo
         disconnect_vpn
         nordvpn connect "$xcountry"
-        status
+        exit_status
         exit
     fi
     create_list "city"
@@ -1481,31 +1475,34 @@ function city_menu {
                 ;;
             "Best")
                 heading "$xcountry"
+                echo
                 disconnect_vpn
                 echo "Connect to the best available city."
                 echo
                 nordvpn connect "$xcountry"
-                status
+                exit_status
                 exit
                 ;;
             "Random")
                 heading "Random"
+                echo
                 disconnect_vpn
                 echo "Connect to $rcity $xcountry"
                 echo
                 nordvpn connect "$rcity"
-                status
+                exit_status
                 exit
                 ;;
             *)
                 if (( 1 <= REPLY )) && (( REPLY <= ${#modcitylist[@]} )); then
                     city_names_restore
                     heading "$xcity"
+                    echo
                     disconnect_vpn
                     echo "Connect to $xcity $xcountry"
                     echo
                     nordvpn connect "$xcity"
-                    status
+                    exit_status
                     exit
                 else
                     invalid_option "${#modcitylist[@]}" "$parent"
@@ -1627,11 +1624,12 @@ function host_connect {
     elif [[ "$connecthost" == *"nord"* ]]; then
         connecthost=$( echo "$connecthost" | cut -f1 -d'.' )
     fi
+    echo
     disconnect_vpn
     echo "Connect to $connecthost"
     echo
     nordvpn connect "$connecthost"
-    status
+    exit_status
     # add testing commands here
     #
     # https://streamtelly.com/check-netflix-region/
@@ -1656,38 +1654,13 @@ function random_worldwide {
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         main_menu
     fi
+    echo
     disconnect_vpn
     echo "Connect to $rcity $rcountry"
     echo
     nordvpn connect "$rcity"
-    status
+    exit_status
     exit
-}
-function killswitch_enable {
-    echo
-    if [[ "$firewall" == "disabled" ]]; then
-        nordvpn set firewall enabled; wait
-        echo
-    fi
-    nordvpn set killswitch enabled; wait
-    echo
-}
-function killswitch_groups {
-    if [[ "$killswitch" == "enabled" ]]; then return; fi
-    #
-    if [[ "$fast5" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}Fast5 is enabled.  Enabling the Kill Switch.${Color_Off}"
-        killswitch_enable
-    elif [[ "$exitkillswitch" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
-        killswitch_enable
-    else
-        if [[ "$firewall" == "disabled" ]]; then
-            echo -e "${WColor}Enabling the Kill Switch will also enable the Firewall.${Color_Off}"
-            echo
-        fi
-        change_setting "killswitch" "back"
-    fi
 }
 function group_location {
     # $1 = $1 from function group_connect (Nord group name)
@@ -1779,57 +1752,67 @@ function group_connect {
     echo "changes will be made (if necessary):"
     echo -e "${LColor}"
     echo "Disconnect the VPN."
-    if [[ "$1" == "Obfuscated_Servers" ]]; then
-        echo "Disable Post-Quantum."
-        echo "Set Technology to OpenVPN."
-        echo "Choose the Protocol."
-        echo "Set Obfuscate to enabled."
-    elif [[ "$1" == "Dedicated_IP" ]]; then
-        echo "Disable Post-Quantum."
-        echo "Set Technology to OpenVPN."
-        echo "Choose the Protocol."
-        echo "Set Obfuscate to disabled."
-    else
-        echo "Choose the Technology & Protocol."
-        echo "Set NordLynx Post-Quantum (choice)."
-        echo "Set Obfuscate to disabled."
-    fi
-    echo "Enable the Kill Switch (choice)."
+    case "$1" in
+        "Obfuscated_Servers")
+            # OpenVPN only
+            echo "Disable Post-Quantum."
+            echo "Set Technology to OpenVPN TCP or UDP."
+            echo "Set Obfuscate to enabled."
+            ;;
+        "Dedicated_IP")
+            # OpenVPN only
+            echo "Disable Post-Quantum."
+            echo "Set Technology to OpenVPN TCP or UDP."
+            echo "Set Obfuscate to disabled."
+            ;;
+        "P2P")
+            # available with all technologies
+            echo "Choose a Technology and Protocol."
+            echo "Set NordLynx Post-Quantum (choice)."
+            echo "Set Obfuscate to disabled."
+            ;;
+        *)
+            # exclude NordWhisper for Double-VPN, Onion+VPN
+            echo "Set Technology to OpenVPN or NordLynx."
+            echo "Set NordLynx Post-Quantum (choice)."
+            echo "Set Obfuscate to disabled."
+            ;;
+    esac
+    echo "Set the Kill Switch (choice)."
     echo -e "Connect to the $1 group ${EColor}$location${Color_Off}"
-    if [[ "$fast4" =~ ^[Yy]$ ]]; then
-        echo
-        echo -e "${FColor}Fast4 is enabled.  Automatically connect.${Color_Off}"
-        REPLY="y"
-    else
-        echo -e "${LColor}(Type ${FIColor}S${LColor} to specify a location)${Color_Off}"
-        echo
-        read -n 1 -r -p "Proceed? (y/n/S) "; echo
-        if [[ $REPLY =~ ^[Ss]$ ]]; then
-            group_location "$1"
-        fi
+    echo -e "${LColor}(Type ${FIColor}S${LColor} to specify a location)${Color_Off}"
+    echo
+    read -n 1 -r -p "Proceed? (y/n/S) "; echo
+    if [[ $REPLY =~ ^[Ss]$ ]]; then
+        group_location "$1"
     fi
+    echo
     parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnect_vpn "force"
         case "$1" in
             "Obfuscated_Servers")
-                if [[ "$postquantum" == "enabled" ]]; then nordvpn set post-quantum disabled; wait; echo; fi
-                if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; wait; echo; fi
-                protocol_ask
-                if [[ "$obfuscate" == "disabled" ]]; then nordvpn set obfuscate enabled; wait; echo; fi
+                # OpenVPN only
+                techpro_menu "back" "ovpn"
+                setting_enable "obfuscate"
                 ;;
             "Dedicated_IP")
-                if [[ "$postquantum" == "enabled" ]]; then nordvpn set post-quantum disabled; wait; echo; fi
-                if [[ "$technology" == "nordlynx" ]]; then nordvpn set technology openvpn; wait; echo; fi
-                protocol_ask
-                if [[ "$obfuscate" == "enabled" ]]; then nordvpn set obfuscate disabled; wait; echo; fi
+                # OpenVPN only
+                techpro_menu "back" "ovpn"
+                setting_disable "obfuscate"
+                ;;
+            "P2P")
+                # available with all technologies
+                techpro_menu "back"
+                setting_disable "obfuscate"
                 ;;
             *)
-                technology_setting "back"
-                if [[ "$obfuscate" == "enabled" ]]; then nordvpn set obfuscate disabled; wait; echo; fi
+                # exclude NordWhisper for Double-VPN, Onion+VPN
+                techpro_menu "back" "xnw"
+                setting_disable "obfuscate"
                 ;;
         esac
-        killswitch_groups
+        setting_change "killswitch" "back"
         echo -e "Connect to the $1 group ${EColor}$location${Color_Off}"
         echo
         if [[ -n $location ]]; then
@@ -1837,198 +1820,173 @@ function group_connect {
         else
             nordvpn connect --group "$1"
         fi
-        status
+        exit_status
         exit
     else
-        echo
         echo "No changes made."
         main_menu
     fi
 }
-function technology_setting {
-    # $1 = "back" - skip the heading, ignore fast3, return
+function set_techpro {
+    # Set the technology and protocol.  arguments are case insensitive
+    # $1 = technology - "nordlynx" "openvpn" "nordwhisper"
+    # $2 = protocol - "tcp" "udp" "webtunnel"
+    #
+    disconnect_vpn "force"
+    #
+    case "${1,,}" in
+        "nordlynx")
+            setting_disable "obfuscate"
+            ;;
+        "openvpn")
+            setting_disable "post-quantum"
+            ;;
+        "nordwhisper")
+            setting_disable "obfuscate"
+            setting_disable "post-quantum"
+            ;;
+    esac
+    #
+    if [[ "${technology,,}" != "${1,,}" ]]; then
+        nordvpn set technology "$1"
+        set_vars
+    else
+        echo -e "${TColor}Technology is ${TIColor}$technologyd${Color_Off}"
+    fi
+    echo
+    #
+    # use $protocold
+    if [[ "${protocold,,}" != "${2,,}" ]]; then
+        nordvpn set protocol "$2"
+        set_vars
+    else
+        echo -e "${TColor}Protocol is ${TIColor}$protocold${Color_Off}"
+    fi
+    echo
+}
+function techpro_menu {
+    # Choose a technology and protocol combination
+    # $1 = "back" - skip the heading, return
+    # $2 = "ovpn" - list only the OpenVPN options
+    # $2 = "xnw" - list all the options but exclude NordWhisper
     #
     parent="Settings"
     if [[ "$1" != "back" ]]; then
-        heading "Technology"
+        heading "Tech + Protocol"
+        echo "NordLynx is based on WireGuard and may be faster with less overhead."
+        echo "NordLynx is required to use Post-Quantum VPN and is UDP only."
+        echo
+        echo "OpenVPN is a standard VPN technology which can use TCP or UDP."
+        echo "OpenVPN is required when using Obfuscated-Servers or a Dedicated-IP."
+        echo
+        echo "NordWhisper may be slower and is designed for use only on restricted"
+        echo "networks where VPN traffic is blocked but web browsing is allowed."
+        echo
+        echo "The UDP protocol is mainly used for online streaming and downloading."
+        echo "The TCP protocol is more reliable but usually slower than UDP."
+        # ? WebTunnel HTTP/HTTPS, TCP port 80/443  TODO
+        echo "WebTunnel mimics HTTPS web traffic to evade network censorship."
         echo
         disconnect_warning
-        echo "OpenVPN is an open-source VPN protocol that is required"
-        echo "for Obfuscated servers, a Dedicated-IP, and to use TCP."
-        echo "Post-Quantum VPN is not compatible with OpenVPN."
-        echo
-        echo "NordLynx is built around the WireGuard VPN protocol"
-        echo "and may be faster with less overhead."
-        echo "NordLynx supports the use of Post-Quantum VPN."
-        echo
     fi
-    echo -e "Currently using $technologydc."
+    echo -e "Currently using $techpro"
     if [[ "$technology" == "nordlynx" ]]; then
         echo -e "$pq Post-Quantum VPN is $postquantumc."
     fi
     echo
-    if [[ "$fast3" =~ ^[Yy]$ ]] && [[ "$1" != "back" ]]; then
-        echo -e "${FColor}Fast3 is enabled.  Changing the Technology.${Color_Off}"
-        REPLY="y"
-    elif [[ "$technology" == "openvpn" ]]; then
-        read -n 1 -r -p "Change the Technology to NordLynx? (y/n) "; echo
+    PS3=$'\n''Choose a Technology-Protocol: '
+    COLUMNS="$menuwidth"
+    #
+    if [[ "$2" == "ovpn" ]]; then
+        submtech=( "OpenVPN-UDP" "OpenVPN-TCP" )
+    elif [[ "$2" == "xnw" ]]; then
+        submtech=( "NordLynx-UDP" "OpenVPN-UDP" "OpenVPN-TCP" )
     else
-        read -n 1 -r -p "Change the Technology to OpenVPN? (y/n) "; echo
+        submtech=( "NordLynx-UDP" "OpenVPN-UDP" "OpenVPN-TCP" "NordWhisper-WebTunnel" )
     fi
-    parent_menu "$1"
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        disconnect_vpn "force"
-        if [[ "$technology" == "openvpn" ]]; then
-            if [[ "$obfuscate" == "enabled" ]]; then
-                nordvpn set obfuscate disabled; wait
-                echo
-            fi
-            if [[ "$protocol" == "TCP" ]]; then
-                nordvpn set protocol UDP; wait
-                echo
-            fi
-            nordvpn set technology nordlynx; wait
-            echo
-            set_vars
-            change_setting "post-quantum" "back"
-        else
-            if [[ "$postquantum" == "enabled" ]]; then
-                nordvpn set post-quantum disabled; wait
-                echo
-            fi
-            nordvpn set technology openvpn; wait
-            echo
-            protocol_ask
-        fi
-    else
-        echo
-        echo -e "Continue to use $technologydc."
-        echo
-        set_vars
-        if [[ "$connected" != "connected" ]]; then
-            if [[ "$technology" == "openvpn" ]]; then
-                protocol_ask
-            elif [[ "$technology" == "nordlynx" ]]; then
-                change_setting "post-quantum" "back"
-            fi
-        fi
+    #
+    if [[ "$1" != "back" ]]; then
+        submtech+=( "Exit" )
     fi
+    #
+    select xtech in "${submtech[@]}"
+    do
+        parent_menu "$1"
+        case $xtech in
+            "NordLynx-UDP")
+                echo
+                set_techpro "nordlynx" "udp"
+                setting_change "post-quantum" "back"
+                break
+                ;;
+            "OpenVPN-UDP")
+                echo
+                set_techpro "openvpn" "udp"
+                break
+                ;;
+            "OpenVPN-TCP")
+                echo
+                set_techpro "openvpn" "tcp"
+                break
+                ;;
+            "NordWhisper-WebTunnel")
+                echo
+                set_techpro "nordwhisper" "webtunnel"
+                break
+                ;;
+            "Exit")
+                main_menu
+                ;;
+            *)
+                if [[ "$1" != "back" ]]; then
+                    invalid_option "${#submtech[@]}" "$parent"
+                fi
+                ;;
+        esac
+    done
+    #
     if [[ "$1" == "back" ]]; then
         set_vars
-        echo
         return
     fi
-    main_menu
-}
-function protocol_setting {
-    heading "Protocol"
-    parent="Settings"
-    if [[ "$technology" == "nordlynx" ]]; then
-        echo
-        echo -e "Technology is currently set to $technologydc."
-        echo
-        echo "No protocol to specify when using $technologyd,"
-        echo "WireGuard supports UDP only."
-        echo
-        echo "Change Technology to OpenVPN to use TCP or UDP."
-        echo
-        read -n 1 -r -p "Go to the 'Technology' setting? (y/n) "; echo
-        parent_menu
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            technology_setting
-        else
-            main_menu
-        fi
-    fi
-    disconnect_warning
-    echo "UDP is mainly used for online streaming and downloading."
-    echo "TCP is more reliable but also slightly slower than UDP and"
-    echo " is mainly used for web browsing."
-    echo
-    echo -e "The Protocol is set to $protocoldc."
-    echo
-    if [[ "$fast3" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}Fast3 is enabled.  Changing the Protocol.${Color_Off}"
-        REPLY="y"
-    elif [[ "$protocol" == "UDP" ]]; then
-        read -n 1 -r -p "Change the Protocol to TCP? (y/n) "; echo
-    else
-        read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
-    fi
-    parent_menu
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        disconnect_vpn "force"
-        if [[ "$protocol" == "UDP" ]]; then
-            nordvpn set protocol TCP; wait
-        else
-            nordvpn set protocol UDP; wait
-        fi
-    else
-        echo
-        echo -e "Continue to use $protocoldc."
-    fi
-    main_menu
-}
-function protocol_ask {
-    # Ask to choose TCP/UDP if changing to OpenVPN, using Obfuscate,
-    # and when connecting to groups using OpenVPN
     #
-    set_vars    # set $protocol if technology just changed from NordLynx
-    echo -e "The Protocol is set to $protocoldc."
-    echo
-    if [[ "$fast6" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}Fast6 is enabled.  Always choose $fast6p.${Color_Off}"
-        echo
-        if [[ "$protocol" == "UDP" ]] && [[ "$fast6p" == "TCP" ]]; then
-            nordvpn set protocol TCP; wait
-            echo
-        elif [[ "$protocol" == "TCP" ]] && [[ "$fast6p" == "UDP" ]]; then
-            nordvpn set protocol UDP; wait
-            echo
-        fi
-        return
-    elif [[ "$protocol" == "UDP" ]]; then
-        read -n 1 -r -p "Change the Protocol to TCP? (y/n) "; echo
-    else
-        read -n 1 -r -p "Change the Protocol to UDP? (y/n) "; echo
-    fi
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        if [[ "$protocol" == "UDP" ]]; then
-            nordvpn set protocol TCP; wait
-        else
-            nordvpn set protocol UDP; wait
-        fi
-        echo
-    else
-        echo -e "Continue to use $protocoldc."
-        echo
-    fi
+    main_menu
 }
-function change_setting {
+function setting_getvars {
+    # Set the variable values for each Nord command
+    # $1 = Nord command
+    #
+    chgloc=""
+    case "$1" in
+        "firewall")             chgname="Firewall"; chgvar="$firewall"; chgind="$fw";;
+        "routing")              chgname="Routing"; chgvar="$routing"; chgind="$rt";;
+        "analytics")            chgname="Analytics"; chgvar="$analytics"; chgind="$an";;
+        "killswitch")           chgname="Kill Switch"; chgvar="$killswitch"; chgind="$ks";;
+        "threatprotectionlite") chgname="Threat Protection Lite"; chgvar="$tplite"; chgind="$tp";;
+        "obfuscate")            chgname="Obfuscate"; chgvar="$obfuscate"; chgind="$ob";;
+        "notify")               chgname="Notify"; chgvar="$notify"; chgind="$no";;
+        "tray")                 chgname="Tray"; chgvar="$tray"; chgind="$tr";;
+        "autoconnect")          chgname="Auto-Connect"; chgvar="$autoconnect"; chgind="$ac"; chgloc="$acwhere";;
+        "ipv6")                 chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6";;
+        "meshnet")              chgname="Meshnet"; chgvar="$meshnet"; chgind="$mn";;
+        "dns")                  chgname="Custom-DNS"; chgvar="$customdns"; chgind="$dns"; chgloc="$default_dns";;
+        "lan-discovery")        chgname="LAN-Discovery"; chgvar="$landiscovery"; chgind="$ld";;
+        "virtual-location")     chgname="Virtual-Location"; chgvar="$virtual"; chgind="$vl";;
+        "post-quantum")         chgname="Post-Quantum VPN"; chgvar="$postquantum"; chgind="$pq";;
+        *)                      echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo; return;;
+    esac
+    #
+}
+function setting_change {
+    # Prompt to enable or disable the NordVPN setting
     # $1 = Nord command
     # $2 = "back" - ignore fast2, return
     #
     if [[ "$2" != "back" ]]; then
         parent="Settings"
     fi
-    chgloc=""
-    case "$1" in
-        "firewall")             chgname="the Firewall"; chgvar="$firewall"; chgind="$fw";;
-        "routing")              chgname="Routing"; chgvar="$routing"; chgind="$rt";;
-        "analytics")            chgname="Analytics"; chgvar="$analytics"; chgind="$an";;
-        "killswitch")           chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks";;
-        "threatprotectionlite") chgname="Threat Protection Lite"; chgvar="$tplite"; chgind="$tp";;
-        "notify")               chgname="Notify"; chgvar="$notify"; chgind="$no";;
-        "tray")                 chgname="the Tray"; chgvar="$tray"; chgind="$tr";;
-        "autoconnect")          chgname="Auto-Connect"; chgvar="$autoconnect"; chgind="$ac"; chgloc="$acwhere2";;
-        "ipv6")                 chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6";;
-        "meshnet")              chgname="Meshnet"; chgvar="$meshnet"; chgind="$mn";;
-        "lan-discovery")        chgname="LAN-Discovery"; chgvar="$landiscovery"; chgind="$ld";;
-        "virtual-location")     chgname="Virtual-Location"; chgvar="$virtual"; chgind="$vl";;
-        "post-quantum")         chgname="Post-Quantum VPN"; chgvar="$postquantum"; chgind="$pq";;
-        *)                      echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo; return;;
-    esac
+    #
+    setting_getvars "$1"
     #
     if [[ "$chgvar" == "enabled" ]]; then
         chgvarc="${EColor}$chgvar${Color_Off}"
@@ -2037,99 +1995,150 @@ function change_setting {
         chgvarc="${DColor}$chgvar${Color_Off}"
         chgprompt=$(echo -e "${EColor}Enable${Color_Off} $chgname? (y/n) ")
     fi
+    #
     echo -e "$chgind $chgname is $chgvarc."
     echo
-    if [[ "$fast2" =~ ^[Yy]$ ]] && [[ "$2" != "back" ]]; then
+    #
+    if [[ "$fast2" =~ ^[Yy]$ ]] && [[ "$2" != "back" ]] && [[ "$1" != "obfuscate" ]]; then
         echo -e "${FColor}Fast2 is enabled.  Changing the setting.${Color_Off}"
         REPLY="y"
-        if [[ "$chgvar" == "enabled" ]] && [[ "$1" == "routing" ]]; then
-            # confirmation prompt before disable routing
-            echo
-            read -n 1 -r -p "$(echo -e "Confirm: ${WColor}Disable $chgname${Color_Off} (y/n) ")"; echo
-        fi
     else
         read -n 1 -r -p "$chgprompt"; echo
     fi
-    parent_menu "$2"
     echo
+    parent_menu "$2"
+    #
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if [[ "$chgvar" == "disabled" ]]; then
-            case "$1" in
-                "killswitch")
-                    if [[ "$firewall" == "disabled" ]]; then
-                        # when connecting to Groups or changing the setting from IPTables
-                        echo -e "${WColor}Enabling the Firewall.${Color_Off}"
-                        echo
-                        nordvpn set firewall enabled; wait
-                        echo
-                    fi
-                    ;;
-                "threatprotectionlite")
-                    if [[ "$customdns" != "disabled" ]]; then
-                        nordvpn set dns disabled; wait
-                        echo
-                    fi
-                    ;;
-                "autoconnect")
-                    if [[ -n $chgloc ]]; then
-                        echo -e "$chgname to ${LColor}$chgloc${Color_Off}"
-                        echo
-                    fi
-                    ;;
-                "meshnet")
-                    echo -e "${WColor}Wait 30s to refresh the peer list.${Color_Off}"
-                    echo "Try disconnecting the VPN if Meshnet fails to enable."
-                    echo
-                    ;;
-                "post-quantum")
-                    if [[ "$connected" == "connected" ]]; then
-                        echo -e "${WColor}Reconnect to VPN${Color_Off} to start using Post-Quantum encryption."
-                        echo
-                    fi
-                    ;;
-            esac
-            #
-            if [[ -n $chgloc ]]; then
-                nordvpn set "$1" enabled "$chgloc"; wait
-            else
-                nordvpn set "$1" enabled; wait
-            fi
-            #
+            setting_enable "$1"
         else
-            case "$1" in
-                "firewall")
-                    if [[ "$killswitch" == "enabled" ]]; then
-                        # when changing the setting from IPTables
-                        echo -e "${WColor}Disabling the Kill Switch.${Color_Off}"
-                        echo
-                        nordvpn set killswitch disabled; wait
-                        echo
-                    fi
-                    ;;
-                "routing")
-                    echo -e "${WColor}Disabling all traffic routing.${Color_Off}"
-                    echo
-                    ;;
-                "post-quantum")
-                    if [[ "$connected" == "connected" ]]; then
-                        echo -e "${WColor}Disconnect or reconnect to VPN${Color_Off} to stop using Post-Quantum encryption."
-                        echo
-                    fi
-                    ;;
-            esac
-            #
-            nordvpn set "$1" disabled; wait
-            #
+            setting_disable "$1"
         fi
     else
         echo -e "$chgind Keep $chgname $chgvarc."
+        echo
     fi
+    #
     if [[ "$2" == "back" ]]; then
         set_vars
+        return
+    fi
+    #
+    main_menu
+}
+function setting_enable {
+    # Enable the NordVPN setting
+    # $1 = Nord command
+    # $2 = For 'dns' only.  Up to three DNS IPs separated by spaces
+    #
+    # after calling 'setting_change/enable/disable' from here, run this command again since
+    # common variable values will have changed.  eg "$chgname" "$chgloc"
+    setting_getvars "$1"
+    #
+    if [[ "$chgvar" == "enabled" ]] && [[ "${1,,}" != "dns" ]]; then
+        echo -e "$chgind ${TColor}$chgname is $chgvar.${Color_Off}"
         echo
         return
     fi
-    main_menu
+    #
+    case "$1" in
+        "killswitch")
+            setting_enable "firewall"
+            setting_getvars "$1"
+            ;;
+        "threatprotectionlite")
+            setting_disable "dns"
+            setting_getvars "$1"
+            ;;
+        "autoconnect")
+            if [[ -n $chgloc ]]; then
+                echo -e "$chgname to ${LColor}$chgloc${Color_Off}"
+                echo
+            fi
+            ;;
+        "meshnet")
+            setting_disable "post-quantum"
+            setting_getvars "$1"
+            echo -e "${WColor}Wait 30s to refresh the peer list.${Color_Off}"
+            echo "Try disconnecting the VPN if $chgname fails to enable."
+            echo
+            ;;
+        "dns")
+            setting_disable "threatprotectionlite"
+            setting_getvars "$1"
+            #
+            if [[ -n "$2" ]]; then
+                echo -e "${TColor}Set $chgname to ${LColor}$2${Color_Off}"
+                echo
+                # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1"
+                nordvpn set "$1" $2
+                #
+            else
+                echo -e "${TColor}Set $chgname to ${FColor}$dnsdesc ${LColor}$default_dns${Color_Off}"
+                echo
+                # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1"
+                nordvpn set "$1" $default_dns
+                #
+            fi
+            echo
+            # does not use 'nordvpn set "$1" enabled'
+            return
+            ;;
+        "post-quantum")
+            setting_disable "meshnet"
+            setting_getvars "$1"
+            set_vars
+            if [[ "$status" == "connected" ]]; then
+                echo -e "${WColor}Reconnect to VPN${Color_Off} to start using $chgname."
+                echo
+            fi
+            ;;
+    esac
+    #
+    if [[ -n $chgloc ]]; then
+        nordvpn set "$1" enabled "$chgloc"
+    else
+        nordvpn set "$1" enabled
+    fi
+    echo
+    #
+}
+function setting_disable {
+    # Disable the NordVPN setting
+    # $1 = Nord command
+    #
+    setting_getvars "$1"
+    if [[ "$chgvar" == "disabled" ]]; then
+        echo -e "$chgind ${TColor}$chgname is $chgvar.${Color_Off}"
+        echo
+        return
+    fi
+    #
+    case "$1" in
+        "firewall")
+            setting_disable "killswitch"
+            setting_getvars "$1"
+            ;;
+        "routing")
+            echo -e "${WColor}Disabling all traffic routing.${Color_Off}"
+            echo
+            ;;
+        "dns")
+            echo -e "${DColor}Disable ${TColor}current DNS: ${LColor}$dns_servers${Color_Off}"
+            echo
+            ;;
+        "post-quantum")
+            set_vars
+            if [[ "$status" == "connected" ]]; then
+                echo -e "${WColor}Disconnect from VPN${Color_Off} to stop using $chgname."
+                echo
+            fi
+            ;;
+    esac
+    #
+    nordvpn set "$1" disabled
+    echo
+    #
 }
 function firewall_setting {
     heading "Firewall"
@@ -2138,21 +2147,13 @@ function firewall_setting {
     echo "The Firewall must be enabled to use the Kill Switch."
     echo
     echo -e "Firewall Mark: ${LColor}$fwmark${Color_Off}"
-    # see:  https://linux.die.net/man/8/iptables
     echo "Change with: nordvpn set fwmark <mark>"
     echo
     if [[ "$killswitch" == "enabled" ]]; then
-        echo -e "$fw the Firewall is $firewallc."
+        echo -e "$ks - ${WColor}Note:${Color_Off} Disabling the Firewall also disables the Kill Switch."
         echo
-        echo -e "${WColor}The Kill Switch must be disabled before disabling the Firewall.${Color_Off}"
-        echo
-        change_setting "killswitch" "back"
-        if [[ "$killswitch" == "enabled" ]]; then
-            echo -e "$fw Keep the Firewall $firewallc."
-            main_menu
-        fi
     fi
-    change_setting "firewall"
+    setting_change "firewall"
 }
 function routing_setting {
     heading "Routing"
@@ -2164,7 +2165,7 @@ function routing_setting {
     echo "If this setting is disabled, the app will connect to the"
     echo "VPN server (or peer) but won’t route any traffic."
     echo
-    change_setting "routing"
+    setting_change "routing"
 }
 function analytics_setting {
     heading "Analytics"
@@ -2173,7 +2174,7 @@ function analytics_setting {
     echo "crash reports, OS version, marketing performance, and "
     echo "feature usage data. (Nothing that could identify you.)"
     echo
-    change_setting "analytics"
+    setting_change "analytics"
 }
 function killswitch_setting {
     heading "Kill Switch"
@@ -2183,22 +2184,15 @@ function killswitch_setting {
     echo "When the Kill Switch is enabled and the VPN is disconnected, your"
     echo "computer should not be able to access the internet."
     echo
-    if [[ "$connected" != "connected" ]]; then
-        echo -e "The VPN is currently $connectedc."
+    if [[ "$status" != "connected" ]]; then
+        echo -e "The VPN is currently $statusc."
         echo
     fi
     if [[ "$firewall" == "disabled" ]]; then
-        echo -e "$ks the Kill Switch is $killswitchc."
+        echo -e "$fw - ${WColor}Note:${Color_Off} Enabling the Kill Switch also enables the Firewall."
         echo
-        echo -e "${WColor}The Firewall must be enabled to use the Kill Switch.${Color_Off}"
-        echo
-        change_setting "firewall" "back"
-        if [[ "$firewall" == "disabled" ]]; then
-            echo -e "$ks Keep the Kill Switch $killswitchc."
-            main_menu
-        fi
     fi
-    change_setting "killswitch"
+    setting_change "killswitch"
 }
 function tplite_setting {
     heading "TPLite"
@@ -2207,11 +2201,11 @@ function tplite_setting {
     echo "Uses the Nord Threat Protection Lite DNS 103.86.96.96 103.86.99.99"
     echo
     if [[ "$customdns" != "disabled" ]]; then
-        echo -e "$dns Note: Enabling TPLite disables Custom-DNS"
-        echo "      Current $dns_servers"
+        echo -e "$dns - ${WColor}Note:${Color_Off} Enabling TPLite disables Custom-DNS."
+        echo -e "Current DNS: ${LColor}$dns_servers${Color_Off}"
         echo
     fi
-    change_setting "threatprotectionlite"
+    setting_change "threatprotectionlite"
 }
 function notify_setting {
     heading "Notify"
@@ -2219,7 +2213,7 @@ function notify_setting {
     echo "Send OS notifications when the VPN status changes, and"
     echo "on Meshnet file transfer events."
     echo
-    change_setting "notify"
+    setting_change "notify"
 }
 function tray_setting {
     heading "Tray"
@@ -2227,7 +2221,7 @@ function tray_setting {
     echo "Enable or disable the NordVPN icon in the system tray."
     echo "The icon provides quick access to basic controls and VPN status details."
     echo
-    change_setting "tray"
+    setting_change "tray"
 }
 function autoconnect_setting {
     heading "AutoConnect"
@@ -2235,8 +2229,8 @@ function autoconnect_setting {
     echo "Automatically connect to the VPN on startup."
     echo
     if [[ "$obfuscate" == "enabled" ]]; then
-        echo -e "$ob When obfuscate is enabled, the Auto-Connect"
-        echo "     location must support obfuscation."
+        echo -e "$ob Obfuscate is $obfuscatec."
+        echo "The Auto-Connect location must support obfuscation."
         echo
     fi
     if [[ "$autoconnect" == "disabled" ]]; then
@@ -2248,10 +2242,10 @@ function autoconnect_setting {
         echo
         read -r -p "Specify a location or hit 'Enter' for default: "
         parent_menu
-        acwhere2=${REPLY:-$acwhere}
+        acwhere=${REPLY:-$acwhere}
         echo
     fi
-    change_setting "autoconnect"
+    setting_change "autoconnect"
 }
 function ipv6_setting {
     heading "IPv6"
@@ -2259,9 +2253,8 @@ function ipv6_setting {
     echo
     echo "Also refer to:"
     echo "https://support.nordvpn.com/hc/en-us/articles/20164669224337"
-    echo "https://forums.linuxmint.com/viewtopic.php?p=2387296#p2387296"
     echo
-    change_setting "ipv6"
+    setting_change "ipv6"
 }
 function landiscovery_setting {
     heading "LAN-Discovery"
@@ -2269,17 +2262,17 @@ function landiscovery_setting {
     echo "Access printers, TVs, and other devices on your LAN while connected to"
     echo "the VPN, using Meshnet traffic routing, or with the Kill Switch enabled."
     echo
-    echo "Automatically allow traffic from these subnets:"
+    echo "Automatically allow traffic from these private subnets:"
     echo "10.0.0.0/8  169.254.0.0/16  172.16.0.0/12  192.168.0.0/16"
     echo
     if [[ -n "${allowlist[*]}" ]]; then
-        echo -e "${WColor}Note:${Color_Off} Enabling LAN-Discovery will remove private subnets from the allowlist."
+        echo -e "$al - ${WColor}Note:${Color_Off} Enabling LAN-Discovery removes private subnets from Allowlist."
         echo
-        echo -e "$al Current Allowlist:"
+        echo "Current Allowlist:"
         printf '%s\n' "${allowlist[@]}"
         echo
     fi
-    change_setting "lan-discovery"
+    setting_change "lan-discovery"
 }
 function virtual_setting {
     heading "Virtual-Location"
@@ -2292,99 +2285,82 @@ function virtual_setting {
     echo
     echo "Refer to: https://nordvpn.com/blog/new-nordvpn-virtual-servers/"
     echo
-    change_setting "virtual-location"
+    setting_change "virtual-location"
 }
 function postquantum_setting {
     # disconnect VPN when changing setting.  https://github.com/NordSecurity/nordvpn-linux/issues/637
     # if $postquantum is enabled, the technology is NordLynx and Meshnet is disabled
-    # $postquantum has no value when using OpenVPN
     heading "Post-Quantum"
-    echo "When Post-Quantum VPN is enabled, your connection uses cutting-edge"
-    echo "cryptography designed to resist quantum computer attacks."
-    echo "Not compatible with OpenVPN or Meshnet.  Refer to:"
+    echo "Post-Quantum VPN uses cutting-edge cryptography designed to resist"
+    echo "quantum computer attacks.  Refer to:"
     echo "https://nordvpn.com/blog/nordvpn-linux-post-quantum-encryption-support/"
     echo
-    if [[ "$connected" == "connected" ]] || [[ "$technology" == "openvpn" ]] || [[ "$meshnet" == "enabled" ]] ; then
+    if [[ "$status" == "connected" ]] || [[ "$technology" != "nordlynx" ]] || [[ "$meshnet" == "enabled" ]] ; then
         echo -e "$pq Post-Quantum VPN is $postquantumc."
         echo
-        echo -e "The VPN is $connectedc."
+        echo -e "The VPN is $statusc."
         if [[ "$postquantum" == "enabled" ]]; then
             echo
             echo -e "${WColor}To disable Post-Quantum VPN you must disconnect from VPN.${Color_Off}"
         else
-            echo -e "The Technology is set to $technologydc."
+            echo -e "The Technology is set to $techpro."
             echo -e "$mn Meshnet is $meshnetc."
             echo
             echo -e "${WColor}To enable Post-Quantum VPN you must disconnect from VPN and"
             echo -e "use NordLynx Technology with Meshnet disabled.${Color_Off}"
         fi
         echo
-        echo
         read -n 1 -r -p "Proceed? (y/n) "; echo
+        echo
+        #
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            disconnect_vpn "force" "check_ks"
-            if [[ "$technology" == "openvpn" ]]; then if [[ "$protocol" == "TCP" ]]; then nordvpn set protocol UDP; fi; nordvpn set technology nordlynx; fi
-            if [[ "$meshnet" == "enabled" ]]; then nordvpn set meshnet disabled; fi
+            set_techpro "nordlynx" "udp"    # will disconnect
+            setting_disable "meshnet"
             set_vars
-            echo
         else
-            settings_menu
+            setting_menu
         fi
+        #
     fi
-    change_setting "post-quantum"
+    setting_change "post-quantum"
 }
 function obfuscate_setting {
     # not available when using NordLynx
     # must disconnect/reconnect to change setting
     heading "Obfuscate"
     parent="Settings"
-    if [[ "$technology" == "nordlynx" ]]; then
-        echo -e "Technology is currently set to $technologydc."
-        echo
-        echo "Obfuscation is not available when using $technologyd."
-        echo "Change Technology to OpenVPN to use Obfuscation."
-        echo
-        read -n 1 -r -p "Go to the 'Technology' setting? (y/n) "; echo
-        parent_menu
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            technology_setting
-        else
-            main_menu
-        fi
-    fi
+    echo "Obfuscated servers can bypass restrictions such as network firewalls."
+    echo "They are recommended for countries with restricted access. "
+    echo
+    echo "Only certain NordVPN locations support obfuscation.  Recommend connecting"
+    echo "to the 'Obfuscated' group or through 'Countries' when Obfuscate is enabled."
+    echo "Attempting to connect to unsupported locations will cause an error."
+    echo
     disconnect_warning
-    echo "Obfuscated servers can bypass internet restrictions such"
-    echo "as network firewalls.  They are recommended for countries"
-    echo "with restricted access. "
-    echo
-    echo "Only certain NordVPN locations support obfuscation."
-    echo
-    echo "Recommend connecting to the 'Obfuscated' group or through"
-    echo "'Countries' when Obfuscate is enabled.  Attempting to"
-    echo "connect to unsupported locations will cause an error."
-    echo
+    if [[ "$technology" != "openvpn" ]]; then
+        echo -e "Technology is currently set to $techpro"
+        echo -e "${WColor}Note:${Color_Off} Enabling Obfuscate will change the Technology to OpenVPN."
+        echo
+    fi
     echo -e "$ob Obfuscate is $obfuscatec."
     echo
-    if [[ "$fast3" =~ ^[Yy]$ ]]; then
-        echo -e "${FColor}Fast3 is enabled.  Changing the setting.${Color_Off}"
-        REPLY="y"
-    elif [[ "$obfuscate" == "enabled" ]]; then
+    if [[ "$obfuscate" == "enabled" ]]; then
         read -n 1 -r -p "$(echo -e "${DColor}Disable${Color_Off} Obfuscate? (y/n) ")"; echo
     else
         read -n 1 -r -p "$(echo -e "${EColor}Enable${Color_Off} Obfuscate? (y/n) ")"; echo
     fi
+    echo
     parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnect_vpn "force"
         if [[ "$obfuscate" == "enabled" ]]; then
-            nordvpn set obfuscate disabled; wait
+            nordvpn set obfuscate disabled; echo
+            techpro_menu "back"
         else
-            nordvpn set obfuscate enabled; wait
+            techpro_menu "back" "ovpn"
+            nordvpn set obfuscate enabled; echo
         fi
-        echo
-        protocol_ask
     else
-        echo
         echo -e "$ob Keep Obfuscate $obfuscatec."
     fi
     main_menu
@@ -2655,16 +2631,15 @@ function meshnet_fileshare {
                 echo "nordvpn fileshare send --background <peer> </path/file1> </path/file2>"
                 #
                 echo
-                echo -e "${WColor}'fileshare send' is not fully working with the script.${Color_Off}"
-                echo "Transfers will fail if there is a space in the path. (File not found)"
+                echo -e "${WColor}Note:${Color_Off} Transfers will fail if there is a space in the path. (File not found)"
                 echo "Workaround: Copy the output command and paste it in a new terminal window."
                 #
                 meshnet_prompt
                 read -r -p "Enter the recipient hostname|nickname|IP|pubkey: " meshwhere
                 if [[ -n "$meshwhere" ]]; then
                     echo
-                    echo "Enter the full paths and filenames, or try dragging the"
-                    echo "files from your file manager to this terminal window."
+                    echo "Enter the full paths and filenames, or try dragging the files from"
+                    echo "your file manager to this terminal window."
                     echo
                     read -r -p "Files: " meshfiles
                     if [[ -n "$meshfiles" ]]; then
@@ -2746,7 +2721,7 @@ function meshnet_fileshare {
                 echo "Send OS notifications for Meshnet file transfer events."
                 echo "Accept or Decline file transfers directly from the notification."
                 echo
-                change_setting "notify" "back"
+                setting_change "notify" "back"
                 ;;
             "Online Peers")
                 heading "Online Peers" "txt"
@@ -2787,8 +2762,8 @@ function meshnet_menu {
         parent_menu
         case $mesh in
             "Enable/Disable")
-                clear -x
-                echo
+                heading "Enable/Disable Meshnet" "txt"
+                #
                 if [[ "$postquantum" == "enabled" ]]; then
                     echo -e "$pq Post-Quantum VPN is $postquantumc."
                     echo -e "${WColor}Meshnet is not compatible with Post-Quantum VPN.${Color_Off}"
@@ -2801,7 +2776,7 @@ function meshnet_menu {
                         meshnet_menu
                     fi
                 fi
-                change_setting "meshnet" "back"
+                setting_change "meshnet" "back"
                 meshnet_menu
                 ;;
             "Peer List")
@@ -2907,7 +2882,7 @@ function meshnet_menu {
                 echo "and only while using the NordLynx connection protocol."
                 if [[ "$technology" != "nordlynx" ]]; then
                     echo
-                    echo -e "Currently using $technologydc."
+                    echo -e "Currently using $techpro."
                 fi
                 meshnet_prompt "IP"
                 read -r -p "nordvpn meshnet peer connect "
@@ -2985,29 +2960,20 @@ function meshnet_menu {
         esac
     done
 }
-function tplite_disable {
-    echo
-    if [[ "$tplite" == "enabled" ]]; then
-        nordvpn set threatprotectionlite disabled
-        echo
-    fi
-}
 function customdns_menu {
-    heading "CustomDNS"
+    heading "Custom-DNS"
     parent="Settings"
     echo "The NordVPN app automatically uses NordVPN DNS servers"
     echo "to prevent DNS leaks. (103.86.96.100 and 103.86.99.100)"
     echo "You can specify your own Custom-DNS servers instead."
     echo
     if [[ "$tplite" == "enabled" ]]; then
-        echo -e "$tp Note: Enabling Custom-DNS disables TPLite"
+        echo -e "$tp - ${WColor}Note:${Color_Off} Enabling Custom-DNS disables TPLite."
         echo
     fi
-    if [[ "$customdns" == "disabled" ]]; then
-        echo -e "$dns Custom-DNS is ${DColor}disabled${Color_Off}."
-    else
-        echo -e "$dns Custom-DNS is ${EColor}enabled${Color_Off}."
-        echo "Current $dns_servers"
+    echo -e "$dns Custom-DNS is $customdnsc."
+    if [[ "$customdns" != "disabled" ]]; then
+        echo -e "Current DNS: ${LColor}$dns_servers${Color_Off}"
     fi
     echo
     PS3=$'\n''Choose an option: '
@@ -3019,58 +2985,55 @@ function customdns_menu {
         parent_menu
         case $cdns in
             "Nord 103.86.96.100 103.86.99.100")
-                tplite_disable
-                nordvpn set dns 103.86.96.100 103.86.99.100
+                echo
+                setting_enable "dns" "103.86.96.100 103.86.99.100"
                 ;;
             "Nord-TPLite 103.86.96.96 103.86.99.99")
-                tplite_disable
-                nordvpn set dns 103.86.96.96 103.86.99.99
+                echo
+                setting_enable "dns" "103.86.96.96 103.86.99.99"
                 ;;
             "OpenDNS 208.67.220.220 208.67.222.222")
-                tplite_disable
-                nordvpn set dns 208.67.220.220 208.67.222.222
+                echo
+                setting_enable "dns" "208.67.220.220 208.67.222.222"
                 ;;
             "CB-Security 185.228.168.9 185.228.169.9")
                 # Clean Browsing Security 185.228.168.9 185.228.169.9
                 # Clean Browsing Adult 185.228.168.10 185.228.169.11
                 # Clean Browsing Family 185.228.168.168 185.228.169.168
-                tplite_disable
-                nordvpn set dns 185.228.168.9 185.228.169.9
+                echo
+                setting_enable "dns" "185.228.168.9 185.228.169.9"
                 ;;
             "AdGuard 94.140.14.14 94.140.15.15")
-                tplite_disable
-                nordvpn set dns 94.140.14.14 94.140.15.15
+                echo
+                setting_enable "dns" "94.140.14.14 94.140.15.15"
                 ;;
             "Quad9 9.9.9.9 149.112.112.11")
-                tplite_disable
-                nordvpn set dns 9.9.9.9 149.112.112.11
+                echo
+                setting_enable "dns" "9.9.9.9 149.112.112.11"
                 ;;
             "Cloudflare 1.0.0.1 1.1.1.1")
-                tplite_disable
-                nordvpn set dns 1.0.0.1 1.1.1.1
+                echo
+                setting_enable "dns" "1.0.0.1 1.1.1.1"
                 ;;
             "Google 8.8.4.4 8.8.8.8")
-                tplite_disable
-                nordvpn set dns 8.8.4.4 8.8.8.8
+                echo
+                setting_enable "dns" "8.8.4.4 8.8.8.8"
                 ;;
             "Specify or Default")
                 echo
-                echo "Enter the DNS server IPs or hit 'Enter' for default."
-                echo -e "Default: ${FColor}$dnsdesc ($default_dns)${Color_Off}"
+                echo "Enter the DNS IPs.  Hit 'Enter' for default or '$upmenu' to quit."
+                echo -e "Default: ${FColor}$dnsdesc ${LColor}$default_dns${Color_Off}"
                 echo
                 read -r -p "Up to 3 DNS server IPs: "
+                echo
                 parent_menu
                 dns3srvrs="$REPLY"
                 dns3srvrs=${dns3srvrs:-$default_dns}
-                tplite_disable
-                # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1 8.8.8.8"
-                nordvpn set dns $dns3srvrs
-                echo
+                setting_enable "dns" "$dns3srvrs"
                 ;;
             "Disable Custom-DNS")
                 echo
-                nordvpn set dns disabled; wait
-                echo
+                setting_disable "dns"
                 ;;
             "Flush DNS Cache")
                 echo
@@ -3126,8 +3089,8 @@ function allowlist_setting {
     echo "making other changes. Edit the script to modify the function."
     echo
     if [[ "$landiscovery" == "enabled" ]]; then
-        echo -e "$ld Note: Allowlisting a private subnet is not available while"
-        echo -e "     LAN-Discovery is enabled."
+        echo -e "$ld LAN-Discovery is $landiscoveryc."
+        echo -e "Allowlisting a private subnet is not available."
         echo
     fi
     echo -e "${EColor}Current Settings:${Color_Off}"
@@ -3321,6 +3284,7 @@ function account_menu {
                 echo -e "${WColor}** Untested **${Color_Off}"
                 echo
                 read -n 1 -r -p "Proceed? (y/n) "; echo
+                echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     disconnect_vpn "force" "check_ks"
                     nordvpn register
@@ -3422,15 +3386,14 @@ function reset_app {
     echo "Reset the NordVPN app to default settings."
     echo "Requires NordVPN Account login to reconnect."
     echo
-    echo -n "Send commands:"
     echo -e "${WColor}"
-    echo "nordvpn set killswitch disabled"
-    echo "nordvpn disconnect"
-    echo "nordvpn logout"
-    echo "nordvpn allowlist remove all"
-    echo "nordvpn set defaults"
-    echo "Restart nordvpnd service"
-    echo "nordvpn login"
+    echo "Disable the kill switch"
+    echo "Disconnect"
+    echo "Logout"
+    echo "'nordvpn allowlist remove all'"
+    echo "'nordvpn set defaults'"
+    echo "Restart the nordvpnd service"
+    echo "Login"
     echo "Apply your default configuration"
     echo -e "${Color_Off}"
     echo
@@ -3438,15 +3401,12 @@ function reset_app {
     echo
     parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        # first four redundant
-        if [[ "$killswitch" == "enabled" ]]; then
-            nordvpn set killswitch disabled; wait
-        fi
+        setting_disable "killswitch"
         disconnect_vpn "force"
         logout_nord
-        nordvpn allowlist remove all; wait
+        nordvpn allowlist remove all
         echo
-        nordvpn set defaults; wait
+        nordvpn set defaults
         echo
         echo -e "${EColor}Can also delete:${Color_Off}"
         echo "  /home/username/.config/nordvpn/nordvpn.conf"
@@ -3467,7 +3427,7 @@ function reset_app {
 }
 function iptables_status {
     echo
-    echo -e "The VPN is $connectedc. IP: ${IPColor}$ipaddr${Color_Off}"
+    echo -e "The VPN is $statusc. IP: ${IPColor}$ipaddr${Color_Off}"
     echo -e "$fw The Firewall is $firewallc. Firewall Mark: ${LColor}$fwmark${Color_Off}"
     echo -e "$rt Routing is $routingc."
     echo -e "$ks The Kill Switch is $killswitchc."
@@ -3549,27 +3509,27 @@ function iptables_menu {
                 ;;
             "Firewall")
                 echo
-                change_setting "firewall" "back"
+                setting_change "firewall" "back"
                 iptables_status
                 ;;
             "Routing")
                 echo
-                change_setting "routing" "back"
+                setting_change "routing" "back"
                 iptables_status
                 ;;
             "KillSwitch")
                 echo
-                change_setting "killswitch" "back"
+                setting_change "killswitch" "back"
                 iptables_status
                 ;;
             "Meshnet")
                 echo
-                change_setting "meshnet" "back"
+                setting_change "meshnet" "back"
                 iptables_status
                 ;;
             "LAN-Discovery")
                 echo
-                change_setting "lan-discovery" "back"
+                setting_change "lan-discovery" "back"
                 iptables_status
                 ;;
             "Allowlist")
@@ -3589,7 +3549,7 @@ function iptables_menu {
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     if [[ "$autoconnect" == "enabled" ]]; then
-                        change_setting "autoconnect" "back"
+                        setting_change "autoconnect" "back"
                     fi
                     disconnect_vpn "force"
                     restart_service "back"
@@ -3603,7 +3563,7 @@ function iptables_menu {
                 ;;
             "Disconnect")
                 echo
-                if [[ "$connected" == "connected" ]]; then
+                if [[ "$status" == "connected" ]]; then
                     read -n 1 -r -p "$(echo -e "${WColor}Disconnect the VPN?${Color_Off} (y/n) ")"; echo
                     echo
                     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -3661,7 +3621,7 @@ function service_logs {
     else
         read -n 1 -s -r -p "Press any key to continue... "; echo
     fi
-    settings_menu
+    setting_menu
 }
 function rate_server {
     while true
@@ -3692,33 +3652,28 @@ function server_load {
         return
     fi
     echo -ne "$nordhost load = "
-    # this will also work but it will download 20MB every time and possible api server timeouts
-    # sload=$( timeout 10 curl --silent "https://api.nordvpn.com/v1/servers?limit=999999" | jq --arg host "$nordhost" '.[] | select(.hostname == $host) | .load' )
-    #
-    #
-    # workaround.  https://github.com/ph202107/nordlist/issues/6
-    if [[ -f "$nordserversfile" ]]; then
-        # have not found a way to query the api directly by "hostname", but "id" works
+    # https://github.com/ph202107/nordlist/issues/6
+    if [[ -f "$serversfile" ]]; then
         # find the "id" of the current server from the local .json
-        serverid=$( jq --arg host "$nordhost" '.[] | select(.hostname == $host) | .id' "$nordserversfile" )
+        serverid=$( jq --arg host "$nordhost" '.[] | select(.hostname == $host) | .id' "$serversfile" )
         if [[ -n "$serverid" ]]; then
             # query the api by the server id. this method downloads about 3KB instead of 20MB
-            sload=$( timeout 10 curl --silent "https://api.nordvpn.com/v1/servers?limit=1&filters\[servers.id\]=$serverid" | jq '.[].load' )
+            sload=$( timeout 6 curl --silent "https://api.nordvpn.com/v1/servers?limit=1&filters\[servers.id\]=$serverid" | jq '.[].load' )
         else
             # servers may be added or removed
             echo -e "${WColor}No id found for '$nordhost'${Color_Off}"
-            echo "Try updating $(basename "$nordserversfile") (Tools - NordVPN API - All VPN Servers)"
+            echo "Try updating $(basename "$serversfile") (Tools - NordVPN API - All VPN Servers)"
         fi
     else
-        echo -e "${WColor}$nordserversfile not found${Color_Off}"
+        echo -e "${WColor}$serversfile not found${Color_Off}"
         echo "Create the file at: Tools - NordVPN API - All VPN Servers"
     fi
     #
     if [[ -z $sload ]]; then
         echo "Request failed."
-    elif (( sload <= 30 )); then
+    elif (( sload < 40 )); then
         echo -e "${EIColor}$sload%${Color_Off}"
-    elif (( sload <= 60 )); then
+    elif (( sload < 70 )); then
         echo -e "${FIColor}$sload%${Color_Off}"
     else
         echo -e "${DIColor}$sload%${Color_Off}"
@@ -3726,7 +3681,7 @@ function server_load {
     echo
 }
 function backup_file {
-    # $1 = full path and filename.  "$nordserversfile"  "$nordfavoritesfile" "$nordlogfile"
+    # $1 = full path and filename.  "$serversfile"  "$favoritesfile" "$nordlogfile"
     #
     if [[ ! -f "$1" ]]; then return; fi
     #
@@ -3741,9 +3696,9 @@ function backup_file {
     echo "File Size: $( du -k "$1" | cut -f1 ) KB"
     echo "Last Modified: $( date -r "$1" )"
     #
-    if [[ "$1" == "$nordserversfile" ]]; then
+    if [[ "$1" == "$serversfile" ]]; then
         echo "Server Count: $( jq length "$1" )"
-    elif [[ "$1" == "$nordfavoritesfile" ]]; then
+    elif [[ "$1" == "$favoritesfile" ]]; then
         echo "Server Count: $( wc -l < "$1" )"
     else
         echo "Lines: $( wc -l < "$1" )"
@@ -3774,10 +3729,10 @@ function backup_file {
 function favorites_verify {
     parent="Favorites"
     heading "Check for Obsolete Favorites" "txt"
-    echo -e "Compare: ${EColor}$nordfavoritesfile${Color_Off}"
-    echo "Last Modified: $( date -r "$nordfavoritesfile" )"
-    echo -e "Against: ${EColor}$nordserversfile${Color_Off}"
-    echo "Last Modified: $( date -r "$nordserversfile" )"
+    echo -e "Compare: ${EColor}$favoritesfile${Color_Off}"
+    echo "Last Modified: $( date -r "$favoritesfile" )"
+    echo -e "Against: ${EColor}$serversfile${Color_Off}"
+    echo "Last Modified: $( date -r "$serversfile" )"
     echo
     echo "Check if any hostnames have been removed from service."
     echo "You will be prompted to delete any obsolete servers from"
@@ -3787,8 +3742,8 @@ function favorites_verify {
     echo "Backup and update the JSON file."
     echo "Recommended if you've added favorites since the last update."
     echo
-    if [[ ! -f "$nordserversfile" ]]; then
-        echo -e "${WColor}$(basename "$nordserversfile") does not exist.${Color_Off}"
+    if [[ ! -f "$serversfile" ]]; then
+        echo -e "${WColor}$(basename "$serversfile") does not exist.${Color_Off}"
         echo
         echo "Please visit: Tools - NordVPN API - All VPN Servers"
         echo
@@ -3799,15 +3754,15 @@ function favorites_verify {
     echo "============================================================"
     echo "Please backup your favorites file."
     echo
-    backup_file "$nordfavoritesfile"
+    backup_file "$favoritesfile"
     echo
     echo "============================================================"
-    echo "Comparing your favorites with $(basename "$nordserversfile"):"
+    echo "Comparing your favorites with $(basename "$serversfile"):"
     echo
     # extract hostnames.  this speeds up the process significantly since we only search the json once
-    hostnames="$(jq -r '.[].hostname' "$nordserversfile")"
+    hostnames="$(jq -r '.[].hostname' "$serversfile")"
     #
-    # loop through lines in nordfavoritesfile
+    # loop through lines in favoritesfile
     # https://superuser.com/questions/421701/bash-reading-input-within-while-read-loop-doesnt-work
     while IFS= read -r -u 3 line; do
         # take the partial hostname from the line and append ".nordvpn.com". awk last field by "_"
@@ -3820,11 +3775,11 @@ function favorites_verify {
             # if it doesn't exist, print a unicode "X" and prompt to delete
             echo
             echo -e "$line \u274c"
-            read -n 1 -r -p "$(echo -e "${WColor}Delete${Color_Off}") $line from '$(basename "$nordfavoritesfile")'? (y/n): "
+            read -n 1 -r -p "$(echo -e "${WColor}Delete${Color_Off}") $line from '$(basename "$favoritesfile")'? (y/n): "
             echo
             if [[ "$REPLY" =~ ^[Yy]$ ]]; then
                 # delete the line using awk.  tried using 'sed -i' but had problems with special characters
-                awk -v pattern="$line" '$0 != pattern' "$nordfavoritesfile" >favtemp && mv favtemp "$nordfavoritesfile"
+                awk -v pattern="$line" '$0 != pattern' "$favoritesfile" >favtemp && mv favtemp "$favoritesfile"
                 echo -e "$line ${WColor}deleted${Color_Off}"
                 echo
             else
@@ -3832,12 +3787,12 @@ function favorites_verify {
                 echo
             fi
         fi
-    done 3< <(sort < "$nordfavoritesfile")
+    done 3< <(sort < "$favoritesfile")
     echo
     echo "Completed."
     echo
     echo
-    # reload the favorites menu in case nordfavoritesfile has changed
+    # reload the favorites menu in case favoritesfile has changed
     read -n 1 -s -r -p "Press any key to continue... "; echo
     favorites_menu
 }
@@ -3846,24 +3801,24 @@ function allservers_update {
     # if a backup file was created, compare it with the new json to see if any hostnames were added or removed
     #
     # backup the current json
-    backup_file "$nordserversfile"
+    backup_file "$serversfile"
     #
     read -n 1 -r -p "Download an updated .json? (~20MB) (y/n) "; echo
     echo
     parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
+        curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$serversfile"
         echo
-        echo -e "Saved as: ${EColor}$nordserversfile${Color_Off}"
-        echo "File Size: $( du -k "$nordserversfile" | cut -f1 ) KB"
-        echo "Last Modified: $( date -r "$nordserversfile" )"
-        echo "Server Count: $( jq length "$nordserversfile" )"
+        echo -e "Saved as: ${EColor}$serversfile${Color_Off}"
+        echo "File Size: $( du -k "$serversfile" | cut -f1 ) KB"
+        echo "Last Modified: $( date -r "$serversfile" )"
+        echo "Server Count: $( jq length "$serversfile" )"
         echo
     fi
     if [[ -f "$backupfile" ]]; then
         #
         oldfile="$backupfile"
-        newfile="$nordserversfile"
+        newfile="$serversfile"
         #
         echo -e "Hostname changes in ${EColor}$newfile${Color_Off}"
         echo -e "Compared to ${FColor}$oldfile${Color_Off}"
@@ -3881,7 +3836,7 @@ function virtual_check {
     declare -A nordv_map
     declare -A jsonv_map
     #
-    readarray -t jsonvirtual < <( jq -r '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u )
+    readarray -t jsonvirtual < <( jq -r '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$serversfile" | tr ' ' '_' | sort -u )
     #
     for element in "${nordvirtual[@]}"; do
         nordv_map["$element"]=1
@@ -3906,11 +3861,11 @@ function virtual_check {
     echo
     if "$mismatch"; then
         echo -e "${WColor}** Virtual location mismatch **${Color_Off}"
-        echo "Please update $(basename "$nordserversfile") and then the nordvirtual array."
+        echo "Please update $(basename "$serversfile") and then the nordvirtual array."
     else
         echo -e "${EColor}Virtual locations match. \u2705${Color_Off}"
         echo "Countries and Cities listed in the nordvirtual array match the"
-        echo "virtual locations listed in $(basename "$nordserversfile")."
+        echo "virtual locations listed in $(basename "$serversfile")."
     fi
     echo
 }
@@ -3918,23 +3873,23 @@ function virtual_locations {
     heading "Virtual Locations" "txt"
     #
     echo -e "${H2Color}Virtual Country Locations${Color_Off}"
-    jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
+    jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$serversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
     echo; echo
-    echo "Virtual Country Locations = $( jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$nordserversfile" | sort -u | wc -l )"
+    echo "Virtual Country Locations = $( jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$serversfile" | sort -u | wc -l )"
     echo
     echo
     echo -e "${H2Color}Virtual City Locations${Color_Off}"
-    jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
+    jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$serversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
     echo; echo
-    echo "Virtual City Locations = $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | wc -l )"
+    echo "Virtual City Locations = $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$serversfile" | tr ' ' '_' | sort -u | wc -l )"
     echo
     echo
     echo -e "${H2Color}Virtual Country and City Locations${Color_Off}"
-    jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
+    jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$serversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
     echo; echo
     echo -e "${FColor}Can use this list to update the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))${Color_Off}"
     echo
-    echo "Virtual Country and City Locations = $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$nordserversfile" | sort -u | wc -l )"
+    echo "Virtual Country and City Locations = $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$serversfile" | sort -u | wc -l )"
     echo
     virtual_check
 }
@@ -3945,11 +3900,11 @@ function allservers_group {
     #
     heading "Group: $1" "txt"
     if [[ "$2" == "quotes" ]]; then
-        jq --arg group "$1" '.[] | select(.groups[].title == $group) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+        jq --arg group "$1" '.[] | select(.groups[].title == $group) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -k2
     else
-        jq -r --arg group "$1" '.[] | select(.groups[].title == $group) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+        jq -r --arg group "$1" '.[] | select(.groups[].title == $group) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -k2
     fi
-    servercount="$( jq -r --arg group "$1" '.[] | select(.groups[].title == $group) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -u | wc -l )"
+    servercount="$( jq -r --arg group "$1" '.[] | select(.groups[].title == $group) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -u | wc -l )"
     echo
     echo "Servers in Group '$1' = $servercount"
     echo
@@ -3961,11 +3916,11 @@ function allservers_technology {
     #
     heading "Technology: $1" "txt"
     if [[ "$2" == "quotes" ]]; then
-        jq --arg tech "$1" '.[] | select(.technologies[].name == $tech) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+        jq --arg tech "$1" '.[] | select(.technologies[].name == $tech) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -k2
     else
-        jq -r --arg tech "$1" '.[] | select(.technologies[].name == $tech) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+        jq -r --arg tech "$1" '.[] | select(.technologies[].name == $tech) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -k2
     fi
-    servercount="$( jq --arg tech "$1" '.[] | select(.technologies[].name == $tech) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -u | wc -l )"
+    servercount="$( jq --arg tech "$1" '.[] | select(.technologies[].name == $tech) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -u | wc -l )"
     echo
     echo "$1 Servers = $servercount"
     echo
@@ -3977,24 +3932,24 @@ function allservers_menu {
     echo "Query a local .json of all the NordVPN servers."
     echo "Requires 'curl' and 'jq'"
     echo
-    if [[ -f "$nordserversfile" ]]; then
-        echo -e "File: ${EColor}$nordserversfile${Color_Off}"
+    if [[ -f "$serversfile" ]]; then
+        echo -e "File: ${EColor}$serversfile${Color_Off}"
     else
-        echo -e "${WColor}$nordserversfile does not exist.${Color_Off}"
+        echo -e "${WColor}$serversfile does not exist.${Color_Off}"
         echo
         read -n 1 -r -p "Download the .json? (~20MB) (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            touch "$nordserversfile"
-            curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$nordserversfile"
-            echo -e "Saved as: ${EColor}$nordserversfile${Color_Off}"
+            touch "$serversfile"
+            curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$serversfile"
+            echo -e "Saved as: ${EColor}$serversfile${Color_Off}"
         else
             REPLY="$upmenu"
             parent_menu
         fi
     fi
-    echo "Last Modified: $( date -r "$nordserversfile" )"
-    echo "Server Count: $( jq length "$nordserversfile" )"
+    echo "Last Modified: $( date -r "$serversfile" )"
+    echo "Server Count: $( jq length "$serversfile" )"
     echo
     PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
@@ -4005,17 +3960,17 @@ function allservers_menu {
         case $avpn in
             "List All Servers")
                 heading "All the VPN Servers" "txt"
-                jq -r '.[].hostname' "$nordserversfile" | sort -V -u
+                jq -r '.[].hostname' "$serversfile" | sort -V -u
                 echo
-                echo "All Servers = $( jq length "$nordserversfile" )"
+                echo "All Servers = $( jq length "$serversfile" )"
                 echo
                 ;;
             "Server Count")
                 heading "Servers in each Country" "txt"
-                jq -r 'group_by(.locations[0].country.name) | map({country: .[0].locations[0].country.name, total: length}) | sort_by(.country) | .[] | "\(.country) \(.total)"' "$nordserversfile"
+                jq -r 'group_by(.locations[0].country.name) | map({country: .[0].locations[0].country.name, total: length}) | sort_by(.country) | .[] | "\(.country) \(.total)"' "$serversfile"
                 echo
                 heading "Servers in each City" "txt"
-                jq -r 'group_by(.locations[0].country.name + " " + .locations[0].country.city.name) | map({country: .[0].locations[0].country.name, city: .[0].locations[0].country.city.name, total: length}) | sort_by(.country, .city) | .[] | "\(.country) \(.city) \(.total)"' "$nordserversfile"
+                jq -r 'group_by(.locations[0].country.name + " " + .locations[0].country.city.name) | map({country: .[0].locations[0].country.name, city: .[0].locations[0].country.city.name, total: length}) | sort_by(.country, .city) | .[] | "\(.country) \(.city) \(.total)"' "$serversfile"
                 echo
                 ;;
             "Double-VPN Servers")
@@ -4075,12 +4030,12 @@ function allservers_menu {
                 else
                     echo
                     #heading "Servers in $searchcountry sorted by City" "txt"
-                    #jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -k2
+                    #jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -k2
                     #echo
                     heading "Servers in $searchcountry sorted by Hostname" "txt"
-                    jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$nordserversfile" | sort -V -k1
+                    jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -V -k1
                     echo
-                    echo "$searchcountry Servers = $( jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | .hostname' "$nordserversfile" | sort -u | wc -l )"
+                    echo "$searchcountry Servers = $( jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | .hostname' "$serversfile" | sort -u | wc -l )"
                     echo
                 fi
                 ;;
@@ -4098,16 +4053,16 @@ function allservers_menu {
                 else
                     echo
                     heading "Servers in $searchcity" "txt"
-                    jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -V
+                    jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$serversfile" | sort -V
                     echo
-                    echo "$searchcity Servers = $( jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$nordserversfile" | sort -u | wc -l )"
+                    echo "$searchcity Servers = $( jq -r --arg searchcity "$searchcity" '.[] | select(.locations[].country.city.name == $searchcity) | .hostname' "$serversfile" | sort -u | wc -l )"
                     echo
                 fi
                 ;;
             "Search Server")
                 heading "Search by Server Hostname" "txt"
                 echo "The complete record for a particular server stored in:"
-                echo -e "${EColor}$nordserversfile${Color_Off}"
+                echo -e "${EColor}$serversfile${Color_Off}"
                 echo "For example 'us9723.nordvpn.com'"
                 echo
                 echo -e "${FColor}(Leave blank to quit)${Color_Off}"
@@ -4119,7 +4074,7 @@ function allservers_menu {
                 else
                     echo
                     heading "Record for $searchserver" "txt"
-                    jq --arg searchserver "$searchserver" '.[] | select(.hostname == $searchserver)' "$nordserversfile"
+                    jq --arg searchserver "$searchserver" '.[] | select(.hostname == $searchserver)' "$serversfile"
                     echo
                 fi
                 ;;
@@ -4221,7 +4176,7 @@ function nordapi_menu {
     echo "Commands may take a few seconds to complete."
     echo "Rate-limiting may cause a stall or 'Parse' error."
     echo
-    if [[ "$connected" == "connected" ]]; then
+    if [[ "$status" == "connected" ]]; then
         echo -e "Connected to: ${EColor}$server.nordvpn.com${Color_Off}"
     fi
     echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
@@ -4293,7 +4248,7 @@ function change_host {
     heading "Change Host" "txt"
     echo "Change the Hostname for testing purposes."
     echo
-    if [[ "$connected" == "connected" ]]; then
+    if [[ "$status" == "connected" ]]; then
         echo -e "Connected to: ${EColor}$server.nordvpn.com${Color_Off}"
     fi
     echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
@@ -4355,14 +4310,14 @@ function wireguard_gen {
         echo "eg. 'sudo apt install wireguard wireguard-tools'"
         echo
         return
-    elif [[ "$connected" != "connected" ]] || [[ "$technology" != "nordlynx" ]]; then
-        echo -e "The VPN is $connectedc."
-        echo -e "The Technology is set to $technologydc."
+    elif [[ "$status" != "connected" ]] || [[ "$technology" != "nordlynx" ]]; then
+        echo -e "The VPN is $statusc."
+        echo -e "The Technology is set to $techpro."
         echo -e "${WColor}Must connect to your chosen server using NordLynx.${Color_Off}"
         echo
         return
     elif [[ -f "$wgfull" ]]; then
-        echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
+        echo -e "Current Server: ${EColor}$nordhost${Color_Off}"
         echo
         echo -e "${WColor}$wgfull already exists${Color_Off}"
         echo
@@ -4372,14 +4327,14 @@ function wireguard_gen {
         echo -e "${WColor}Disable the Meshnet NordLynx interfaces and disconnect?${Color_Off}"
         echo "Please reconnect to your chosen server afterwards."
         echo
-        change_setting "meshnet" "back"
+        setting_change "meshnet" "back"
         if [[ "$meshnet" == "disabled" ]]; then
             main_disconnect
         else
             return
         fi
     fi
-    echo -e "Current Server: ${EColor}$server.nordvpn.com${Color_Off}"
+    echo -e "Current Server: ${EColor}$nordhost${Color_Off}"
     echo -e "${CIColor}$city ${COColor}$country ${IPColor}$ipaddr ${Color_Off}"
     echo
     echo "Generate WireGuard config file:"
@@ -4588,17 +4543,17 @@ function speedtest_menu {
                 ;;
             "Latency & Load")
                 echo
-                if [[ "$connected" != "connected" ]]; then
-                    echo -e "(VPN $connectedc)"
+                if [[ "$status" != "connected" ]]; then
+                    echo -e "(VPN $statusc)"
                     read -r -p "Enter a Hostname/IP [Default $default_vpnhost]: " nordhost
                     nordhost=${nordhost:-$default_vpnhost}
                     echo
                     echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
                     echo
                 fi
-                if [[ "$connected" == "connected" ]] && [[ "$technology" == "openvpn" ]]; then
-                    echo -e "$technologydc - Server IP will not respond to ping."
-                    echo "Attempt to ping your external IP instead."
+                if [[ "$status" == "connected" ]] && [[ "$technology" == "openvpn" ]]; then
+                    echo -e "$techpro - Server IP will not respond to ping."
+                    echo "Attempt to ping the external IP instead."
                     echo
                     ipinfo_curl
                     if [[ -n "$extip" ]]; then
@@ -4647,11 +4602,11 @@ function speedtest_menu {
 function tools_menu {
     heading "Tools"
     parent="Main"
-    if [[ "$connected" == "connected" ]]; then
+    if [[ "$status" == "connected" ]]; then
         main_logo "stats_only"
         PS3=$'\n''Choose an option: '
     else
-        echo -e "(VPN $connectedc)"
+        echo -e "(VPN $statusc)"
         read -r -p "Enter a Hostname/IP [Default $default_vpnhost]: " nordhost
         nordhost=${nordhost:-$default_vpnhost}
         echo
@@ -4724,19 +4679,19 @@ function tools_menu {
                 # random 40-character string
                 ipleak_session=$( head -1 <(fold -w 40  <(tr -dc 'a-zA-Z0-9' < /dev/urandom)) )
                 echo
-                if [[ "$connected" == "connected" ]]; then
+                if [[ "$status" == "connected" ]]; then
                     echo -e "${LColor}VPN Server IP:${Color_Off} $ipaddr"
                     echo
                     if [[ "$customdns" != "disabled" ]]; then
-                        echo -e "$dns Current $dns_servers"
+                        echo -e "$dns Current DNS: ${LColor}$dns_servers${Color_Off}"
                         echo
                     fi
                 else
-                    echo -e "(VPN $connectedc)"
+                    echo -e "(VPN $statusc)"
                     echo
                 fi
                 echo -e "${EColor}ipleak.net DNS Detection: ${Color_Off}"
-                echo -e "${Color_Off}$( timeout 10 curl --silent https://"$ipleak_session"-"$RANDOM".ipleak.net/dnsdetection/ | jq .ip )"
+                echo -e "${Color_Off}$( timeout 6 curl --silent https://"$ipleak_session"-"$RANDOM".ipleak.net/dnsdetection/ | jq .ip )"
                 echo
                 ;;
             "ipleak.net")       openlink "https://ipleak.net/";;
@@ -4801,8 +4756,8 @@ function set_defaults_ask {
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             allowlist_setting "back"
         fi
-        heading "Set Defaults: ${H2Color}CustomDNS${H1Color}" "txt"
-        read -n 1 -r -p "Go to the CustomDNS setting? (y/n) "; echo
+        heading "Set Defaults: ${H2Color}Custom-DNS${H1Color}" "txt"
+        read -n 1 -r -p "Go to the Custom-DNS setting? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             set_vars
@@ -4828,7 +4783,7 @@ function script_info {
     echo "Need to edit the script to change these settings."
     echo
     openlink "$0" "ask" "exit"
-    settings_menu
+    setting_menu
 }
 function quick_connect {
     # This is an alternate method of connecting to the Nord recommended server.
@@ -4837,22 +4792,22 @@ function quick_connect {
     # Auguss82 via github
     heading "QuickConnect"
     echo
-    if [[ "$connected" == "connected" ]] && [[ "$killswitch" == "disabled" ]]; then
+    if [[ "$status" == "connected" ]] && [[ "$killswitch" == "disabled" ]]; then
         read -n 1 -r -p "Disconnect the VPN to find a nearby server? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             disconnect_vpn "force"
         fi
     fi
-    if [[ "$connected" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
-        echo -e "The VPN is $connectedc with the Kill Switch $killswitchc"
+    if [[ "$status" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
+        echo -e "The VPN is $statusc with the Kill Switch $killswitchc"
         bestserver=""
     elif [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Obfuscate is $obfuscatec"
         bestserver=""
     else
         echo -n "Getting the recommended server... "
-        bestserver="$(timeout 10 curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
+        bestserver="$(timeout 6 curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
         echo
     fi
     echo
@@ -4865,7 +4820,7 @@ function quick_connect {
         echo
         nordvpn connect "$bestserver"
     fi
-    status
+    exit_status
     exit
 }
 function group_all_menu {
@@ -4875,7 +4830,7 @@ function group_all_menu {
     create_list "group"
     echo "Groups that are available with"
     echo
-    echo -e "Technology: $technologydc"
+    echo -e "Technology: $techpro"
     if [[ "$technology" == "openvpn" ]]; then
         echo -e "Obfuscate: $obfuscatec"
     fi
@@ -4888,11 +4843,12 @@ function group_all_menu {
             main_menu
         elif (( 1 <= REPLY )) && (( REPLY <= ${#grouplist[@]} )); then
             heading "$xgroup"
+            echo
             disconnect_vpn
             echo "Connect to the $xgroup group."
             echo
             nordvpn connect --group "$xgroup"
-            status
+            exit_status
             exit
         else
             invalid_option "${#grouplist[@]}" "$parent"
@@ -4906,31 +4862,31 @@ function favorites_menu {
     echo "Keep track of your favorite individual servers by adding them to"
     echo "this list. For example low ping servers or streaming servers."
     echo
-    if [[ -f "$nordfavoritesfile" ]]; then
+    if [[ -f "$favoritesfile" ]]; then
         # remove leading and trailing spaces and tabs, delete empty lines
         # prevent sed from changing the "Last Modified" file property unless it actually makes changes
-        if ! cmp -s "$nordfavoritesfile" <( sed -e 's/^[ \t]*//' -e 's/[ \t]*$//' -e '/^$/d' "$nordfavoritesfile" ); then
-            sed -i -e 's/^[ \t]*//' -e 's/[ \t]*$//' -e '/^$/d' "$nordfavoritesfile"
+        if ! cmp -s "$favoritesfile" <( sed -e 's/^[ \t]*//' -e 's/[ \t]*$//' -e '/^$/d' "$favoritesfile" ); then
+            sed -i -e 's/^[ \t]*//' -e 's/[ \t]*$//' -e '/^$/d' "$favoritesfile"
         fi
     else
-        echo -e "${WColor}$nordfavoritesfile does not exist.${Color_Off}"
+        echo -e "${WColor}$favoritesfile does not exist.${Color_Off}"
         echo
         read -n 1 -r -p "Create the file? (y/n) "; echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            touch "$nordfavoritesfile"
+            touch "$favoritesfile"
             favorites_menu
         else
             main_menu
         fi
     fi
-    readarray -t favoritelist < <( sort < "$nordfavoritesfile" )
+    readarray -t favoritelist < <( sort < "$favoritesfile" )
     if (( "${#favoritelist[@]}" > 1 )); then
         rfavorite=$( printf '%s\n' "${favoritelist[ RANDOM % ${#favoritelist[@]} ]}" )
         favoritelist+=( "Random" )
     fi
-    if [[ "$connected" == "connected" ]]; then
-        if grep -q -i "$server" "$nordfavoritesfile"; then
-            echo -e "The Current Server is in the list:  ${FColor}$( grep -i "$server" "$nordfavoritesfile" )${Color_Off}"
+    if [[ "$status" == "connected" ]]; then
+        if grep -q -i "$server" "$favoritesfile"; then
+            echo -e "The Current Server is in the list:  ${FColor}$( grep -i "$server" "$favoritesfile" )${Color_Off}"
             echo
         else
             favoritelist+=( "Add Current Server" )
@@ -4955,7 +4911,7 @@ function favorites_menu {
                 echo -e "Format:  AnyName${H2Color}<underscore>${Color_Off}ActualServerNumber"
                 echo "Examples:  Netflix_us8247  Gaming_ca1672"
                 echo
-                openlink "$nordfavoritesfile" "ask" "exit"
+                openlink "$favoritesfile" "ask" "exit"
                 favorites_menu
                 ;;
             "Add Server")
@@ -4967,9 +4923,9 @@ function favorites_menu {
                 echo
                 read -r -p "Enter the full server name and number: "
                 if [[ -n $REPLY ]]; then
-                    echo "$REPLY" >> "$nordfavoritesfile"
+                    echo "$REPLY" >> "$favoritesfile"
                     echo
-                    echo -e "Added ${FColor}$REPLY${Color_Off} to ${LColor}$nordfavoritesfile${Color_Off}"
+                    echo -e "Added ${FColor}$REPLY${Color_Off} to ${LColor}$favoritesfile${Color_Off}"
                     echo
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
@@ -4997,19 +4953,20 @@ function favorites_menu {
                 if [[ "$favadd" != *"$server"* ]]; then
                     favadd="${favadd}_${server}"
                 fi
-                echo "$favadd" >> "$nordfavoritesfile"
+                echo "$favadd" >> "$favoritesfile"
                 echo
-                echo -e "Added ${FColor}$favadd${Color_Off} to ${LColor}$nordfavoritesfile${Color_Off}"
+                echo -e "Added ${FColor}$favadd${Color_Off} to ${LColor}$favoritesfile${Color_Off}"
                 echo
                 favorites_menu
                 ;;
             "Random")
                 heading "Random"
+                echo
                 disconnect_vpn
                 echo "Connect to $rfavorite"
                 echo
                 nordvpn connect "$( echo "$rfavorite" | rev | cut -f1 -d'_' | rev )"
-                status
+                exit_status
                 exit
                 ;;
             *)
@@ -5017,11 +4974,12 @@ function favorites_menu {
                     # to handle more than one <underscore> in the entry
                     # reverse the text so the first field is the server and the rest is heading
                     heading "$( echo "$xfavorite" | rev | cut -f2- -d'_' | rev )"
+                    echo
                     disconnect_vpn
                     echo "Connect to $xfavorite"
                     echo
                     nordvpn connect "$( echo "$xfavorite" | awk -F'_' '{print $NF}' )"
-                    status
+                    exit_status
                     exit
                 else
                     invalid_option "${#favoritelist[@]}" "$parent"
@@ -5051,20 +5009,20 @@ function group_menu {
         esac
     done
 }
-function settings_menu {
+function setting_menu {
     heading "Settings"
     parent="Main"
     echo
     indicators_display
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual" "Post-Quantum" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "Post-Quantum" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
         case $sett in
-            "Technology")       technology_setting;;
-            "Protocol")         protocol_setting;;
+            "Technology")       techpro_menu;;
+            "Protocol")         techpro_menu;;
             "Firewall")         firewall_setting;;
             "Routing")          routing_setting;;
             "Analytics")        analytics_setting;;
@@ -5078,7 +5036,7 @@ function settings_menu {
             "Meshnet")          meshnet_menu "Settings";;
             "Custom-DNS")       customdns_menu;;
             "LAN-Discovery")    landiscovery_setting;;
-            "Virtual")          virtual_setting;;
+            "Virtual-Loc")      virtual_setting;;
             "Post-Quantum")     postquantum_setting;;
             "Allowlist")        allowlist_setting;;
             "Account")          account_menu;;
@@ -5100,7 +5058,7 @@ function pause_vpn {
     pcountry=$(echo "$country" | tr ' ' '_' )
     #
     heading "Disconnect, Pause, and Reconnect" "txt" "alt"
-    echo -e "$connectedcl ${CIColor}$pcity ${COColor}$pcountry ${SVColor}$server${Color_Off}"
+    echo -e "$statuscl ${CIColor}$pcity ${COColor}$pcountry ${SVColor}$server${Color_Off}"
     echo
     echo "Reconnect to any City, Country, Server, or Group."
     echo; echo
@@ -5118,11 +5076,12 @@ function pause_vpn {
     # use 'bc' to handle decimal minute input
     pseconds=$( echo "scale=0; $pminutes * 60/1" | bc )
     #
+    echo
     disconnect_vpn "force" "check_ks"
     reload_applet
     set_vars
     heading "Pause VPN"
-    echo -e "$connectedcl @ $(date)"
+    echo -e "$statuscl @ $(date)"
     echo
     if [[ "$killswitch" == "enabled" ]]; then
         echo -e "${WColor}Note:${Color_Off} $ks the Kill Switch is $killswitchc."
@@ -5139,7 +5098,7 @@ function pause_vpn {
     echo
     # shellcheck disable=SC2086 # word splitting eg. "--group P2P United_States"
     nordvpn connect $pwhere
-    status
+    exit_status
     exit
 }
 function main_header {
@@ -5147,6 +5106,7 @@ function main_header {
     # $1 = "defaults" - force a disconnect and apply default settings
     #
     heading "$opt"
+    echo
     if [[ "$1" == "defaults" ]]; then
         set_defaults
     else
@@ -5159,7 +5119,7 @@ function main_disconnect {
     # disconnect option from the main menu
     heading "Disconnect"
     echo
-    if [[ "$connected" == "connected" ]] && ! "$meshrouting"; then
+    if [[ "$status" == "connected" ]] && ! "$meshrouting"; then
         if [[ "$rate_prompt" =~ ^[Yy]$ ]]; then
             rate_server
             echo
@@ -5172,7 +5132,7 @@ function main_disconnect {
         fi
     fi
     disconnect_vpn "force" "check_ks"
-    status
+    exit_status
     exit
 }
 function app_exists {
