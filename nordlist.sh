@@ -576,16 +576,16 @@ function ascii_custom {
 }
 function indicators_display {
     # The "nordvpn settings" enabled/disabled indicators shown on the main menu, settings menu, and group connect.
-    # $1 = "group" - group menu indicators
+    # $1 = "short" - short list for group_connect techpro_menu obfuscate_setting
     #
     # Use any symbol to separate the indicators.  Set a color in function set_colors.
     #indsep=" "         # blank space
     #indsep="\u2758"    # unicode vertical line
     indsep="\u00B7"     # unicode middle-dot
     #
-    if [[ "$1" == "group" ]]; then
+    if [[ "$1" == "short" ]]; then
         echo -n "Current settings: "
-        indall=( "$techpro" "$fw" "$ks" "$ob" "$pq" )
+        indall=( "$techpro" "$fw" "$ks" "$ob" "$mn" "$pq" )
     else
         indall=( "$techpro" "$fw" "$rt" "$an" "$ks" "$tp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$pq" "$al" )
         if [[ -n "$fst" ]]; then indall+=( "$fst" ); fi
@@ -794,7 +794,7 @@ function set_vars {
     #
     # "nordvpn settings"  (all elements are lowercase)
     # $protocol and $obfuscate are only listed when using OpenVPN
-    # $postquantum is only listed when using NordLynx
+    # $postquantum not listed when using OpenVPN
     technology=$( nsettings_search "Technology" )
     protocol=$( nsettings_search "Protocol" | tr '[:lower:]' '[:upper:]' )
     firewall=$( nsettings_search "Firewall:" )
@@ -1751,7 +1751,7 @@ function group_connect {
             ;;
     esac
     echo
-    indicators_display "group"
+    indicators_display "short"
     echo
     echo "To connect to the $1 group the following"
     echo "changes will be made (if necessary):"
@@ -1879,8 +1879,8 @@ function techpro_menu {
     # $2 = "ovpn" - list only the OpenVPN options
     # $2 = "xnw" - list all the options but exclude NordWhisper
     #
-    parent="Settings"
     if [[ "$1" != "back" ]]; then
+        parent="Settings"
         heading "Tech + Protocol"
         echo "NordLynx is based on WireGuard and may be faster with less overhead."
         echo "NordLynx is required to use Post-Quantum VPN and is UDP only."
@@ -1898,10 +1898,7 @@ function techpro_menu {
         echo
         disconnect_warning
     fi
-    echo -e "Currently using $techpro"
-    if [[ "$technology" == "nordlynx" ]]; then
-        echo -e "$pq Post-Quantum VPN is $postquantumc."
-    fi
+    indicators_display "short"
     echo
     PS3=$'\n''Choose a Technology-Protocol: '
     COLUMNS="$menuwidth"
@@ -2351,7 +2348,7 @@ function obfuscate_setting {
     echo
     disconnect_warning
     if [[ "$technology" != "openvpn" ]]; then
-        echo -e "Technology is currently set to $techpro"
+        indicators_display "short"
         echo -e "${WColor}Note:${Color_Off} Enabling Obfuscate will change the Technology to OpenVPN."
         echo
     fi
@@ -2368,6 +2365,7 @@ function obfuscate_setting {
         disconnect_vpn "force"
         if [[ "$obfuscate" == "enabled" ]]; then
             nordvpn set obfuscate disabled; echo
+            set_vars
             techpro_menu "back"
         else
             techpro_menu "back" "ovpn"
