@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# January 22, 2025
+# January 23, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -199,6 +199,11 @@ menuwidth="80"
 # terminal window. Minimum is "6".  Leave blank to disable.
 charlimit="12"
 #
+# When one setting is changed, related settings are also checked and
+# their status is output to the terminal.  Choose whether to show these
+# info messages.  Choose "n" for a cleaner look.  "y" or "n"
+showchecks="n"
+#
 # Choosing 'Exit' in a submenu will take you to the main menu.
 # Entering this value while in a submenu will return you to the default
 # parent menu.  Also works with most (y/n) prompts to exit the prompt.
@@ -263,7 +268,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 370 (function main_menu).
+# The Main Menu starts on line 375 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -305,7 +310,7 @@ function set_defaults {
     techpro_set "NordLynx" "UDP"            # disables obfuscate
     #techpro_set "OpenVPN" "UDP"            # disables post-quantum
     #techpro_set "OpenVPN" "TCP"            # disables post-quantum
-    #techpro_set "NordWhisper" "WebTunnel"  # disables obfuscate and post-quantum
+    #techpro_set "NordWhisper" "WT"         # disables obfuscate and post-quantum
     #
     #setting_enable "post-quantum"      # requires NordLynx, disables meshnet
     setting_disable "post-quantum"
@@ -813,17 +818,17 @@ function set_vars {
     #
     # the technology and protocol to display
     # nsettings = $technology - all technologies are listed
-    # nstatus = $protocol2 (uncomment) - all protocols are listed but only while connected
     # nsettings = $protocol - only OpenVPN protocols are listed
+    # nstatus = $protocol2 (uncomment) - all protocols are listed but only while connected
     if [[ "$technology" == "openvpn" ]]; then
         technologyd="OpenVPN"
         protocold="$protocol"
     elif [[ "$technology" == "nordlynx" ]]; then
         technologyd="NordLynx"
-        protocold="UDP"
+        protocold="UDP" # NordLynx protocol is always "UDP".
     elif [[ "$technology" == "nordwhisper" ]]; then
         technologyd="NordWhisper"
-        protocold="WebTunnel"
+        protocold="WT"  # NordWhisper protocol is always "WebTunnel".  Using "WT" for brevity.
     else
         technologyd="??"
         protocold="??"
@@ -1830,7 +1835,7 @@ function group_connect {
 function techpro_set {
     # Set the technology and protocol.  arguments are case insensitive
     # $1 = technology - "nordlynx" "openvpn" "nordwhisper"
-    # $2 = protocol - "tcp" "udp" "webtunnel"
+    # $2 = protocol - "tcp" "udp" "wt"
     #
     disconnect_vpn "force"
     #
@@ -1847,7 +1852,7 @@ function techpro_set {
             ;;
     esac
     #
-    if [[ "${technology,,}" != "${1,,}" ]]; then
+    if [[ "$technology" != "${1,,}" ]]; then
         nordvpn set technology "$1"
         set_vars
     else
@@ -1855,8 +1860,12 @@ function techpro_set {
     fi
     echo
     #
-    # use $protocold
-    if [[ "${protocold,,}" != "${2,,}" ]]; then
+    # use $protocold for comparison in case VPN is disconnected
+    if [[ "$technology" == "nordwhisper" ]]; then
+        # NordWhisper protocol is always "WebTunnel".  Using "WT" for brevity.
+        echo -e "${TColor}Protocol is ${TIColor}$protocold (WebTunnel)${Color_Off}"
+        #
+    elif [[ "${protocold,,}" != "${2,,}" ]]; then
         nordvpn set protocol "$2"
         set_vars
     else
@@ -1885,7 +1894,7 @@ function techpro_menu {
         echo "The UDP protocol is mainly used for online streaming and downloading."
         echo "The TCP protocol is more reliable but usually slower than UDP."
         # ? WebTunnel HTTP/HTTPS, TCP port 80/443  TODO
-        echo "WebTunnel mimics HTTPS web traffic to evade network censorship."
+        echo "WebTunnel (WT) mimics HTTPS web traffic to evade network censorship."
         echo
         disconnect_warning
     fi
@@ -1902,7 +1911,7 @@ function techpro_menu {
     elif [[ "$2" == "xnw" ]]; then
         submtech=( "NordLynx-UDP" "OpenVPN-UDP" "OpenVPN-TCP" )
     else
-        submtech=( "NordLynx-UDP" "OpenVPN-UDP" "OpenVPN-TCP" "NordWhisper-WebTunnel" )
+        submtech=( "NordLynx-UDP" "OpenVPN-UDP" "OpenVPN-TCP" "NordWhisper-WT" )
     fi
     #
     if [[ "$1" != "back" ]]; then
@@ -1929,9 +1938,9 @@ function techpro_menu {
                 techpro_set "openvpn" "tcp"
                 break
                 ;;
-            "NordWhisper-WebTunnel")
+            "NordWhisper-WT")
                 echo
-                techpro_set "nordwhisper" "webtunnel"
+                techpro_set "nordwhisper" "wt"
                 break
                 ;;
             "Exit")
@@ -2036,8 +2045,10 @@ function setting_enable {
     setting_getvars "$1"
     #
     if [[ "$chgvar" == "enabled" ]] && [[ "${1,,}" != "dns" ]]; then
-        echo -e "$chgind ${TColor}$chgname is $chgvar.${Color_Off}"
-        echo
+        if [[ "$showchecks" =~ ^[Yy]$ ]]; then
+            echo -e "$chgind ${TColor}$chgname is $chgvar.${Color_Off}"
+            echo
+        fi
         return
     fi
     #
@@ -2109,8 +2120,10 @@ function setting_disable {
     #
     setting_getvars "$1"
     if [[ "$chgvar" == "disabled" ]]; then
-        echo -e "$chgind ${TColor}$chgname is $chgvar.${Color_Off}"
-        echo
+        if [[ "$showchecks" =~ ^[Yy]$ ]]; then
+            echo -e "$chgind ${TColor}$chgname is $chgvar.${Color_Off}"
+            echo
+        fi
         return
     fi
     #
