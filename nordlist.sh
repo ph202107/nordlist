@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# January 23, 2025
+# January 24, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -575,8 +575,8 @@ function ascii_custom {
     fi
 }
 function indicators_display {
-    # The "nordvpn settings" enabled/disabled indicators shown on the main menu, settings menu, and group connect.
-    # $1 = "short" - short list for group_connect techpro_menu obfuscate_setting
+    # The "nordvpn settings" enabled/disabled indicators shown on the main menu, settings menu
+    # $1 = "short" - short list for group_connect, techpro_menu, obfuscate_setting
     #
     # Use any symbol to separate the indicators.  Set a color in function set_colors.
     #indsep=" "         # blank space
@@ -956,7 +956,7 @@ function set_vars {
         postquantumc="${EColor}$postquantum${Color_Off}"
     else
         pq="${DIColor}PQ${Color_Off}"
-        # $postquantum not listed when using openvpn
+        # $postquantum not listed when using OpenVPN
         postquantum="disabled"
         postquantumc="${DColor}$postquantum${Color_Off}"
     fi
@@ -1174,12 +1174,9 @@ function openlink {
         # open these types of files in the terminal when using ssh
         # WireGuard configs, nordlist.sh, nord_favorites.txt, nord_logs.txt
         # check for default editor otherwise use nano
-        if [[ -n "$VISUAL" ]]; then
-            editor="$VISUAL"
-        elif [[ -n "$EDITOR" ]]; then
-            editor="$EDITOR"
-        else
-            editor="nano"
+        if [[ -n "$VISUAL" ]]; then editor="$VISUAL"
+        elif [[ -n "$EDITOR" ]]; then editor="$EDITOR"
+        else editor="nano"
         fi
         "$editor" "$1"
     else
@@ -1834,8 +1831,8 @@ function group_connect {
 }
 function techpro_set {
     # Set the technology and protocol.  arguments are case insensitive
-    # $1 = technology - "nordlynx" "openvpn" "nordwhisper"
-    # $2 = protocol - "tcp" "udp" "wt"
+    # $1 = technology - "NordLynx" "OpenVPN" "NordWhisper"
+    # $2 = protocol - "TCP" "UDP" "WT"
     #
     disconnect_vpn "force"
     #
@@ -1853,6 +1850,8 @@ function techpro_set {
     esac
     #
     if [[ "$technology" != "${1,,}" ]]; then
+        echo -e "${TColor}Set Technology to ${TIColor}$1${Color_Off}"
+        echo
         nordvpn set technology "$1"
         set_vars
     else
@@ -1861,15 +1860,17 @@ function techpro_set {
     echo
     #
     # use $protocold for comparison in case VPN is disconnected
-    if [[ "$technology" == "nordwhisper" ]]; then
-        # NordWhisper protocol is always "WebTunnel".  Using "WT" for brevity.
-        echo -e "${TColor}Protocol is ${TIColor}$protocold (WebTunnel)${Color_Off}"
-        #
-    elif [[ "${protocold,,}" != "${2,,}" ]]; then
+    if [[ "${protocold,,}" != "${2,,}" ]]; then
+        echo -e "${TColor}Set Protocol to ${TIColor}$2${Color_Off}"
+        echo
         nordvpn set protocol "$2"
         set_vars
     else
-        echo -e "${TColor}Protocol is ${TIColor}$protocold${Color_Off}"
+        echo -ne "${TColor}Protocol is ${TIColor}$protocold${Color_Off}"
+        if [[ "$technology" == "nordwhisper" ]]; then
+            echo -ne "${TIColor} (WebTunnel)${Color_Off}"
+        fi
+        echo
     fi
     echo
 }
@@ -1921,23 +1922,23 @@ function techpro_menu {
         case $xtech in
             "NordLynx-UDP")
                 echo
-                techpro_set "nordlynx" "udp"
+                techpro_set "NordLynx" "UDP"
                 setting_change "post-quantum" "back"
                 break
                 ;;
             "OpenVPN-UDP")
                 echo
-                techpro_set "openvpn" "udp"
+                techpro_set "OpenVPN" "UDP"
                 break
                 ;;
             "OpenVPN-TCP")
                 echo
-                techpro_set "openvpn" "tcp"
+                techpro_set "OpenVPN" "TCP"
                 break
                 ;;
             "NordWhisper-WT")
                 echo
-                techpro_set "nordwhisper" "wt"
+                techpro_set "NordWhisper" "WT"
                 break
                 ;;
             "Exit")
@@ -2324,7 +2325,7 @@ function postquantum_setting {
         echo
         #
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            techpro_set "nordlynx" "udp"    # will disconnect
+            techpro_set "NordLynx" "UDP"    # will disconnect
             setting_disable "meshnet"
             set_vars
         else
