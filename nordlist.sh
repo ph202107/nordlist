@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# January 24, 2025
+# January 25, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -1667,7 +1667,7 @@ function random_worldwide {
 function group_location {
     # $1 = $1 from function group_connect (Nord group name)
     #
-    heading "Set Location" "txt" "alt"
+    heading "Set $1 Location" "txt" "alt"
     if [[ -n $location ]]; then
         echo -e "Default location ${EColor}$location${Color_Off} will be ignored."
         echo
@@ -1830,7 +1830,8 @@ function group_connect {
     fi
 }
 function techpro_set {
-    # Set the technology and protocol.  arguments are case insensitive
+    # Set the technology and protocol.
+    # arguments are case insensitive. $1 and $2 may be echoed
     # $1 = technology - "NordLynx" "OpenVPN" "NordWhisper"
     # $2 = protocol - "TCP" "UDP" "WT"
     #
@@ -1953,7 +1954,6 @@ function techpro_menu {
     done
     #
     if [[ "$1" == "back" ]]; then
-        set_vars
         return
     fi
     #
@@ -2027,7 +2027,6 @@ function setting_change {
     fi
     #
     if [[ "$2" == "back" ]]; then
-        set_vars
         return
     fi
     #
@@ -2090,17 +2089,14 @@ function setting_enable {
                 #
             fi
             echo
-            # does not use 'nordvpn set "$1" enabled'
+            # update variables after any setting change
+            set_vars
+            # 'dns' does not use 'nordvpn set "$1" enabled'
             return
             ;;
         "post-quantum")
             setting_disable "meshnet"
             setting_getvars "$1"
-            set_vars
-            if [[ "$status" == "connected" ]]; then
-                echo -e "${WColor}Reconnect to VPN${Color_Off} to start using $chgname."
-                echo
-            fi
             ;;
     esac
     #
@@ -2111,12 +2107,16 @@ function setting_enable {
     fi
     echo
     #
+    # update variables after any setting change
+    set_vars
+    #
 }
 function setting_disable {
     # Disable the NordVPN setting
     # $1 = Nord command
     #
     setting_getvars "$1"
+    #
     if [[ "$chgvar" == "disabled" ]]; then
         if [[ "$showchecks" =~ ^[Yy]$ ]]; then
             echo -e "$chgind ${TColor}$chgname is $chgvar.${Color_Off}"
@@ -2138,17 +2138,13 @@ function setting_disable {
             echo -e "${DColor}Disable ${TColor}current DNS: ${LColor}$dns_servers${Color_Off}"
             echo
             ;;
-        "post-quantum")
-            set_vars
-            if [[ "$status" == "connected" ]]; then
-                echo -e "${WColor}Disconnect from VPN${Color_Off} to stop using $chgname."
-                echo
-            fi
-            ;;
     esac
     #
     nordvpn set "$1" disabled
     echo
+    #
+    # update variables after any setting change
+    set_vars
     #
 }
 function firewall_setting {
@@ -2327,7 +2323,6 @@ function postquantum_setting {
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             techpro_set "NordLynx" "UDP"    # will disconnect
             setting_disable "meshnet"
-            set_vars
         else
             setting_menu
         fi
@@ -2365,12 +2360,11 @@ function obfuscate_setting {
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         disconnect_vpn "force"
         if [[ "$obfuscate" == "enabled" ]]; then
-            nordvpn set obfuscate disabled; echo
-            set_vars
+            setting_disable "obfuscate"
             techpro_menu "back"
         else
             techpro_menu "back" "ovpn"
-            nordvpn set obfuscate enabled; echo
+            setting_enable "obfuscate"
         fi
     else
         echo -e "$ob Keep Obfuscate $obfuscatec."
@@ -3089,7 +3083,6 @@ function customdns_menu {
                 invalid_option "${#submcdns[@]}" "$parent"
                 ;;
         esac
-        set_vars
     done
 }
 function allowlist_setting {
@@ -3923,7 +3916,7 @@ function allservers_group {
 }
 function allservers_technology {
     # query the local json to list and count the servers with a specific technology
-    # $1 = exact technology name - "Socks 5" "IKEv2/IPSec" "HTTP Proxy (SSL)" "HTTP CyberSec Proxy (SSL)" "OpenVPN UDP" "OpenVPN TCP" "Wireguard"
+    # $1 = exact technology name - "Socks 5" "IKEv2/IPSec" "HTTP Proxy (SSL)" "HTTP CyberSec Proxy (SSL)" "OpenVPN UDP" "OpenVPN TCP" "Wireguard" "NordWhisper"
     # $2 = "quotes" - keep the double quotes to use the list elsewhere
     #
     heading "Technology: $1" "txt"
@@ -3965,7 +3958,7 @@ function allservers_menu {
     echo
     PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
-    submallvpn=( "List All Servers" "Server Count" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Obfuscated Servers" "P2P Servers" "Dedicated-IP Servers" "IKEv2/IPSec" "HTTPS Proxy" "HTTPS CyberSec Proxy" "OpenVPN UDP" "OpenVPN TCP" "WireGuard" "Virtual Locations" "Search Country" "Search City" "Search Server" "Connect" "Update List" "Exit" )
+    submallvpn=( "List All Servers" "Server Count" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Obfuscated Servers" "P2P Servers" "Dedicated-IP Servers" "IKEv2/IPSec" "HTTPS Proxy" "HTTPS CyberSec Proxy" "OpenVPN UDP" "OpenVPN TCP" "WireGuard" "NordWhisper" "Virtual Locations" "Search Country" "Search City" "Search Server" "Connect" "Update List" "Exit" )
     select avpn in "${submallvpn[@]}"
     do
         parent_menu
@@ -4023,6 +4016,9 @@ function allservers_menu {
                 ;;
             "WireGuard")
                 allservers_technology "Wireguard"
+                ;;
+            "NordWhisper")
+                allservers_technology "NordWhisper"
                 ;;
             "Virtual Locations")
                 virtual_locations
