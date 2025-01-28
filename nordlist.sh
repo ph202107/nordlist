@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# January 25, 2025
+# January 28, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -199,11 +199,6 @@ menuwidth="80"
 # terminal window. Minimum is "6".  Leave blank to disable.
 charlimit="12"
 #
-# When one setting is changed, related settings are also checked and
-# their status is output to the terminal.  Choose whether to show these
-# info messages.  Choose "n" for a cleaner look.  "y" or "n"
-showchecks="n"
-#
 # Choosing 'Exit' in a submenu will take you to the main menu.
 # Entering this value while in a submenu will return you to the default
 # parent menu.  Also works with most (y/n) prompts to exit the prompt.
@@ -268,7 +263,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 375 (function main_menu).
+# The Main Menu starts on line 370 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -720,7 +715,7 @@ function set_colors {
     DIColor=${BRed}         # Disabled indicator
     FColor=${LYellow}       # Fast text
     FIColor=${BYellow}      # Fast indicator
-    TColor=${LGreen}        # Technology-Protocol & Setting text
+    TColor=${LGreen}        # Technology-Protocol text
     TIColor=${BPurple}      # Technology-Protocol indicator
     #
     WColor=${BRed}          # Warnings, errors, disconnects
@@ -839,7 +834,7 @@ function set_vars {
     #
     if [[ "$status" == "connected" ]]; then
         statusc="${CNColor}$status${Color_Off}"         # in color
-        statuscl="${CNColor}${status^}${Color_Off}:"    # in color and capitalized for logo
+        statuscl="${CNColor}${status^}${Color_Off}:"    # in color and capitalized
         transferc="${DLColor}\u25bc $transferd ${ULColor} \u25b2 $transferu ${Color_Off}"    # up/down triangles
     else
         statusc="${DNColor}$status${Color_Off}"
@@ -849,18 +844,14 @@ function set_vars {
     #
     if [[ "$firewall" == "enabled" ]]; then
         fw="${EIColor}FW${Color_Off}"
-        firewallc="${EColor}$firewall${Color_Off}"
     else
         fw="${DIColor}FW${Color_Off}"
-        firewallc="${DColor}$firewall${Color_Off}"
     fi
     #
     if [[ "$routing" == "enabled" ]]; then
         rt="${EIColor}RT${Color_Off}"
-        routingc="${EColor}$routing${Color_Off}"
     else
         rt="${DIColor}RT${Color_Off}"
-        routingc="${DColor}$routing${Color_Off}"
     fi
     #
     if [[ "$analytics" == "enabled" ]]; then
@@ -871,10 +862,8 @@ function set_vars {
     #
     if [[ "$killswitch" == "enabled" ]]; then
         ks="${EIColor}KS${Color_Off}"
-        killswitchc="${EColor}$killswitch${Color_Off}"
     else
         ks="${DIColor}KS${Color_Off}"
-        killswitchc="${DColor}$killswitch${Color_Off}"
     fi
     #
     if [[ "$tplite" == "enabled" ]]; then
@@ -937,18 +926,14 @@ function set_vars {
     #
     if [[ "$landiscovery" == "enabled" ]]; then
         ld="${EIColor}LD${Color_Off}"
-        landiscoveryc="${EColor}$landiscovery${Color_Off}"
     else
         ld="${DIColor}LD${Color_Off}"
-        landiscoveryc="${DColor}$landiscovery${Color_Off}"
     fi
     #
     if [[ "$virtual" == "enabled" ]]; then
         vl="${EIColor}VL${Color_Off}"
-        virtualc="${EColor}$virtual${Color_Off}"
     else
         vl="${DIColor}VL${Color_Off}"
-        virtualc="${DColor}$virtual${Color_Off}"
     fi
     #
     if [[ "$postquantum" == "enabled" ]]; then
@@ -1010,6 +995,7 @@ function disconnect_vpn {
             echo
             nordvpn disconnect
             echo
+            set_vars
         fi
     fi
 }
@@ -1592,7 +1578,7 @@ function city_count {
     echo "(*) = The location is listed in the 'nordvirtual' array (line $(grep -m1 -n "nordvirtual=(" "$0" | cut -f1 -d':'))."
     echo
     if [[ "$virtual" == "disabled" ]]; then
-        echo -e "$vl Virtual-Location is $virtualc."
+        echo -e "$vl Virtual-Location is ${DColor}disabled${Color_Off}."
         echo
     fi
     if [[ "$obfuscate" == "enabled" ]]; then
@@ -1850,28 +1836,28 @@ function techpro_set {
             ;;
     esac
     #
-    if [[ "$technology" != "${1,,}" ]]; then
+    if [[ "$technology" == "${1,,}" ]]; then
+        echo -e "${TColor}Technology is ${TIColor}$technologyd${Color_Off}"
+    else
         echo -e "${TColor}Set Technology to ${TIColor}$1${Color_Off}"
         echo
         nordvpn set technology "$1"
         set_vars
-    else
-        echo -e "${TColor}Technology is ${TIColor}$technologyd${Color_Off}"
     fi
     echo
     #
     # use $protocold for comparison in case VPN is disconnected
-    if [[ "${protocold,,}" != "${2,,}" ]]; then
-        echo -e "${TColor}Set Protocol to ${TIColor}$2${Color_Off}"
-        echo
-        nordvpn set protocol "$2"
-        set_vars
-    else
+    if [[ "${protocold,,}" == "${2,,}" ]]; then
         echo -ne "${TColor}Protocol is ${TIColor}$protocold${Color_Off}"
         if [[ "$technology" == "nordwhisper" ]]; then
             echo -ne "${TIColor} (WebTunnel)${Color_Off}"
         fi
         echo
+    else
+        echo -e "${TColor}Set Protocol to ${TIColor}$2${Color_Off}"
+        echo
+        nordvpn set protocol "$2"
+        set_vars
     fi
     echo
 }
@@ -2035,15 +2021,16 @@ function setting_change {
 function setting_enable {
     # Enable the NordVPN setting
     # $1 = Nord command
-    # $2 = For 'dns' only.  Up to three DNS IPs separated by spaces
+    # $2 = "showstatus" - show the status if already enabled
+    # $2 = (when $1 = 'dns') - up to three DNS IPs separated by spaces
     #
     # after calling 'setting_change/enable/disable' from here, run this command again since
     # common variable values will have changed.  eg "$chgname" "$chgloc"
     setting_getvars "$1"
     #
-    if [[ "$chgvar" == "enabled" ]] && [[ "${1,,}" != "dns" ]]; then
-        if [[ "$showchecks" =~ ^[Yy]$ ]]; then
-            echo -e "$chgind ${TColor}$chgname is $chgvar.${Color_Off}"
+    if [[ "$chgvar" == "enabled" ]] && [[ "$1" != "dns" ]]; then
+        if [[ "$2" == "showstatus" ]]; then
+            echo -e "$chgind $chgname is ${EColor}$chgvar${Color_Off}."
             echo
         fi
         return
@@ -2076,13 +2063,13 @@ function setting_enable {
             setting_getvars "$1"
             #
             if [[ -n "$2" ]]; then
-                echo -e "${TColor}Set $chgname to ${LColor}$2${Color_Off}"
+                echo -e "${EColor}Enable${Color_Off} $chgname ${LColor}$2${Color_Off}"
                 echo
                 # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1"
                 nordvpn set "$1" $2
                 #
             else
-                echo -e "${TColor}Set $chgname to ${FColor}$dnsdesc ${LColor}$default_dns${Color_Off}"
+                echo -e "${EColor}Enable${Color_Off} $chgname ${FColor}$dnsdesc ${LColor}$default_dns${Color_Off}"
                 echo
                 # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1"
                 nordvpn set "$1" $default_dns
@@ -2114,12 +2101,13 @@ function setting_enable {
 function setting_disable {
     # Disable the NordVPN setting
     # $1 = Nord command
+    # $2 = "showstatus" - show the status if already disabled
     #
     setting_getvars "$1"
     #
     if [[ "$chgvar" == "disabled" ]]; then
-        if [[ "$showchecks" =~ ^[Yy]$ ]]; then
-            echo -e "$chgind ${TColor}$chgname is $chgvar.${Color_Off}"
+        if [[ "$2" == "showstatus" ]]; then
+            echo -e "$chgind $chgname is ${DColor}$chgvar${Color_Off}."
             echo
         fi
         return
@@ -2135,7 +2123,7 @@ function setting_disable {
             echo
             ;;
         "dns")
-            echo -e "${DColor}Disable ${TColor}current DNS: ${LColor}$dns_servers${Color_Off}"
+            echo -e "${DColor}Disable${Color_Off} $chgname ${LColor}$dns_servers${Color_Off}"
             echo
             ;;
     esac
@@ -2322,7 +2310,7 @@ function postquantum_setting {
         #
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             techpro_set "NordLynx" "UDP"    # will disconnect
-            setting_disable "meshnet"
+            setting_disable "meshnet" "showstatus"
         else
             setting_menu
         fi
@@ -3039,7 +3027,7 @@ function customdns_menu {
                 ;;
             "Disable Custom-DNS")
                 echo
-                setting_disable "dns"
+                setting_disable "dns" "showstatus"
                 ;;
             "Flush DNS Cache")
                 echo
@@ -3094,7 +3082,7 @@ function allowlist_setting {
     echo "making other changes. Edit the script to modify the function."
     echo
     if [[ "$landiscovery" == "enabled" ]]; then
-        echo -e "$ld LAN-Discovery is $landiscoveryc."
+        echo -e "$ld LAN-Discovery is ${EColor}enabled${Color_Off}."
         echo -e "Allowlisting a private subnet is not available."
         echo
     fi
@@ -3432,17 +3420,10 @@ function reset_app {
 }
 function iptables_status {
     echo
-    echo -e "The VPN is $statusc. IP: ${IPColor}$ipaddr${Color_Off}"
-    echo -e "$fw The Firewall is $firewallc. Firewall Mark: ${LColor}$fwmark${Color_Off}"
-    echo -e "$rt Routing is $routingc."
-    echo -e "$ks The Kill Switch is $killswitchc."
-    echo -e "$mn Meshnet is $meshnetc."
-    echo -e "$ld LAN-Discovery is $landiscoveryc."
+    main_logo "stats_only"
+    echo -e "Firewall Mark: ${LColor}$fwmark${Color_Off}"
     if [[ -n "${allowlist[*]}" ]]; then
-        echo -ne "$al "
         printf '%s\n' "${allowlist[@]}"
-    else
-        echo -e "$al No allowlist entries."
     fi
     echo
     echo -e "${LColor}sudo iptables -S${Color_Off}"
@@ -3488,7 +3469,7 @@ function iptables_flush {
     echo -e "${EColor}IPTables After:${Color_Off}"
     sudo iptables -S
     echo
-    echo -e "${FColor}Restart the service and reconnect to recreate the iptables rules.${Color_Off}"
+    echo -e "${FColor}Restart the service and reconnect VPN to recreate the iptables rules.${Color_Off}"
     echo
 }
 function iptables_menu {
@@ -3509,7 +3490,6 @@ function iptables_menu {
         parent_menu
         case $ipt in
             "View IPTables")
-                set_vars
                 iptables_status
                 ;;
             "Firewall")
@@ -3575,7 +3555,6 @@ function iptables_menu {
                         disconnect_vpn "force"
                     fi
                 fi
-                set_vars
                 iptables_status
                 ;;
             "Exit")
@@ -4808,7 +4787,7 @@ function quick_connect {
         fi
     fi
     if [[ "$status" != "connected" ]] && [[ "$killswitch" == "enabled" ]]; then
-        echo -e "The VPN is $statusc with the Kill Switch $killswitchc"
+        echo -e "The VPN is $statusc with the Kill Switch ${EColor}enabled${Color_Off}."
         bestserver=""
     elif [[ "$obfuscate" == "enabled" ]]; then
         echo -e "$ob Obfuscate is $obfuscatec"
@@ -5087,12 +5066,11 @@ function pause_vpn {
     echo
     disconnect_vpn "force" "check_ks"
     reload_applet
-    set_vars
     heading "Pause VPN"
     echo -e "$statuscl @ $(date)"
     echo
     if [[ "$killswitch" == "enabled" ]]; then
-        echo -e "${WColor}Note:${Color_Off} $ks the Kill Switch is $killswitchc."
+        echo -e "${WColor}Note:${Color_Off} $ks the Kill Switch is ${EColor}enabled${Color_Off}."
         echo
     fi
     echo -e "${FColor}Please do not close this window.${Color_Off}"
