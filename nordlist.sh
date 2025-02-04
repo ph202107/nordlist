@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# January 28, 2025
+# February 4, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -130,7 +130,7 @@ favoritesfile="/home/$USER/Downloads/nord_favorites.txt"
 # Specify the absolute path and filename to save a copy of the
 # nordvpnd.service logs.  Create the file in: Settings - Logs
 nordlogfile="/home/$USER/Downloads/nord_logs.txt"
-# Also show this number of lines from the tail of the log.
+# Also display this number of lines from the tail of the log.
 loglines="100"
 #
 # Change the terminal window titlebar text while the script is running.
@@ -240,7 +240,7 @@ allfast=( "$fast1" "$fast2" "$fast3" )
 # This list is subject to change and must be updated manually.
 # Retrieve an updated list in "Tools - NordVPN API - All VPN Servers"
 nordvirtual=(
-"Accra" "Algeria" "Algiers" "Amman" "Andorra" "Andorra_la_Vella" "Angola" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Bahrain" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dakar" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Jordan" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Kuwait" "Kuwait_City" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Luanda" "Malta" "Manama" "Manila" "Maputo" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mozambique" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Senegal" "Sri_Lanka" "Taipei" "Taiwan" "Tashkent" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Tunis" "Tunisia" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
+"Accra" "Algeria" "Algiers" "Amman" "Andorra" "Andorra_la_Vella" "Angola" "Argentina" "Armenia" "Astana" "Asuncion" "Azerbaijan" "Bahamas" "Bahrain" "Baku" "Bandar_Seri_Begawan" "Bangkok" "Bangladesh" "Beirut" "Belize" "Belmopan" "Bermuda" "Bhutan" "Bolivia" "Brunei_Darussalam" "Buenos_Aires" "Cairo" "Cambodia" "Caracas" "Cayman_Islands" "Colombo" "Costa_Rica" "Dakar" "Dhaka" "Dominican_Republic" "Douglas" "Ecuador" "Egypt" "El_Salvador" "George_Town" "Georgia" "Ghana" "Greenland" "Guam" "Guatemala" "Guatemala_City" "Hagatna" "Hamilton" "Hanoi" "Ho_Chi_Minh_City" "Honduras" "India" "Isle_of_Man" "Jamaica" "Jersey" "Jordan" "Karachi" "Kathmandu" "Kazakhstan" "Kenya" "Kingston" "Kuwait" "Kuwait_City" "Lao_People's_Democratic_Republic" "La_Paz" "Lebanon" "Liechtenstein" "Luanda" "Malta" "Manama" "Manila" "Maputo" "Monaco" "Mongolia" "Monte_Carlo" "Montenegro" "Montevideo" "Morocco" "Mozambique" "Mumbai" "Myanmar" "Nairobi" "Nassau" "Naypyidaw" "Nepal" "Nuuk" "Pakistan" "Panama" "Panama_City" "Papua_New_Guinea" "Paraguay" "Philippines" "Phnom_Penh" "Podgorica" "Port_Moresby" "Port_of_Spain" "Puerto_Rico" "Quito" "Rabat" "Saint_Helier" "San_Jose" "San_Juan" "San_Salvador" "Santo_Domingo" "Senegal" "Sri_Lanka" "Taipei" "Taiwan" "Tashkent" "Tbilisi" "Tegucigalpa" "Thailand" "Thimphu" "Trinidad_and_Tobago" "Tunis" "Tunisia" "Ulaanbaatar" "Uruguay" "Uzbekistan" "Vaduz" "Valletta" "Venezuela" "Vientiane" "Vietnam" "Yerevan"
 )
 #
 # =====================================================================
@@ -270,17 +270,17 @@ nordvirtual=(
 #
 # ==End================================================================
 #
-declare -A nordlist_apps    # populated in function app_exists
-#
 function allowlist_commands {
     # Add your allowlist configuration commands here.
     # Enter one command per line.
-    # allowlist_start (keep this line as-is)
+    # Disable lan-discovery when adding private subnets to allowlist.
+    # allowlist_start (keep this line unchanged)
     #
+    #setting_disable "lan-discovery"
     #nordvpn allowlist remove all
     #nordvpn allowlist add subnet 192.168.1.0/24
     #
-    # allowlist_end (keep this line as-is)
+    # allowlist_end (keep this line unchanged)
     echo
 }
 function set_defaults {
@@ -302,10 +302,10 @@ function set_defaults {
     #setting_disable "killswitch"
     #
     # Required: Choose one of these options for Technology and Protocol
-    techpro_set "NordLynx" "UDP"            # disables obfuscate
-    #techpro_set "OpenVPN" "UDP"            # disables post-quantum
-    #techpro_set "OpenVPN" "TCP"            # disables post-quantum
-    #techpro_set "NordWhisper" "WT"         # disables obfuscate and post-quantum
+    techpro_set "NordLynx" "UDP"        # disables obfuscate
+    #techpro_set "OpenVPN" "UDP"        # disables post-quantum
+    #techpro_set "OpenVPN" "TCP"        # disables post-quantum
+    #techpro_set "NordWhisper" "WT"     # disables obfuscate and post-quantum
     #
     #setting_enable "post-quantum"      # requires NordLynx, disables meshnet
     setting_disable "post-quantum"
@@ -571,7 +571,7 @@ function ascii_custom {
 }
 function indicators_display {
     # The "nordvpn settings" enabled/disabled indicators shown on the main menu, settings menu
-    # $1 = "short" - short list for group_connect, techpro_menu, obfuscate_setting
+    # $1 = "short" - short list of indicators for group_connect, techpro_menu, obfuscate_setting
     #
     # Use any symbol to separate the indicators.  Set a color in function set_colors.
     #indsep=" "         # blank space
@@ -723,6 +723,7 @@ function set_colors {
     ASColor=${BBlue}        # Color for the ascii_static image
     H1Color=${LGreen}       # Non-figlet headings
     H2Color=${LCyan}        # Non-figlet headings alternate
+    DNSColor=${LCyan}       # DNS IP addresses
     # main_logo
     CNColor=${LGreen}       # Connected status
     DNColor=${LRed}         # Disconnected status
@@ -767,7 +768,9 @@ function nsettings_search {
     fi
 }
 function set_vars {
-    # Store info in arrays (BASH v4)
+    # Set variables with the values found in "nordvpn settings" and "nordvpn status"
+    #
+    # Store info in arrays (BASH v4+)
     readarray -t nstatus < <( nordvpn status | tr -d '\r' )
     readarray -t nsettings < <( nordvpn settings | tr -d '\r' | tr '[:upper:]' '[:lower:]' )
     #
@@ -781,8 +784,9 @@ function set_vars {
     ipaddr=$( nstatus_search "IP:" )
     country=$( nstatus_search "Country" )
     city=$( nstatus_search "City" )
-    #technology2=$( nstatus_search "Technology" | tr '[:upper:]' '[:lower:]' )
+    #technology2=$( nstatus_search "technology" | tr '[:upper:]' '[:lower:]' )
     #protocol2=$( nstatus_search "protocol" | tr '[:lower:]' '[:upper:]' )
+    #postquantum2=$( nstatus_search "quantum" | tr '[:upper:]' '[:lower:]' )
     transferd=$( nstatus_search "Transfer" "line" | cut -f 2-3 -d' ' )  # download stat with units
     transferu=$( nstatus_search "Transfer" "line" | cut -f 5-6 -d' ' )  # upload stat with units
     uptime=$( nstatus_search "Uptime" "line" | cut -f 1-9 -d' ' )
@@ -799,177 +803,123 @@ function set_vars {
     killswitch=$( nsettings_search "Kill" )
     tplite=$( nsettings_search "Threat" )
     obfuscate=$( nsettings_search "Obfuscate" )
+    obfuscate="${obfuscate:-disabled}"          # default to "disabled" if not listed
     notify=$( nsettings_search "Notify" )
     tray=$( nsettings_search "Tray" )
     autoconnect=$( nsettings_search "Auto" )
     ipversion6=$( nsettings_search "IPv6" )
     meshnet=$( nsettings_search "Meshnet" | tr -d '\n' )
-    customdns=$( nsettings_search "DNS" )                               # disabled or not=disabled
-    dns_servers=$( nsettings_search "DNS" "line" | cut -f 2- -d' ' )    # Server IPs
+    customdns=$( nsettings_search "DNS" )   # $customdns is either "disabled" or lists the DNS IPs
+    if [[ "$customdns" != "disabled" ]]; then customdns="enabled"; fi
+    dns_servers=$( nsettings_search "DNS" "line" | cut -f 2- -d' ' )
     landiscovery=$( nsettings_search "Discover" )
     virtual=$( nsettings_search "Virtual" )
     postquantum=$( nsettings_search "quantum" )
-    allowlist=$( printf '%s\n' "${nsettings[@]}" | grep -A100 -i "allowlist" )
+    postquantum="${postquantum:-disabled}"      # default to "disabled" if not listed
     #
-    # the technology and protocol to display
+    allowlist=$( printf '%s\n' "${nsettings[@]}" | grep -A100 -i "allowlist" )
+    if [[ -n "${allowlist[*]}" ]]; then
+        allowlist_var="enabled"
+    else
+        allowlist_var="disabled"
+    fi
+    #
+    set_vars_techpro
+    set_vars_indicators
+    set_vars_other
+    #
+}
+function set_vars_techpro {
+    # The technology and protocol to display
+    #
+    # from function set_vars:
     # nsettings = $technology - all technologies are listed
     # nsettings = $protocol - only OpenVPN protocols are listed
     # nstatus = $protocol2 (uncomment) - all protocols are listed but only while connected
-    if [[ "$technology" == "openvpn" ]]; then
-        technologyd="OpenVPN"
-        protocold="$protocol"
-    elif [[ "$technology" == "nordlynx" ]]; then
-        technologyd="NordLynx"
-        protocold="UDP" # NordLynx protocol is always "UDP".
-    elif [[ "$technology" == "nordwhisper" ]]; then
-        technologyd="NordWhisper"
-        protocold="WT"  # NordWhisper protocol is always "WebTunnel".  Using "WT" for brevity.
-    else
-        technologyd="??"
-        protocold="??"
-    fi
+    #
+    case "$technology" in
+        "openvpn")
+            technologyd="OpenVPN"
+            protocold="$protocol"
+            ;;
+        "nordlynx")
+            # NordLynx protocol is always "UDP"
+            technologyd="NordLynx"
+            protocold="UDP"
+            ;;
+        "nordwhisper")
+            # NordWhisper protocol is always "WebTunnel", use "WT"
+            technologyd="NordWhisper"
+            protocold="WT"
+            ;;
+    esac
     #
     # technology-protocol indicator
     techpro="${TIColor}${technologyd}\u00B7${protocold}${Color_Off}"
     #
+}
+function set_vars_indicators {
+    # Set the indicator colors
+    #
+    # create an associative array of the indicators with the current
+    # status of the corresponding enabled/disabled variables
+    declare -A nordlist_indicators=(
+    #   ["$indkey"]="$indstatus"
+        ["fw"]="$firewall"
+        ["rt"]="$routing"
+        ["an"]="$analytics"
+        ["ks"]="$killswitch"
+        ["tp"]="$tplite"
+        ["ob"]="$obfuscate"
+        ["no"]="$notify"
+        ["tr"]="$tray"
+        ["ac"]="$autoconnect"
+        ["ip6"]="$ipversion6"
+        ["mn"]="$meshnet"
+        ["dns"]="$customdns"
+        ["ld"]="$landiscovery"
+        ["vl"]="$virtual"
+        ["pq"]="$postquantum"
+        ["al"]="$allowlist_var"
+    )
+    #
+    for indkey in "${!nordlist_indicators[@]}"
+    do
+        indstatus="${nordlist_indicators[$indkey]}"
+        #
+        if [[ "$indstatus" == "enabled" ]]; then
+            case "$indkey" in
+                "ob")   obfuscatec="${EColor}$indstatus${Color_Off}";;
+                "mn")   meshnetc="${EColor}$indstatus${Color_Off}";;
+                "pq")   postquantumc="${EColor}$indstatus${Color_Off}";;
+            esac
+            eval "$indkey='${EIColor}${indkey^^}${Color_Off}'"
+        else
+            case "$indkey" in
+                "ob")   obfuscatec="${DColor}$indstatus${Color_Off}";;
+                "mn")   meshnetc="${DColor}$indstatus${Color_Off}";;
+                "pq")   postquantumc="${DColor}$indstatus${Color_Off}";;
+            esac
+            eval "$indkey='${DIColor}${indkey^^}${Color_Off}'"
+        fi
+    done
+    #
+}
+function set_vars_other {
+    # Set other variables and colors
+    #
+    # main_logo connection status and transfer stats
     if [[ "$status" == "connected" ]]; then
-        statusc="${CNColor}$status${Color_Off}"         # in color
-        statuscl="${CNColor}${status^}${Color_Off}:"    # in color and capitalized
-        transferc="${DLColor}\u25bc $transferd ${ULColor} \u25b2 $transferu ${Color_Off}"    # up/down triangles
+        statusc="${CNColor}$status${Color_Off}"
+        statuscl="${CNColor}${status^}${Color_Off}:"
+        transferc="${DLColor}\u25bc $transferd ${ULColor} \u25b2 $transferu ${Color_Off}"
     else
         statusc="${DNColor}$status${Color_Off}"
         statuscl="${DNColor}${status^}${Color_Off}"
         transferc=""
     fi
     #
-    if [[ "$firewall" == "enabled" ]]; then
-        fw="${EIColor}FW${Color_Off}"
-    else
-        fw="${DIColor}FW${Color_Off}"
-    fi
-    #
-    if [[ "$routing" == "enabled" ]]; then
-        rt="${EIColor}RT${Color_Off}"
-    else
-        rt="${DIColor}RT${Color_Off}"
-    fi
-    #
-    if [[ "$analytics" == "enabled" ]]; then
-        an="${EIColor}AN${Color_Off}"
-    else
-        an="${DIColor}AN${Color_Off}"
-    fi
-    #
-    if [[ "$killswitch" == "enabled" ]]; then
-        ks="${EIColor}KS${Color_Off}"
-    else
-        ks="${DIColor}KS${Color_Off}"
-    fi
-    #
-    if [[ "$tplite" == "enabled" ]]; then
-        tp="${EIColor}TP${Color_Off}"
-    else
-        tp="${DIColor}TP${Color_Off}"
-    fi
-    #
-    if [[ "$obfuscate" == "enabled" ]]; then
-        ob="${EIColor}OB${Color_Off}"
-        obfuscatec="${EColor}$obfuscate${Color_Off}"
-    else
-        ob="${DIColor}OB${Color_Off}"
-        # $obfuscate only listed with OpenVPN
-        obfuscate="disabled"
-        obfuscatec="${DColor}$obfuscate${Color_Off}"
-    fi
-    #
-    if [[ "$notify" == "enabled" ]]; then
-        no="${EIColor}NO${Color_Off}"
-    else
-        no="${DIColor}NO${Color_Off}"
-    fi
-    #
-    if [[ "$tray" == "enabled" ]]; then
-        tr="${EIColor}TR${Color_Off}"
-    else
-        tr="${DIColor}TR${Color_Off}"
-    fi
-    #
-    if [[ "$autoconnect" == "enabled" ]]; then
-        ac="${EIColor}AC${Color_Off}"
-    else
-        ac="${DIColor}AC${Color_Off}"
-    fi
-    #
-    if [[ "$ipversion6" == "enabled" ]]; then
-        ip6="${EIColor}IP6${Color_Off}"
-    else
-        ip6="${DIColor}IP6${Color_Off}"
-    fi
-    #
-    if [[ "$meshnet" == "enabled" ]]; then
-        mn="${EIColor}MN${Color_Off}"
-        meshnetc="${EColor}$meshnet${Color_Off}"
-    else
-        mn="${DIColor}MN${Color_Off}"
-        meshnetc="${DColor}$meshnet${Color_Off}"
-    fi
-    #
-    if [[ "$customdns" == "disabled" ]]; then # reversed
-        dns="${DIColor}DNS${Color_Off}"
-        customdnsc="${DColor}$customdns${Color_Off}"
-    else
-        dns="${EIColor}DNS${Color_Off}"
-        # disabled or not=disabled (dns_servers)
-        customdns="enabled"
-        customdnsc="${EColor}$customdns${Color_Off}"
-    fi
-    #
-    if [[ "$landiscovery" == "enabled" ]]; then
-        ld="${EIColor}LD${Color_Off}"
-    else
-        ld="${DIColor}LD${Color_Off}"
-    fi
-    #
-    if [[ "$virtual" == "enabled" ]]; then
-        vl="${EIColor}VL${Color_Off}"
-    else
-        vl="${DIColor}VL${Color_Off}"
-    fi
-    #
-    if [[ "$postquantum" == "enabled" ]]; then
-        pq="${EIColor}PQ${Color_Off}"
-        postquantumc="${EColor}$postquantum${Color_Off}"
-    else
-        pq="${DIColor}PQ${Color_Off}"
-        # $postquantum not listed when using OpenVPN
-        postquantum="disabled"
-        postquantumc="${DColor}$postquantum${Color_Off}"
-    fi
-    #
-    if [[ -n "${allowlist[*]}" ]]; then # not empty
-        al="${EIColor}AL${Color_Off}"
-    else
-        al="${DIColor}AL${Color_Off}"
-    fi
-    #
-    if [[ ${allfast[*]} =~ [Yy] ]]; then
-        fst="${FIColor}F${Color_Off}"
-    else
-        fst=""
-    fi
-    #
-    if "$usingssh"; then
-        sshi="${FIColor}SSH${Color_Off}"
-    else
-        sshi=""
-    fi
-    #
-    if [[ "$status" == "connected" ]] && [[ "$meshnet" == "enabled" ]] && [[ "$nordhost" != *"nordvpn.com"* ]]; then
-        meshrouting="true"
-    else
-        meshrouting="false"
-    fi
-    #
+    # Favorite|Dedicated-IP|Virtual label
     if [[ "$status" == "connected" ]] && [[ "$technology" == "openvpn" ]] && [[ "${server,,}" == "${dipwhere,,}" ]]; then
         fav="${FVColor}(Dedicated-IP)${Color_Off}"
     elif [[ "$status" == "connected" ]] && [[ -f "$favoritesfile" ]] && grep -q -i "$server" "$favoritesfile"; then
@@ -979,6 +929,28 @@ function set_vars {
     else
         fav=""
     fi
+    #
+    # 'F' indicator
+    if [[ ${allfast[*]} =~ [Yy] ]]; then
+        fst="${FIColor}F${Color_Off}"
+    else
+        fst=""
+    fi
+    #
+    # 'SSH' indicator
+    if "$usingssh"; then
+        sshi="${FIColor}SSH${Color_Off}"
+    else
+        sshi=""
+    fi
+    #
+    # Meshnet Routing status
+    if [[ "$status" == "connected" ]] && [[ "$meshnet" == "enabled" ]] && [[ "$nordhost" != *"nordvpn.com"* ]]; then
+        meshrouting="true"
+    else
+        meshrouting="false"
+    fi
+    #
 }
 function disconnect_vpn {
     # $1 = "force" - force a disconnect
@@ -1782,7 +1754,7 @@ function group_connect {
             "Obfuscated_Servers")
                 # OpenVPN only
                 techpro_menu "back" "ovpn"
-                setting_enable "obfuscate"
+                setting_enable "obfuscate" "showstatus"
                 ;;
             "Dedicated_IP")
                 # OpenVPN only
@@ -1876,12 +1848,12 @@ function techpro_menu {
         echo "OpenVPN is a standard VPN technology which can use TCP or UDP."
         echo "OpenVPN is required when using Obfuscated-Servers or a Dedicated-IP."
         echo
+        # https://nordvpn.com/blog/nordwhisper-protocol/
         echo "NordWhisper may be slower and is designed for use only on restricted"
         echo "networks where VPN traffic is blocked but web browsing is allowed."
         echo
         echo "The UDP protocol is mainly used for online streaming and downloading."
         echo "The TCP protocol is more reliable but usually slower than UDP."
-        # ? WebTunnel HTTP/HTTPS, TCP port 80/443  TODO
         echo "WebTunnel (WT) mimics HTTPS web traffic to evade network censorship."
         echo
         disconnect_warning
@@ -2063,13 +2035,13 @@ function setting_enable {
             setting_getvars "$1"
             #
             if [[ -n "$2" ]]; then
-                echo -e "${EColor}Enable${Color_Off} $chgname ${LColor}$2${Color_Off}"
+                echo -e "${EColor}Enable${Color_Off} $chgname ${DNSColor}$2${Color_Off}"
                 echo
                 # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1"
                 nordvpn set "$1" $2
                 #
             else
-                echo -e "${EColor}Enable${Color_Off} $chgname ${FColor}$dnsdesc ${LColor}$default_dns${Color_Off}"
+                echo -e "${EColor}Enable${Color_Off} $chgname ${FColor}$dnsdesc ${DNSColor}$default_dns${Color_Off}"
                 echo
                 # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1"
                 nordvpn set "$1" $default_dns
@@ -2123,7 +2095,7 @@ function setting_disable {
             echo
             ;;
         "dns")
-            echo -e "${DColor}Disable${Color_Off} $chgname ${LColor}$dns_servers${Color_Off}"
+            echo -e "${DColor}Disable${Color_Off} $chgname ${DNSColor}$dns_servers${Color_Off}"
             echo
             ;;
     esac
@@ -2197,7 +2169,7 @@ function tplite_setting {
     echo
     if [[ "$customdns" != "disabled" ]]; then
         echo -e "$dns - ${WColor}Note:${Color_Off} Enabling TPLite disables Custom-DNS."
-        echo -e "Current DNS: ${LColor}$dns_servers${Color_Off}"
+        echo -e "Current DNS: ${DNSColor}$dns_servers${Color_Off}"
         echo
     fi
     setting_change "threatprotectionlite"
@@ -2260,10 +2232,10 @@ function landiscovery_setting {
     echo "Automatically allow traffic from these private subnets:"
     echo "10.0.0.0/8  169.254.0.0/16  172.16.0.0/12  192.168.0.0/16"
     echo
-    if [[ -n "${allowlist[*]}" ]]; then
+    if [[ -n "${allowlist[*]}" ]] && [[ "$landiscovery" == "disabled" ]]; then
         echo -e "$al - ${WColor}Note:${Color_Off} Enabling LAN-Discovery removes private subnets from Allowlist."
         echo
-        echo "Current Allowlist:"
+        echo -e "${EColor}Current Allowlist:${Color_Off}"
         printf '%s\n' "${allowlist[@]}"
         echo
     fi
@@ -2319,7 +2291,7 @@ function postquantum_setting {
     setting_change "post-quantum"
 }
 function obfuscate_setting {
-    # not available when using NordLynx
+    # requires OpenVPN
     # must disconnect/reconnect to change setting
     heading "Obfuscate"
     parent="Settings"
@@ -2965,9 +2937,11 @@ function customdns_menu {
         echo -e "$tp - ${WColor}Note:${Color_Off} Enabling Custom-DNS disables TPLite."
         echo
     fi
-    echo -e "$dns Custom-DNS is $customdnsc."
-    if [[ "$customdns" != "disabled" ]]; then
-        echo -e "Current DNS: ${LColor}$dns_servers${Color_Off}"
+    if [[ "$customdns" == "enabled" ]]; then
+        echo -e "$dns Custom-DNS is ${EColor}$customdns${Color_Off}."
+        echo -e "Current DNS: ${DNSColor}$dns_servers${Color_Off}"
+    else
+        echo -e "$dns Custom-DNS is ${DColor}$customdns${Color_Off}."
     fi
     echo
     PS3=$'\n''Choose an option: '
@@ -3016,7 +2990,7 @@ function customdns_menu {
             "Specify or Default")
                 echo
                 echo "Enter the DNS IPs.  Hit 'Enter' for default or '$upmenu' to quit."
-                echo -e "Default: ${FColor}$dnsdesc ${LColor}$default_dns${Color_Off}"
+                echo -e "Default: ${FColor}$dnsdesc ${DNSColor}$default_dns${Color_Off}"
                 echo
                 read -r -p "Up to 3 DNS server IPs: "
                 echo
@@ -4670,7 +4644,7 @@ function tools_menu {
                     echo -e "${LColor}VPN Server IP:${Color_Off} $ipaddr"
                     echo
                     if [[ "$customdns" != "disabled" ]]; then
-                        echo -e "$dns Current DNS: ${LColor}$dns_servers${Color_Off}"
+                        echo -e "$dns Current DNS: ${DNSColor}$dns_servers${Color_Off}"
                         echo
                     fi
                 else
@@ -5127,6 +5101,8 @@ function app_exists {
     #
     if [[ "$1" == "start" ]]; then
         # populate the nordlist_apps array and echo the results on script startup
+        #
+        declare -gA nordlist_apps   # global associative array
         #
         applications=( "wg" "jq" "curl" "figlet" "lolcat" "iperf3" "nordvpn" "highlight" "speedtest-cli" )
         #
