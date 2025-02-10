@@ -9,11 +9,6 @@
 # List available versions with: "apt list -a nordvpn"
 #
 nord_version="nordvpn"              # install the latest version available
-#nord_version="nordvpn=3.17.0"      # 16 Jan 2024 Meshnet peer rename, clear transfer history. DNS leak issue: https://github.com/NordSecurity/nordvpn-linux/issues/243
-#nord_version="nordvpn=3.17.1"      # 12 Feb 2024 /etc/resolv.conf DNS fix, bug fixes. IPv6 issue: https://github.com/NordSecurity/nordvpn-linux/issues/243
-#nord_version="nordvpn=3.17.2"      # 14 Feb 2024 bug fix for IPv6 issue in 3.17.1
-#nord_version="nordvpn=3.17.3"      # 28 Mar 2024 Fixed meshnet routing and OpenVPN. DNS leak issue: https://github.com/NordSecurity/nordvpn-linux/issues/343
-#nord_version="nordvpn=3.17.4"      # 05 Apr 2024 Fixed DNS leak in 3.17.3. Lan-discovery issue: https://github.com/NordSecurity/nordvpn-linux/issues/371
 #nord_version="nordvpn=3.18.0"      # 09 May 2024 Tray icon. Fix Meshnet Routing kill switch.
 #nord_version="nordvpn=3.18.1"      # 10 May 2024 Fix potential security vulnerabilities. Allowlist issue: https://github.com/NordSecurity/nordvpn-linux/issues/406
 #nord_version="nordvpn=3.18.2"      # 11 Jun 2024 Fix allowlist and lan-discovery. Option to disable Tray. Snapstore available. Allowlist issue: https://github.com/NordSecurity/nordvpn-linux/issues/461
@@ -25,7 +20,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.19.2"      # 27 Nov 2024 OpenVPN bugfix.
 #nord_version="nordvpn=3.20.0"      # 21 Jan 2025 Significant security improvements. NordWhisper technology added.
 #
-# v3.15.0+ can login using a token. Leave blank for earlier versions.
+# Login using a token, or leave blank to log in using a web browser.
 # To create a token visit https://my.nordaccount.com/ - Services - NordVPN - Manual Setup - Generate New Token
 logintoken=""
 expires="Permanent"
