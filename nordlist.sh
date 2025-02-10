@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# February 7, 2025
+# February 10, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -88,8 +88,9 @@ torwhere=""
 dipwhere=""
 #
 # Specify your Auto-Connect location. (Optional)
-# eg. acwhere="Australia" or acwhere="Sydney"
 # When obfuscate is enabled, the location must support obfuscation.
+# Connect to any Country, City, Server, or Group. eg:
+# acwhere="Australia" acwhere="Sydney" acwhere="au731" acwhere="P2P"
 acwhere=""
 #
 # Specify your Custom-DNS servers with a description.
@@ -247,9 +248,9 @@ nordvirtual=(
 # Visual Options
 # ===============
 #
+# Change the text and indicator colors in "function set_colors"
 # Change the main menu figlet ASCII style in "function ascii_custom"
 # Change the figlet ASCII style for headings in "function heading"
-# Change the text and indicator colors in "function set_colors"
 # Change the indicator layout in "function indicators_display"
 #
 # =====================================================================
@@ -263,7 +264,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 370 (function main_menu).
+# The Main Menu starts on line 371 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -535,8 +536,14 @@ EOF
     echo -ne "${Color_Off}"
 }
 function ascii_custom {
+    #
     if ! app_exists "figlet" || ! app_exists "lolcat"; then
         ascii_static
+        return
+    fi
+    #
+    if [[ "$status" != "connected" ]]; then
+        figlet -t -f "standard" "NordVPN"
         return
     fi
     # This ASCII is displayed above the main menu.  Any text or variable(s) can be used.
@@ -545,29 +552,23 @@ function ascii_custom {
     asciitext="$city"
     #
     if [[ "$meshrouting" == "true" ]]; then
-        # when routing through meshnet
         asciitext="Meshnet Routing"
     fi
-    if [[ "$status" == "connected" ]]; then
-        # Add or remove any figlet fonts, arrange from largest to smallest or by preference.
-        for figletfont in slant standard smslant small none
-        do
-            if [[ "$figletfont" == "none" ]]; then
-                # If no ascii fonts will fit then print regular text.
-                echo
-                echo "======  ${asciitext^^}  ======" | lolcat -p 0.7
-                #echo -e "${H1Color}======  ${asciitext^^}  ======${Color_Off}"
-                echo
-            elif (( "$(tput cols)" > "$(wc -L <<< "$(figlet -w 999 -f "$figletfont" "$asciitext")")" )); then
-                # Check the current terminal width, and the width required for the ascii font.
-                figlet -t -f "$figletfont" "$asciitext" | lolcat
-                break
-            fi
-        done
-    else
-        # style when disconnected
-        figlet -t -f "standard" "NordVPN"
-    fi
+    # Add or remove any figlet fonts, arrange from largest to smallest or by preference.
+    for figletfont in slant standard smslant small none
+    do
+        if [[ "$figletfont" == "none" ]]; then
+            # If no ascii fonts will fit then print regular text.
+            echo
+            echo "======  ${asciitext^^}  ======" | lolcat -p 0.7
+            #echo -e "${H1Color}======  ${asciitext^^}  ======${Color_Off}"
+            echo
+        elif (( "$(tput cols)" > "$(wc -L <<< "$(figlet -w 999 -f "$figletfont" "$asciitext")")" )); then
+            # Check the current terminal width, and the width required for the ascii font.
+            figlet -t -f "$figletfont" "$asciitext" | lolcat
+            break
+        fi
+    done
 }
 function heading {
     # The text or ASCII that displays after a menu selection is made.
@@ -745,19 +746,18 @@ function set_colors {
 function set_vars {
     # Set variables with the values found in "nordvpn settings" and "nordvpn status".
     #
-    # Reset all vars to ensure stale data is never used.
     allvars=(
         status servername nordhost server ipaddr country city transferd transferu uptime
         technology protocol firewall fwmark routing analytics killswitch tplite obfuscate notify
         tray autoconnect ipversion6 meshnet customdns dns_servers landiscovery virtual postquantum
     )
-    for var in "${allvars[@]}"; do
-        eval "$var=''"
-    done
+    # Reset all vars to ensure stale data is never used.
+    declare -g "${allvars[@]/%/=}"
     #
-    # Store info in arrays (BASH v4+)
-    readarray -t nordstatus < <(nordvpn status | tr -d '\r')
-    readarray -t nordsettings < <(nordvpn settings | tr -d '\r' | tr '[:upper:]' '[:lower:]')
+    # Store info in arrays
+    readarray -t nordstatus < <( nordvpn status )
+    readarray -t nordsettings < <( nordvpn settings )
+    nordsettings=( "${nordsettings[@],,}" )   # convert everything to lowercase
     #
     # "nordvpn status"
     # When disconnected, $status is the only variable from nordstatus.
@@ -766,19 +766,18 @@ function set_vars {
     #
     for line in "${nordstatus[@]}"
     do
-        lc_line="${line,,}" # case-insensitive matching, but output the original case
+        lc_line="${line,,}"     # lowercase used for matching and individual vars
         #
         case "$lc_line" in
             *"status"*)
-                status="${line##*: }"
-                status="${status,,}"        # status is lowercase
+                status="${lc_line##*: }"    # status is lowercase
                 ;;
             *"server"*)
                 servername="${line##*: }"   # eg "United States #9992" incl. "Virtual"
                 ;;
             *"hostname"*)
-                nordhost="${line##*: }"     # eg "us9992.nordvpn.com"
-                server="${nordhost%%.*}"    # eg "us9992"
+                nordhost="${lc_line##*: }"  # eg "us9992.nordvpn.com". lowercase
+                server="${nordhost%%.*}"    # eg "us9992". lowercase
                 ;;
             *"ip:"*)
                 ipaddr="${line##*: }"
@@ -789,14 +788,14 @@ function set_vars {
             *"city"*)
                 city="${line##*: }"
                 ;;
-            #*"technology"*) technology2="${line##*: }"; technology2="${technology2,,}";;
-            #*"protocol"*) protocol2="${line##*: }"; protocol2="${protocol2^^}";;
-            #*"postquantum"*) postquantum2="${line##*: }"; postquantum2="${postquantum2,,}";;
+            #*"technology"*)    technology2="${lc_line##*: }";;     # lowercase
+            #*"protocol"*)      protocol2="${line##*: }"; protocol2="${protocol2^^}";;  # uppercase
+            #*"postquantum"*)   postquantum2="${lc_line##*: }";;    # lowercase
                 #
             *"transfer"*)
-                transfer_line="$line"
-                transferd=$( echo "$transfer_line" | cut -f 2-3 -d' ' )  # download stat with units
-                transferu=$( echo "$transfer_line" | cut -f 5-6 -d' ' )  # upload stat with units
+                read -ra words <<< "$line"           # split line into an array
+                transferd="${words[1]} ${words[2]}"  # fields 2,3 = download stat with units
+                transferu="${words[4]} ${words[5]}"  # fields 5,6 = upload stat with units
                 ;;
             *"uptime"*)
                 uptime="$line"
@@ -804,19 +803,16 @@ function set_vars {
         esac
     done
     #
-    # "nordvpn settings"  (all elements are lowercase)
+    # "nordvpn settings"  (all elements in nordsettings[@] are lowercase)
     # $protocol and $obfuscate are only listed when using OpenVPN
-    # $postquantum not listed when using OpenVPN
+    # $postquantum is not listed when using OpenVPN
     # Using <colon><space> as delimiter.
     #
     for line in "${nordsettings[@]}"
     do
         case "$line" in
             *"technology"*)     technology="${line##*: }";;
-            *"protocol"*)
-                protocol="${line##*: }"
-                protocol="${protocol^^}"    # protocol is uppercase
-                ;;
+            *"protocol"*)       protocol="${line##*: }"; protocol="${protocol^^}";; # uppercase
             *"firewall:"*)      firewall="${line##*: }";;
             *"firewall mark"*)  fwmark="${line##*: }";;
             *"routing"*)        routing="${line##*: }";;
@@ -848,20 +844,20 @@ function set_vars {
     #
     # handle allowlist separately
     allowlist=()
-    collect_lines="false"
     allowlist_var="disabled"
+    collect_lines="false"
     #
     for line in "${nordsettings[@]}"
     do
         if [[ "$line" == *"allowlist"* ]]; then
-            # when the allowlist is empty, "allowlist" does not appear in "nordvpn settings"
+            # "allowlist" is only listed when the allowlist has entries
             allowlist_var="enabled"
             collect_lines="true"
         fi
-        if "$collect_lines"; then
+        if [[ "$collect_lines" == "true" ]]; then
             allowlist+=( "$line" )
         fi
-        # allowlist is the last entry in "nordvpn settings"
+        # allowlist is the last item in "nordvpn settings"
         # customize as necessary if the "nordvpn settings" output changes in the future
         if [[ -z "$line" ]]; then
             break
@@ -907,7 +903,7 @@ function set_vars_indicators {
     #
     # create an associative array of the indicators with the current
     # status of the corresponding enabled/disabled variables
-    declare -A nordlist_indicators=(
+    declare -gA nordlist_indicators=(
     #   ["$indkey"]="$indstatus"
         ["fw"]="$firewall"
         ["rt"]="$routing"
@@ -932,22 +928,22 @@ function set_vars_indicators {
         indstatus="${nordlist_indicators[$indkey]}"
         #
         if [[ "$indstatus" == "enabled" ]]; then
-            case "$indkey" in
-                "ob")   obfuscatec="${EColor}$indstatus${Color_Off}";;
-                "mn")   meshnetc="${EColor}$indstatus${Color_Off}";;
-                "pq")   postquantumc="${EColor}$indstatus${Color_Off}";;
-            esac
-            eval "$indkey='${EIColor}${indkey^^}${Color_Off}'"
+            tmpcolor="${EColor}"
+            tmpicolor="${EIColor}"
         else
-            case "$indkey" in
-                "ob")   obfuscatec="${DColor}$indstatus${Color_Off}";;
-                "mn")   meshnetc="${DColor}$indstatus${Color_Off}";;
-                "pq")   postquantumc="${DColor}$indstatus${Color_Off}";;
-            esac
-            eval "$indkey='${DIColor}${indkey^^}${Color_Off}'"
+            tmpcolor="${DColor}"
+            tmpicolor="${DIColor}"
         fi
+        #
+        case "$indkey" in
+            "ob")   obfuscatec="${tmpcolor}$indstatus${Color_Off}";;
+            "mn")   meshnetc="${tmpcolor}$indstatus${Color_Off}";;
+            "pq")   postquantumc="${tmpcolor}$indstatus${Color_Off}";;
+        esac
+        #
+        declare -g "$indkey=${tmpicolor}${indkey^^}${Color_Off}"
+        #
     done
-    #
 }
 function set_vars_other {
     # Set other variables and colors
@@ -966,24 +962,24 @@ function set_vars_other {
     # Favorite|Dedicated-IP|Virtual label
     fav=""
     if [[ "$status" == "connected" ]]; then
-        if [[ "$technology" == "openvpn" && "${server,,}" == "${dipwhere,,}" ]]; then
+        #
+        if [[ "$technology" == "openvpn" && "$server" == "${dipwhere,,}" ]]; then
             fav="${FVColor}(Dedicated-IP)${Color_Off}"
-        else
-            # favoritelist populated in 'function start' if the file exists
-            # check if favoritelist exists and is not empty
-            if [[ -v favoritelist && ${#favoritelist[@]} -gt 0 ]]; then
-                for favorite in "${favoritelist[@]}"; do
-                    # server number after the last underscore
-                    favserver_id="${favorite##*_}"
-                    if [[ "${favserver_id,,}" == "${server,,}" ]]; then
-                        fav="${FVColor}(Favorite)${Color_Off}"
-                        break
-                    fi
-                done
-            fi
-            if [[ -z "$fav" && "${servername,,}" == *"virtual"* ]]; then
-                fav="${FVColor}(Virtual)${Color_Off}"
-            fi
+        fi
+        # favoritelist is populated in 'function start' if the file exists
+        # check if favoritelist exists and is not empty
+        if [[ -z "$fav" && -v favoritelist && ${#favoritelist[@]} -gt 0 ]]; then
+            for favorite in "${favoritelist[@]}"; do
+                # server number after the last underscore
+                favserver="${favorite##*_}"
+                if [[ "${favserver,,}" == "$server" ]]; then
+                    fav="${FVColor}(Favorite)${Color_Off}"
+                    break
+                fi
+            done
+        fi
+        if [[ -z "$fav" && "${servername,,}" == *"virtual"* ]]; then
+            fav="${FVColor}(Virtual)${Color_Off}"
         fi
     fi
     #
@@ -1085,14 +1081,11 @@ function techpro_menu {
     PS3=$'\n''Choose a Technology-Protocol: '
     COLUMNS="$menuwidth"
     #
-    if [[ "$2" == "ovpn" ]]; then
-        submtech=( "OpenVPN-UDP" "OpenVPN-TCP" )
-    elif [[ "$2" == "xnw" ]]; then
-        submtech=( "NordLynx-UDP" "OpenVPN-UDP" "OpenVPN-TCP" )
-    else
-        submtech=( "NordLynx-UDP" "OpenVPN-UDP" "OpenVPN-TCP" "NordWhisper-WT" )
-    fi
-    #
+    case "$2" in
+        "ovpn") submtech=( "OpenVPN-UDP" "OpenVPN-TCP" );;
+        "xnw")  submtech=( "NordLynx-UDP" "OpenVPN-UDP" "OpenVPN-TCP" );;
+        *)      submtech=( "NordLynx-UDP" "OpenVPN-UDP" "OpenVPN-TCP" "NordWhisper-WT" );;
+    esac
     if [[ "$1" != "back" ]]; then
         submtech+=( "Exit" )
     fi
@@ -1437,7 +1430,7 @@ function tplite_setting {
     echo "connections, and malicious sites. Previously known as CyberSec."
     echo "Uses the Nord Threat Protection Lite DNS 103.86.96.96 103.86.99.99"
     echo
-    if [[ "$customdns" != "disabled" ]]; then
+    if [[ "$customdns" == "enabled" ]]; then
         echo -e "$dns - ${WColor}Note:${Color_Off} Enabling TPLite disables Custom-DNS."
         echo -e "Current DNS: ${DNSColor}$dns_servers${Color_Off}"
         echo
@@ -1512,11 +1505,18 @@ function autoconnect_setting {
         echo
     fi
     if [[ "$autoconnect" == "disabled" ]]; then
+        echo "Choose a location before enabling the setting."
+        echo
         if [[ -n $acwhere ]]; then
             echo -e "${FColor}Default location: ${LColor}$acwhere${Color_Off}"
         else
             echo -e "${FColor}Default location: ${LColor}Automatic${Color_Off}"
         fi
+        echo
+        echo "Connect to any Country, City, Server, or Group."
+        echo "eg. Australia or Sydney or au731 or P2P"
+        echo
+        echo "The input location will be the new default until the script exits."
         echo
         read -r -p "Specify a location or hit 'Enter' for default: "
         parent_menu
@@ -1664,7 +1664,7 @@ function landiscovery_setting {
     echo "Automatically allow traffic from these private subnets:"
     echo "10.0.0.0/8  169.254.0.0/16  172.16.0.0/12  192.168.0.0/16"
     echo
-    if [[ -n "${allowlist[*]}" && "$landiscovery" == "disabled" ]]; then
+    if [[ "$allowlist_var" == "enabled" && "$landiscovery" == "disabled" ]]; then
         echo -e "$al - ${WColor}Note:${Color_Off} Enabling LAN-Discovery removes private subnets from Allowlist."
         echo
         echo -e "${EColor}Current Allowlist:${Color_Off}"
@@ -1756,28 +1756,31 @@ function allowlist_setting {
     echo -e "Type ${FIColor}E${Color_Off} to edit the script."
     echo
     read -n 1 -r -p "Apply your default allowlist settings? (y/n/C/E) "; echo
-    parent_menu "$1"
     echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        allowlist_commands
-        set_vars
-    elif [[ $REPLY =~ ^[Cc]$ ]]; then
-        nordvpn allowlist remove all
-        set_vars
-    elif [[ $REPLY =~ ^[Ee]$ ]]; then
-        echo -e "Modify ${LColor}function allowlist_commands${Color_Off} starting on ${FColor}line $(( startline + 1 ))${Color_Off}"
-        echo
-        openlink "$0" "noask" "exit"
-    else
-        echo "No changes made."
-    fi
+    parent_menu "$1"
+    case "$REPLY" in
+        [Yy])
+            allowlist_commands
+            set_vars
+            ;;
+        [Cc])
+            nordvpn allowlist remove all
+            set_vars
+            ;;
+        [Ee])
+            echo -e "Modify ${LColor}function allowlist_commands${Color_Off} starting on ${FColor}line $(( startline + 1 ))${Color_Off}"
+            openlink "$0" "noask" "exit"
+            ;;
+        *)
+            echo "No changes made."
+            ;;
+    esac
+    echo
     if [[ -n "${allowlist[*]}" ]]; then
-        echo
-        echo -ne "$al "
+        echo -e "${EColor}Current Allowlist:${Color_Off}"
         printf '%s\n' "${allowlist[@]}"
     fi
     if [[ "$1" == "back" ]]; then
-        echo
         return
     fi
     main_menu
@@ -2166,6 +2169,7 @@ function iptables_status {
     echo
     main_logo "stats_only"
     echo -e "Firewall Mark: ${LColor}$fwmark${Color_Off}"
+    echo
     if [[ -n "${allowlist[*]}" ]]; then
         printf '%s\n' "${allowlist[@]}"
     fi
@@ -2522,18 +2526,18 @@ function favorites_menu {
 function create_list {
     # Create an array containing all countries, cities, or groups
     #
-    # remove notices by keyword
+    # remove notices by keyword     TODO: notices deprecated?
     listexclude="update|feature"
     #
     case "$1" in
         "country")
-            readarray -t countrylist < <( nordvpn countries | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
+            readarray -t countrylist < <( nordvpn countries | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
             if [[ "$2" == "count" ]]; then return; fi
             rcountry=$( printf '%s\n' "${countrylist[ RANDOM % ${#countrylist[@]} ]}" )
             countrylist+=( "Random" "Exit" )
             ;;
         "city")
-            readarray -t citylist < <( nordvpn cities "$xcountry" | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
+            readarray -t citylist < <( nordvpn cities "$xcountry" | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
             if [[ "$2" == "count" ]]; then return; fi
             rcity=$( printf '%s\n' "${citylist[ RANDOM % ${#citylist[@]} ]}" )
             if (( "${#citylist[@]}" > 1 )); then
@@ -2542,7 +2546,7 @@ function create_list {
             citylist+=( "Exit" )
             ;;
         "group")
-            readarray -t grouplist < <( nordvpn groups | tr -d '\r' | tr -d '-' | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
+            readarray -t grouplist < <( nordvpn groups | grep -v -i -E "$listexclude" | awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' | sort )
             grouplist+=( "Exit" )
             ;;
     esac
@@ -3758,7 +3762,7 @@ function city_count {
                 break
             fi
         done
-        if ! $virtualcountry; then
+        if [[ "$virtualcountry" == "false" ]]; then
             echo "$xcountry"
             allcountries+=( "$xcountry" )
         fi
@@ -3771,7 +3775,7 @@ function city_count {
                 if [[ "${element,,}" == "${ccity,,}" ]]; then
                     virtualcity="true"
                     echo "    $ccity*"
-                    if $virtualcountry; then
+                    if [[ "$virtualcountry" == "true" ]]; then
                         virtualcities+=( "$xcountry* $ccity*" )
                         allcities+=( "$ccity* $xcountry*" )
                     else
@@ -3781,7 +3785,7 @@ function city_count {
                     break
                 fi
             done
-            if ! $virtualcity; then
+            if [[ "$virtualcity" == "false" ]]; then
                 echo "    $ccity"
                 allcities+=( "$ccity $xcountry" )
             fi
@@ -4148,7 +4152,7 @@ function virtual_check {
         fi
     done
     echo
-    if "$mismatch"; then
+    if [[ "$mismatch" == "true" ]]; then
         echo -e "${WColor}** Virtual location mismatch **${Color_Off}"
         echo "Please update $(basename "$serversfile") and then the nordvirtual array."
     else
@@ -4412,7 +4416,7 @@ function wireguard_gen {
         fi
     fi
     echo -e "Current Server: ${EColor}$nordhost${Color_Off}"
-    echo -e "${CIColor}$city ${COColor}$country ${IPColor}$ipaddr ${Color_Off}"
+    echo -e "${CIColor}$city${Color_Off} ${COColor}$country${Color_Off} ${IPColor}$ipaddr${Color_Off}"
     echo
     echo "Generate WireGuard config file:"
     echo -e "${LColor}$wgfull${Color_Off}"
@@ -4858,7 +4862,7 @@ function quick_connect {
     fi
     echo
     if [[ -z $bestserver ]]; then
-        echo -e "Request failed. Trying: '${LColor}nordvpn connect${Color_Off}'"
+        echo -e "Request failed.  Trying ${LColor}nordvpn connect${Color_Off}"
         echo
         nordvpn connect
     else
@@ -4963,18 +4967,22 @@ function rate_server {
         echo -e "${DColor}Terrible${Color_Off} <_1__2__3__4__5_> ${EColor}Excellent${Color_Off}"
         echo
         read -n 1 -r -p "$(echo -e "Rating 1-5 [e${LColor}x${Color_Off}it]: ")" rating
-        if [[ $rating =~ ^[Xx]$ || -z $rating ]]; then
-            echo -e "${DColor}(Skipped)${Color_Off}"
-            break
-        elif (( 1 <= rating )) && (( rating <= 5 )); then
-            echo; echo
-            nordvpn rate "$rating"
-            break
-        else
-            echo; echo
-            echo -e "${WColor}** Please choose a number from 1 to 5${Color_Off}"
-            echo "('Enter' or 'x' to exit)"
-        fi
+        case "$rating" in
+            [Xx] | "")
+                echo -e "${DColor}(Skipped)${Color_Off}"
+                break
+                ;;
+            [1-5])
+                echo; echo
+                nordvpn rate "$rating"
+                break
+                ;;
+            *)
+                echo
+                echo -e "${WColor}** Please choose a number from 1 to 5 **${Color_Off}"
+                echo "('Enter' or 'x' to exit)"
+                ;;
+        esac
         echo
     done
 }
@@ -4985,18 +4993,16 @@ function pause_vpn {
     pcountry=$(echo "$country" | tr ' ' '_' )
     #
     heading "Disconnect, Pause, and Reconnect" "txt" "alt"
-    echo -e "$statuscl ${CIColor}$pcity ${COColor}$pcountry ${SVColor}$server${Color_Off}"
+    echo -e "$statuscl ${CIColor}$pcity${Color_Off} ${COColor}$pcountry${Color_Off} ${SVColor}$server${Color_Off}"
     echo
     echo "Reconnect to any City, Country, Server, or Group."
     echo; echo
     echo -e "Complete this command or hit 'Enter' for ${FColor}$pcity${Color_Off}"
     echo
     read -r -p "nordvpn connect " pwhere
-    if [[ -z "$pwhere" ]]; then
-        printf '\e[A\e[K'   # erase previous line
-        echo  "nordvpn connect $pcity"
-    fi
     pwhere=${pwhere:-$pcity}
+    printf '\e[A\e[K'   # erase previous line
+    echo -e "${LColor}nordvpn connect $pwhere${Color_Off}"
     echo
     read -r -p "How many minutes? Hit 'Enter' for [$default_pause]: " pminutes
     pminutes=${pminutes:-$default_pause}
@@ -5020,7 +5026,7 @@ function pause_vpn {
     countdown_timer "$pseconds"
     heading "Reconnect"
     echo
-    echo "Connect to $pwhere"
+    echo -e "${LColor}nordvpn connect $pwhere${Color_Off}"
     echo
     # shellcheck disable=SC2086 # word splitting eg. "--group P2P United_States"
     nordvpn connect $pwhere
@@ -5186,7 +5192,7 @@ function ipinfo_curl {
     #
     if [[ -n "$extip" ]]; then
         echo -e "${IPColor}$extip  $exthost${Color_Off}"
-        echo -e "${SVColor}$extorg ${CIColor}$extcity $extregion ${COColor}$extcountry${Color_Off}"
+        echo -e "${SVColor}$extorg${Color_Off} ${CIColor}$extcity $extregion${Color_Off} ${COColor}$extcountry${Color_Off}"
         echo
     elif [[ -n "$extlimit" ]]; then
         echo -e "${WColor}$extlimit${Color_Off}"
@@ -5217,13 +5223,13 @@ function app_exists {
                 echo -e "${DIColor}N${Color_Off} $app"
             fi
         done
+        return
+    fi
+    # check the nordlist_apps array to confirm the program is available
+    if [[ "${nordlist_apps[$1]}" == "true" ]]; then
+        return 0    # success
     else
-        # check the nordlist_apps array to confirm the program is available
-        if [[ "${nordlist_apps[$1]}" == "true" ]]; then
-            return 0    # success
-        else
-            return 1    # failure
-        fi
+        return 1    # failure
     fi
 }
 function start {
@@ -5238,10 +5244,9 @@ function start {
     else
         usingssh="false"
     fi
-    if (( BASH_VERSINFO < 4 )); then
+    if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 2) )); then
         echo "Bash Version $BASH_VERSION"
-        echo -e "${WColor}Bash v4.0 or higher is required.${Color_Off}"
-        echo
+        echo -e "${WColor}Bash v4.2 or higher is required.${Color_Off}"
         exit 1
     fi
     if [[ -n "$titlebartext" ]]; then
@@ -5281,17 +5286,6 @@ function start {
     # will be checked on every 'set_vars' call for the main_logo (Favorite) label
     if [[ -f "$favoritesfile" ]]; then
         readarray -t favoritelist < "$favoritesfile"
-    fi
-    #
-    if nordvpn status | grep -i "update"; then
-        # "A new version of NordVPN is available! Please update the application."
-        clear -x
-        echo
-        echo -e "${WColor}** A NordVPN update is available **${Color_Off}"
-        echo
-        echo
-        read -n 1 -s -r -p "Press any key for the menu... "; echo
-        echo
     fi
     #
     main_menu "start"
