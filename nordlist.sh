@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# February 10, 2025
+# February 14, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -83,8 +83,6 @@ torwhere=""
 #
 # Specify your Dedicated_IP location. (Optional)
 # If you have a Dedicated IP you can specify your server, eg. "ca1692"
-# Otherwise you can connect to the server group in a supported region.
-# eg. dipwhere="Tokyo" or dipwhere="Johannesburg"
 dipwhere=""
 #
 # Specify your Auto-Connect location. (Optional)
@@ -264,7 +262,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 371 (function main_menu).
+# The Main Menu starts on line 369 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -790,7 +788,7 @@ function set_vars {
                 ;;
             #*"technology"*)    technology2="${lc_line##*: }";;     # lowercase
             #*"protocol"*)      protocol2="${line##*: }"; protocol2="${protocol2^^}";;  # uppercase
-            #*"postquantum"*)   postquantum2="${lc_line##*: }";;    # lowercase
+            #*"quantum"*)       postquantum2="${lc_line##*: }";;    # lowercase
                 #
             *"transfer"*)
                 read -ra words <<< "$line"           # split line into an array
@@ -872,7 +870,6 @@ function set_vars {
 function set_vars_techpro {
     # The technology and protocol to display
     #
-    # from function set_vars:
     # nordsettings = $technology - all technologies are listed
     # nordsettings = $protocol - only OpenVPN protocols are listed
     # nordstatus = $protocol2 (uncomment) - all protocols are listed but only while connected
@@ -963,7 +960,7 @@ function set_vars_other {
     fav=""
     if [[ "$status" == "connected" ]]; then
         #
-        if [[ "$technology" == "openvpn" && "$server" == "${dipwhere,,}" ]]; then
+        if [[ "$server" == "${dipwhere,,}" ]]; then
             fav="${FVColor}(Dedicated-IP)${Color_Off}"
         fi
         # favoritelist is populated in 'function start' if the file exists
@@ -1064,9 +1061,8 @@ function techpro_menu {
         echo "NordLynx is required to use Post-Quantum VPN and is UDP only."
         echo
         echo "OpenVPN is a standard VPN technology which can use TCP or UDP."
-        echo "OpenVPN is required when using Obfuscated-Servers or a Dedicated-IP."
+        echo "OpenVPN is required when using Obfuscated-Servers."
         echo
-        # https://nordvpn.com/blog/nordwhisper-protocol/
         echo "NordWhisper may be slower and is designed for use only on restricted"
         echo "networks where VPN traffic is blocked but web browsing is allowed."
         echo
@@ -1259,7 +1255,7 @@ function setting_enable {
                 nordvpn set "$1" $2
                 #
             else
-                echo -e "${EColor}Enable${Color_Off} $chgname ${FColor}$dnsdesc ${DNSColor}$default_dns${Color_Off}"
+                echo -e "${EColor}Enable${Color_Off} $chgname ${FColor}$dnsdesc${Color_Off} ${DNSColor}$default_dns${Color_Off}"
                 echo
                 # shellcheck disable=SC2086 # word splitting eg. "1.1.1.1 1.0.0.1"
                 nordvpn set "$1" $default_dns
@@ -2411,7 +2407,9 @@ function favorites_menu {
             main_menu
         fi
     fi
+    # return to favorites_menu after any change so that the array is updated.  (used for main_logo "Favorite" label)
     readarray -t favoritelist < <( sort < "$favoritesfile" )
+    #
     if (( "${#favoritelist[@]}" > 1 )); then
         rfavorite=$( printf '%s\n' "${favoritelist[ RANDOM % ${#favoritelist[@]} ]}" )
         favoritelist+=( "Random" )
@@ -2797,11 +2795,8 @@ function group_location {
             echo "(Any region should be OK)"
             ;;
         "Dedicated_IP")
-            # https://support.nordvpn.com/hc/en-us/articles/19507808024209
-            echo -e "${EColor}$1 locations (subject to change):${Color_Off}"
-            echo "Buffalo Chicago Dallas Los_Angeles Miami New_York Seattle Toronto"
-            echo "Amsterdam Brussels Copenhagen Frankfurt Lisbon London Madrid Milan"
-            echo "Paris Stockholm Warsaw Zurich Hong_Kong Tokyo Sydney Johannesburg"
+            echo "A Dedicated-IP subscription is required."
+            echo "Enter your assigned server.  eg 'ca1692'"
             ;;
     esac
     echo
@@ -2846,9 +2841,8 @@ function group_connect {
             ;;
         "Dedicated_IP")
             heading "Dedicated-IP"
-            echo "Connect to your assigned server, or test the performance of the"
-            echo "server group before purchasing a Dedicated-IP.  Please refer to:"
-            echo "https://support.nordvpn.com/hc/en-us/articles/19507808024209"
+            echo "Connect to your assigned server to use a personal IP address that"
+            echo "belongs only to you.  Purchasing a subscription is required."
             location="$dipwhere"
             ;;
     esac
@@ -2866,12 +2860,6 @@ function group_connect {
             echo "Set Technology to OpenVPN TCP or UDP."
             echo "Set Obfuscate to enabled."
             ;;
-        "Dedicated_IP")
-            # OpenVPN only
-            echo "Disable Post-Quantum."
-            echo "Set Technology to OpenVPN TCP or UDP."
-            echo "Set Obfuscate to disabled."
-            ;;
         "P2P")
             # available with all technologies
             echo "Choose a Technology and Protocol."
@@ -2879,7 +2867,7 @@ function group_connect {
             echo "Set Obfuscate to disabled."
             ;;
         *)
-            # exclude NordWhisper for Double-VPN, Onion+VPN
+            # exclude NordWhisper for Double-VPN, Onion+VPN, Dedicated_IP
             echo "Set Technology to OpenVPN or NordLynx."
             echo "Set NordLynx Post-Quantum (choice)."
             echo "Set Obfuscate to disabled."
@@ -2903,18 +2891,13 @@ function group_connect {
                 techpro_menu "back" "ovpn"
                 setting_enable "obfuscate" "showstatus"
                 ;;
-            "Dedicated_IP")
-                # OpenVPN only
-                techpro_menu "back" "ovpn"
-                setting_disable "obfuscate"
-                ;;
             "P2P")
                 # available with all technologies
                 techpro_menu "back"
                 setting_disable "obfuscate"
                 ;;
             *)
-                # exclude NordWhisper for Double-VPN, Onion+VPN
+                # exclude NordWhisper for Double-VPN, Onion+VPN, Dedicated_IP
                 techpro_menu "back" "xnw"
                 setting_disable "obfuscate"
                 ;;
