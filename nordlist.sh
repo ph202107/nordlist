@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# February 14, 2025
+# February 19, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -168,8 +168,8 @@ exitping="n"
 # Requires 'curl' 'jq' and the local 'serversfile' mentioned above.
 exitload="n"
 #
-# Show your external IP address when the script exits.  "y" or "n"
-# Requires 'curl' and 'jq'.  Connects to ipinfo.io.
+# Show your external IP address and geolocation when the script exits.
+# Requires 'curl' and 'jq'.  Connects to ipinfo.io.  "y" or "n"
 exitip="n"
 #
 # Reload the "Bash Sensors" Cinnamon applet when the script exits.
@@ -941,6 +941,19 @@ function set_vars_indicators {
         declare -g "$indkey=${tmpicolor}${indkey^^}${Color_Off}"
         #
     done
+    #
+    # 'F' indicator
+    fst=""
+    if [[ ${allfast[*]} =~ [Yy] ]]; then
+        fst="${FIColor}F${Color_Off}"
+    fi
+    #
+    # 'SSH' indicator
+    sshi=""
+    if [[ "$usingssh" == "true" ]]; then
+        sshi="${FIColor}SSH${Color_Off}"
+    fi
+    #
 }
 function set_vars_other {
     # Set other variables and colors
@@ -954,6 +967,12 @@ function set_vars_other {
         statusc="${DNColor}$status${Color_Off}"
         statuscl="${DNColor}${status^}${Color_Off}"
         transferc=""
+    fi
+    #
+    # Meshnet Routing status
+    meshrouting="false"
+    if [[ "$status" == "connected" && "$meshnet" == "enabled" && "$nordhost" != *"nordvpn.com"* ]]; then
+        meshrouting="true"
     fi
     #
     # Favorite|Dedicated-IP|Virtual label
@@ -979,25 +998,6 @@ function set_vars_other {
             fav="${FVColor}(Virtual)${Color_Off}"
         fi
     fi
-    #
-    # 'F' indicator
-    fst=""
-    if [[ ${allfast[*]} =~ [Yy] ]]; then
-        fst="${FIColor}F${Color_Off}"
-    fi
-    #
-    # 'SSH' indicator
-    sshi=""
-    if [[ "$usingssh" == "true" ]]; then
-        sshi="${FIColor}SSH${Color_Off}"
-    fi
-    #
-    # Meshnet Routing status
-    meshrouting="false"
-    if [[ "$status" == "connected" && "$meshnet" == "enabled" && "$nordhost" != *"nordvpn.com"* ]]; then
-        meshrouting="true"
-    fi
-    #
 }
 #
 # =====================================================================
@@ -1689,6 +1689,8 @@ function postquantum_setting {
     echo "Post-Quantum VPN uses cutting-edge cryptography designed to resist"
     echo "quantum computer attacks.  Refer to:"
     echo "https://nordvpn.com/blog/nordvpn-linux-post-quantum-encryption-support/"
+    echo
+    echo "Not compatible with OpenVPN, NordWhisper, Meshnet, or Dedicated-IP."
     echo
     if [[ "$status" == "connected" || "$technology" != "nordlynx" || "$meshnet" == "enabled" ]] ; then
         echo -e "$pq Post-Quantum VPN is $postquantumc."
@@ -2464,7 +2466,7 @@ function favorites_menu {
                 favorites_menu
                 ;;
             "Add Current Server")
-                favname="$(echo "$city" | tr -d ' _')_$server"
+                favname="$(echo "$city" | tr -d ' _')_$server"  # remove any space or underscore
                 #
                 heading "Add $server to Favorites" "txt"
                 echo -e "Format:  AnyName${H2Color}<underscore>${Color_Off}ActualServerNumber"
@@ -2495,20 +2497,18 @@ function favorites_menu {
                 disconnect_vpn
                 echo "Connect to $rfavorite"
                 echo
-                nordvpn connect "$( echo "$rfavorite" | rev | cut -f1 -d'_' | rev )"
+                nordvpn connect "${rfavorite##*_}"  # everything after the last underscore
                 exit_status
                 exit
                 ;;
             *)
                 if (( 1 <= REPLY )) && (( REPLY <= ${#favoritelist[@]} )); then
-                    # to handle more than one <underscore> in the entry
-                    # reverse the text so the first field is the server and the rest is heading
-                    heading "$( echo "$xfavorite" | rev | cut -f2- -d'_' | rev )"
+                    heading "${xfavorite%_*}"   # everything before the last underscore
                     echo
                     disconnect_vpn
                     echo "Connect to $xfavorite"
                     echo
-                    nordvpn connect "$( echo "$xfavorite" | awk -F'_' '{print $NF}' )"
+                    nordvpn connect "${xfavorite##*_}"  # everything after the last underscore
                     exit_status
                     exit
                 else
@@ -2856,19 +2856,26 @@ function group_connect {
     case "$1" in
         "Obfuscated_Servers")
             # OpenVPN only
-            echo "Disable Post-Quantum."
+            echo "Set Post-Quantum to disabled."
             echo "Set Technology to OpenVPN TCP or UDP."
             echo "Set Obfuscate to enabled."
             ;;
-        "P2P")
-            # available with all technologies
-            echo "Choose a Technology and Protocol."
+        "Double_VPN" | "Dedicated_IP")
+            # exclude NordWhisper
+            # Double-VPN fails with PQ enabled. Dedicated-IP is not compatible with PQ.
+            echo "Set Technology to OpenVPN or NordLynx."
+            echo "Set Post-Quantum to disabled."
+            echo "Set Obfuscate to disabled."
+            ;;
+        "Onion_Over_VPN")
+            # exclude NordWhisper.  works OK with PQ
+            echo "Set Technology to OpenVPN or NordLynx."
             echo "Set NordLynx Post-Quantum (choice)."
             echo "Set Obfuscate to disabled."
             ;;
-        *)
-            # exclude NordWhisper for Double-VPN, Onion+VPN, Dedicated_IP
-            echo "Set Technology to OpenVPN or NordLynx."
+        "P2P")
+            # available with all technologies and PQ
+            echo "Choose a Technology and Protocol."
             echo "Set NordLynx Post-Quantum (choice)."
             echo "Set Obfuscate to disabled."
             ;;
@@ -2891,14 +2898,26 @@ function group_connect {
                 techpro_menu "back" "ovpn"
                 setting_enable "obfuscate" "showstatus"
                 ;;
-            "P2P")
-                # available with all technologies
-                techpro_menu "back"
+            "Double_VPN" | "Dedicated_IP")
+                # exclude NordWhisper
+                # Double-VPN fails with PQ enabled. Dedicated-IP is not compatible with PQ.
+                techpro_menu "back" "xnw"
+                # Choosing NordLynx will always prompt to enable post-quantum. Ensure PQ is disabled.
+                if [[ "$postquantum" == "enabled" ]]; then
+                    echo -e "${WColor}Note:${Color_Off} Post-Quantum VPN is not compatible with $1."
+                    echo
+                    setting_disable "post-quantum"
+                fi
                 setting_disable "obfuscate"
                 ;;
-            *)
-                # exclude NordWhisper for Double-VPN, Onion+VPN, Dedicated_IP
+            "Onion_Over_VPN")
+                # exclude NordWhisper.  works OK with PQ
                 techpro_menu "back" "xnw"
+                setting_disable "obfuscate"
+                ;;
+            "P2P")
+                # available with all technologies and PQ
+                techpro_menu "back"
                 setting_disable "obfuscate"
                 ;;
         esac
@@ -2922,12 +2941,9 @@ function group_all_menu {
     heading "All Groups"
     parent="Group"
     create_list "group"
-    echo "Groups that are available with"
     echo
-    echo -e "Technology: $techpro"
-    if [[ "$technology" == "openvpn" ]]; then
-        echo -e "Obfuscate: $obfuscatec"
-    fi
+    echo -n "Available With "
+    indicators_display "short"
     echo
     PS3=$'\n''Connect to Group: '
     select xgroup in "${grouplist[@]}"
