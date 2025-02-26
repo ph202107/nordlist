@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# February 19, 2025
+# February 26, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -575,7 +575,7 @@ function heading {
     # $3 = "alt" - use alternate color for regular text
     #
     clear -x
-    if ! app_exists "figlet" || ! app_exists "lolcat" || [[ "$2" == "txt" ]]; then
+    if [[ "$2" == "txt" ]] || ! app_exists "figlet" || ! app_exists "lolcat"; then
         echo
         if [[ "$3" == "alt" ]]; then
             echo -e "${H2Color}=== $1 ===${Color_Off}"
@@ -730,7 +730,7 @@ function set_colors {
     COColor=${Color_Off}    # Country name
     SVColor=${Color_Off}    # Server name
     IPColor=${Color_Off}    # IP address
-    FVColor=${LCyan}        # Favorite|Dedicated-IP|Virtual label
+    FVColor=${LCyan}        # Favorite|Dedicated|etc server label
     ISColor=${DGrey}        # Indicators separator
     DLColor=${Green}        # Download stat
     ULColor=${Yellow}       # Upload stat
@@ -975,12 +975,12 @@ function set_vars_other {
         meshrouting="true"
     fi
     #
-    # Favorite|Dedicated-IP|Virtual label
+    # Favorite|Dedicated|Obfuscated|Onion|Double|Virtual label
     fav=""
     if [[ "$status" == "connected" ]]; then
         #
         if [[ "$server" == "${dipwhere,,}" ]]; then
-            fav="${FVColor}(Dedicated-IP)${Color_Off}"
+            fav="${FVColor}(Dedicated)${Color_Off}"
         fi
         # favoritelist is populated in 'function start' if the file exists
         # check if favoritelist exists and is not empty
@@ -994,6 +994,19 @@ function set_vars_other {
                 fi
             done
         fi
+        #
+        if [[ -z "$fav" && "$obfuscate" == "enabled" ]]; then
+            fav="${FVColor}(Obfuscated)${Color_Off}"
+        fi
+        #
+        if [[ -z "$fav" && "$server" == *"-"* && "$meshrouting" == "false" ]]; then
+            if [[ "$server" == *"onion"* ]]; then
+                fav="${FVColor}(Onion)${Color_Off}"
+            else
+                fav="${FVColor}(Double)${Color_Off}"
+            fi
+        fi
+        #
         if [[ -z "$fav" && "${servername,,}" == *"virtual"* ]]; then
             fav="${FVColor}(Virtual)${Color_Off}"
         fi
@@ -1089,25 +1102,22 @@ function techpro_menu {
     select xtech in "${submtech[@]}"
     do
         parent_menu "$1"
+        echo
         case $xtech in
             "NordLynx-UDP")
-                echo
                 techpro_set "NordLynx" "UDP"
                 setting_change "post-quantum" "back"
                 break
                 ;;
             "OpenVPN-UDP")
-                echo
                 techpro_set "OpenVPN" "UDP"
                 break
                 ;;
             "OpenVPN-TCP")
-                echo
                 techpro_set "OpenVPN" "TCP"
                 break
                 ;;
             "NordWhisper-WT")
-                echo
                 techpro_set "NordWhisper" "WT"
                 break
                 ;;
@@ -1502,22 +1512,22 @@ function autoconnect_setting {
     fi
     if [[ "$autoconnect" == "disabled" ]]; then
         echo "Choose a location before enabling the setting."
-        echo
-        if [[ -n $acwhere ]]; then
-            echo -e "${FColor}Default location: ${LColor}$acwhere${Color_Off}"
-        else
-            echo -e "${FColor}Default location: ${LColor}Automatic${Color_Off}"
-        fi
-        echo
         echo "Connect to any Country, City, Server, or Group."
         echo "eg. Australia or Sydney or au731 or P2P"
         echo
-        echo "The input location will be the new default until the script exits."
+        echo -e "${FColor}(Hit 'Enter' for default or '$upmenu' to quit.)${Color_Off}"
         echo
-        read -r -p "Specify a location or hit 'Enter' for default: "
+        if [[ -n $acwhere ]]; then
+            echo -e "${FColor}Default:${Color_Off} ${LColor}$acwhere${Color_Off}"
+        else
+            echo -e "${FColor}Default:${Color_Off} ${LColor}Automatic${Color_Off}"
+        fi
+        echo
+        echo "(The input location will remain as default until the script exits.)"
+        echo
+        read -r -p "Enter the Auto-Connect location: "; echo
         parent_menu
         acwhere=${REPLY:-$acwhere}
-        echo
     fi
     setting_change "autoconnect"
 }
@@ -1555,59 +1565,57 @@ function customdns_menu {
     select cdns in "${submcdns[@]}"
     do
         parent_menu
+        echo
         case $cdns in
             "Nord 103.86.96.100 103.86.99.100")
-                echo
                 setting_enable "dns" "103.86.96.100 103.86.99.100"
                 ;;
             "Nord-TPLite 103.86.96.96 103.86.99.99")
-                echo
                 setting_enable "dns" "103.86.96.96 103.86.99.99"
                 ;;
             "OpenDNS 208.67.220.220 208.67.222.222")
-                echo
                 setting_enable "dns" "208.67.220.220 208.67.222.222"
                 ;;
             "CB-Security 185.228.168.9 185.228.169.9")
                 # Clean Browsing Security 185.228.168.9 185.228.169.9
                 # Clean Browsing Adult 185.228.168.10 185.228.169.11
                 # Clean Browsing Family 185.228.168.168 185.228.169.168
-                echo
                 setting_enable "dns" "185.228.168.9 185.228.169.9"
                 ;;
             "AdGuard 94.140.14.14 94.140.15.15")
-                echo
                 setting_enable "dns" "94.140.14.14 94.140.15.15"
                 ;;
             "Quad9 9.9.9.9 149.112.112.11")
-                echo
                 setting_enable "dns" "9.9.9.9 149.112.112.11"
                 ;;
             "Cloudflare 1.0.0.1 1.1.1.1")
-                echo
                 setting_enable "dns" "1.0.0.1 1.1.1.1"
                 ;;
             "Google 8.8.4.4 8.8.8.8")
-                echo
                 setting_enable "dns" "8.8.4.4 8.8.8.8"
                 ;;
             "Specify or Default")
+                heading "Specify or Default" "txt"
+                echo "Enter up to three DNS IPs separated by spaces."
                 echo
-                echo "Enter the DNS IPs.  Hit 'Enter' for default or '$upmenu' to quit."
+                echo -e "${FColor}(Hit 'Enter' for default or '$upmenu' to quit.)${Color_Off}"
+                echo
                 echo -e "Default: ${FColor}$dnsdesc ${DNSColor}$default_dns${Color_Off}"
                 echo
-                read -r -p "Up to 3 DNS server IPs: "
-                echo
+                read -r -p "Up to 3 DNS server IPs: "; echo
                 parent_menu
-                dns3srvrs="$REPLY"
-                dns3srvrs=${dns3srvrs:-$default_dns}
-                setting_enable "dns" "$dns3srvrs"
+                if [[ -n "$REPLY" ]]; then
+                    setting_enable "dns" "$REPLY"
+                else
+                    setting_enable "dns"
+                fi
                 ;;
             "Disable Custom-DNS")
-                echo
                 setting_disable "dns" "showstatus"
                 ;;
             "Flush DNS Cache")
+                heading "Flush DNS Cache" "txt"
+                echo -e "${LColor}sudo resolvectl flush-caches${Color_Off}"
                 echo
                 if command -v "resolvectl" &> /dev/null; then
                     sudo echo
@@ -1622,10 +1630,16 @@ function customdns_menu {
                 echo
                 ;;
             "Test Servers")
+                heading "Test Servers" "txt"
+                echo "Test DNS response time by looking up a hostname."
                 echo
-                echo "Specify a Hostname to lookup. "
-                read -r -p "Hit 'Enter' for [$default_dnshost]: " testhost
-                testhost=${testhost:-$default_dnshost}
+                echo -e "${FColor}(Hit 'Enter' for default or '$upmenu' to quit.)${Color_Off}"
+                echo
+                echo -e "Default: ${FColor}$default_dnshost${Color_Off}"
+                echo
+                read -r -p "Enter any hostname: "; echo
+                parent_menu
+                testhost=${REPLY:-$default_dnshost}
                 echo
                 echo -e "${EColor}timeout 5 dig @<DNS> $testhost${Color_Off}"
                 for i in "${submcdns[@]}"
@@ -2861,8 +2875,7 @@ function group_connect {
             echo "Set Obfuscate to enabled."
             ;;
         "Double_VPN" | "Dedicated_IP")
-            # exclude NordWhisper
-            # Double-VPN fails with PQ enabled. Dedicated-IP is not compatible with PQ.
+            # exclude NordWhisper. Double-VPN fails with PQ enabled. Dedicated-IP is not compatible with PQ.
             echo "Set Technology to OpenVPN or NordLynx."
             echo "Set Post-Quantum to disabled."
             echo "Set Obfuscate to disabled."
@@ -2900,8 +2913,8 @@ function group_connect {
                 ;;
             "Double_VPN" | "Dedicated_IP")
                 # exclude NordWhisper
-                # Double-VPN fails with PQ enabled. Dedicated-IP is not compatible with PQ.
                 techpro_menu "back" "xnw"
+                # Double-VPN fails with PQ enabled. Dedicated-IP is not compatible with PQ.
                 # Choosing NordLynx will always prompt to enable post-quantum. Ensure PQ is disabled.
                 if [[ "$postquantum" == "enabled" ]]; then
                     echo -e "${WColor}Note:${Color_Off} Post-Quantum VPN is not compatible with $1."
@@ -4836,7 +4849,7 @@ function backup_file {
 }
 function quick_connect {
     # This is an alternate method of connecting to the Nord recommended server.
-    # In some cases it may be faster than using "nordvpn connect"
+    # In some cases it may be faster than using "nordvpn connect".
     # Requires 'curl' and 'jq'
     # Auguss82 via github
     heading "QuickConnect"
@@ -4855,9 +4868,8 @@ function quick_connect {
         echo -e "$ob Obfuscate is $obfuscatec"
         bestserver=""
     else
-        echo -n "Getting the recommended server... "
-        bestserver="$(timeout 6 curl --silent 'https://nordvpn.com/wp-admin/admin-ajax.php?action=servers_recommendations' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
-        echo
+        echo "Getting the recommended server... "
+        bestserver="$(timeout 5 curl --silent 'https://api.nordvpn.com/v1/servers/recommendations?limit=1' | jq --raw-output '.[0].hostname' | awk -F. '{print $1}')"
     fi
     echo
     if [[ -z $bestserver ]]; then
@@ -5032,71 +5044,6 @@ function pause_vpn {
     exit_status
     exit
 }
-function exit_status {
-    # The commands to run before the script exits
-    #
-    reload_applet
-    echo
-    nordvpn settings
-    echo
-    nordvpn status
-    echo
-    if [[ "$exitlogo" =~ ^[Yy]$ ]]; then
-        clear -x
-        main_logo
-    else
-        set_vars
-    fi
-    if [[ "$status" == "connected" ]]; then
-        if [[ "$exitkillswitch" =~ ^[Yy]$ && "$killswitch" == "disabled" ]]; then
-            echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
-            echo
-            setting_enable "killswitch"
-            if [[ "$exitlogo" =~ ^[Yy]$ ]]; then
-                echo -e "${FColor}Updating the logo.${Color_Off}"
-                clear -x
-                main_logo
-            fi
-        fi
-        if [[ "$exitping" =~ ^[Yy]$ ]]; then
-            if [[ "$technology" == "openvpn" ]]; then
-                echo -ne "$techpro - Ping the External IP"
-                if [[ ! "$exitip" =~ ^[Yy]$ ]]; then
-                    echo -ne " (Set ${FColor}exitip=\"y\"${Color_Off} to enable)"
-                fi
-                echo
-            else
-                ping_host "$ipaddr" "stats" "$nordhost"
-            fi
-            echo
-        fi
-        if [[ "$exitload" =~ ^[Yy]$ ]]; then
-            server_load
-        fi
-    else
-        # VPN disconnected
-        if [[ "$exitks_prompt" =~ ^[Yy]$ && "$killswitch" == "enabled" ]]; then
-            echo -e "${WColor}** Reminder **${Color_Off}"
-            setting_change "killswitch" "back"
-        fi
-    fi
-    if [[ "$exitip" =~ ^[Yy]$ ]]; then
-        ipinfo_curl
-        if [[ "$status" == "connected" && "$exitping" =~ ^[Yy]$ && -n "$extip" ]]; then
-            if [[ "$technology" == "openvpn" || "$meshrouting" == "true" ]]; then
-                # ping the external IP when using OpenVPN or Meshnet Routing
-                ping_host "$extip" "stats" "External IP"
-                echo
-            elif [[ "$server" == *"-"* && "$server" != *"onion"* && "$server" != *"napps"* ]]; then
-                # ping both hops of Double-VPN servers when using NordLynx
-                ping_host "$extip" "stats" "Double-VPN"
-                echo
-            fi
-        fi
-    fi
-    date
-    echo
-}
 function reload_applet {
     # reload Cinnamon Desktop applets
     #
@@ -5197,6 +5144,71 @@ function ipinfo_curl {
         echo -e "${WColor}$extlimit${Color_Off}"
         echo
     fi
+}
+function exit_status {
+    # The commands to run before the script exits
+    #
+    reload_applet
+    echo
+    nordvpn settings
+    echo
+    nordvpn status
+    echo
+    if [[ "$exitlogo" =~ ^[Yy]$ ]]; then
+        clear -x
+        main_logo
+    else
+        set_vars
+    fi
+    if [[ "$status" == "connected" ]]; then
+        if [[ "$exitkillswitch" =~ ^[Yy]$ && "$killswitch" == "disabled" ]]; then
+            echo -e "${FColor}(exitkillswitch) - Always enable the Kill Switch.${Color_Off}"
+            echo
+            setting_enable "killswitch"
+            if [[ "$exitlogo" =~ ^[Yy]$ ]]; then
+                echo -e "${FColor}Updating the logo.${Color_Off}"
+                clear -x
+                main_logo
+            fi
+        fi
+        if [[ "$exitping" =~ ^[Yy]$ ]]; then
+            if [[ "$technology" == "openvpn" ]]; then
+                echo -ne "$techpro - Ping the External IP"
+                if [[ ! "$exitip" =~ ^[Yy]$ ]]; then
+                    echo -ne " (Set ${FColor}exitip=\"y\"${Color_Off} to enable)"
+                fi
+                echo
+            else
+                ping_host "$ipaddr" "stats" "$nordhost"
+            fi
+            echo
+        fi
+        if [[ "$exitload" =~ ^[Yy]$ ]]; then
+            server_load
+        fi
+    else
+        # VPN disconnected
+        if [[ "$exitks_prompt" =~ ^[Yy]$ && "$killswitch" == "enabled" ]]; then
+            echo -e "${WColor}** Reminder **${Color_Off}"
+            setting_change "killswitch" "back"
+        fi
+    fi
+    if [[ "$exitip" =~ ^[Yy]$ ]]; then
+        ipinfo_curl
+        if [[ "$status" == "connected" && "$exitping" =~ ^[Yy]$ && -n "$extip" ]]; then
+            if [[ "$technology" == "openvpn" || "$meshrouting" == "true" ]]; then
+                # ping the external IP when using OpenVPN or Meshnet Routing
+                ping_host "$extip" "stats" "External IP"
+                echo
+            elif [[ "$server" == *"-"* && "$server" != *"onion"* ]]; then
+                # ping both hops of Double-VPN servers when using NordLynx
+                ping_host "$extip" "stats" "Double-VPN"
+                echo
+            fi
+        fi
+    fi
+    date
+    echo
 }
 #
 # =====================================================================
