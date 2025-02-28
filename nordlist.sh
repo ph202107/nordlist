@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# February 26, 2025
+# February 28, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -61,6 +61,11 @@
 # =====================================================================
 # Customization
 # ==============
+#
+# Source your customized variables and functions from an external file.
+# Preserves modifications after script updates. Requires advanced setup.
+# Please refer to 'function external_source' for details.  "y" or "n"
+externalsource="n"
 #
 # Specify your P2P preferred location.  (Optional)
 # eg. p2pwhere="Canada" or p2pwhere="Toronto"
@@ -125,6 +130,11 @@ serversfile="/home/$USER/Downloads/nord_allservers.json"
 # favorite NordVPN servers.  eg. Low ping servers or streaming servers.
 # Create the list in: 'Favorites'
 favoritesfile="/home/$USER/Downloads/nord_favorites.txt"
+#
+# Favorite servers are labelled as (Favorite) above the main menu.
+# You can choose to display the favorite name instead. eg. For a favorite server
+# named "Gaming_ca1672" display (Gaming) instead of (Favorite).  "y" or "n"
+showfavname="n"
 #
 # Specify the absolute path and filename to save a copy of the
 # nordvpnd.service logs.  Create the file in: Settings - Logs
@@ -262,7 +272,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 369 (function main_menu).
+# The Main Menu starts on line 379 (function main_menu).
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -738,7 +748,81 @@ function set_colors {
     #
 }
 #
-# =====================================================================
+# ==End Diff===========================================================
+#
+function external_source {
+    # To preserve your modifications when the script is updated.
+    # This applies to all variables and functions from line 1 of the script
+    # up to and including function set_colors.  Includes location variables,
+    # allowlist commands, the Main Menu, etc.
+    #
+    # Step One:
+    # - Modify functions and configure the customization options in "nordlist.sh".
+    # - Set the customization option externalsource="y". Do this now to copy later.
+    # - Save the file.
+    #
+    # Step Two:
+    # - Navigate to the directory that has "nordlist.sh" and in the terminal run:
+    #   awk 'NR==1, /End Diff/ { print }' nordlist.sh > nordlist_config.sh
+    # - This will overwrite any existing "nordlist_config.sh".
+    # - Note that "nordlist_config.sh" does not need to be executable.
+    #
+    # Step Three (Optional):
+    # - Open "nordlist_config.sh" with any text editor.
+    # - Delete the nordvirtual array from "nordlist_config.sh" to use the
+    #   updated list of Virtual Servers included with script updates.
+    #     eg. "nordvirtual=( "Accra" "Algeria" "Algiers" ...)"
+    # - Delete unmodified functions, variables, comments.
+    # - Add your own comments to identify this as a settings file.
+    # - Make further changes to the Main Menu, location variables, options,
+    #   color scheme, etc.
+    #
+    # Your customizations and modifications are preserved.
+    # When the script is updated, just set externalsource="y" in "nordlist.sh".
+    #
+    # The settings added to "nordlist_config.sh" will override the settings
+    # in "nordlist.sh".  No variables or functions should be deleted from
+    # "nordlist.sh".  Set externalsource="n" to revert to local settings.
+    #
+    # Customization options, variables, and functions may change with script
+    # updates and can be viewed in the github commit or with 'diff'.
+    # A side-by-side diff output can be viewed in "Settings - Script".  If your
+    # saved functions are affected, your external source will need to be updated
+    # to maintain script functionality.
+    #
+    #
+    set_colors
+    echo
+    #
+    if [[ ! "$externalsource" =~ ^[Yy]$ ]]; then
+        return
+    fi
+    #
+    configfile="$(dirname "${BASH_SOURCE[0]}")/nordlist_config.sh"
+    #
+    if [[ ! -f "$configfile" ]]; then
+        echo -e "${WColor}Error: '$configfile' does not exist.${Color_Off}"; echo
+        exit 1
+    fi
+    if [[ ! -r "$configfile" ]]; then
+        echo -e "${WColor}Error: '$configfile' is not readable.${Color_Off}"; echo
+        exit 1
+    fi
+    # shellcheck disable=SC1090 # non-constant source
+    if ! source "$configfile"; then
+        echo -e "${WColor}Error: Failed to source '$configfile'.${Color_Off}"; echo
+        exit 1
+    fi
+    set_colors  # update color scheme after source
+    echo
+    echo -e "${EColor}$0${Color_Off}"
+    echo -e "${DColor}Settings are being sourced from:${Color_Off}"
+    echo -e "${FColor}$configfile${Color_Off}"
+    echo
+}
+#
+external_source
+#
 # =====================================================================
 #
 function set_vars {
@@ -862,10 +946,78 @@ function set_vars {
         fi
     done
     #
+    set_vars_status
+    set_vars_fav
     set_vars_techpro
     set_vars_indicators
-    set_vars_other
     #
+}
+function set_vars_status {
+    # Set the connection status variables and colors
+    #
+    # main_logo connection status and transfer stats
+    if [[ "$status" == "connected" ]]; then
+        statusc="${CNColor}$status${Color_Off}"
+        statuscl="${CNColor}${status^}${Color_Off}:"
+        transferc="${DLColor}\u25bc $transferd ${ULColor} \u25b2 $transferu ${Color_Off}"
+    else
+        statusc="${DNColor}$status${Color_Off}"
+        statuscl="${DNColor}${status^}${Color_Off}"
+        transferc=""
+    fi
+    #
+    # Meshnet Routing status
+    meshrouting="false"
+    if [[ "$status" == "connected" && "$meshnet" == "enabled" && "$nordhost" != *"nordvpn.com"* ]]; then
+        meshrouting="true"
+    fi
+}
+function set_vars_fav {
+    # Set the main_logo server label
+    # Dedicated|Favorite|Obfuscated|Onion|Double|Virtual
+    #
+    fav=""
+    if [[ "$status" != "connected" ]]; then
+        return
+    fi
+    # Dedicated
+    if [[ "$server" == "${dipwhere,,}" ]]; then
+        fav="${FVColor}(Dedicated)${Color_Off}"
+    fi
+    # Favorite
+    # favoritelist is populated in 'function start' if the file exists
+    # check if favoritelist exists and is not empty
+    if [[ -z "$fav" && -v favoritelist && ${#favoritelist[@]} -gt 0 ]]; then
+        for favorite in "${favoritelist[@]}"; do
+            # server number after the last underscore
+            favserver="${favorite##*_}"
+            if [[ "${favserver,,}" == "$server" ]]; then
+                if [[ "$showfavname" =~ ^[Yy]$ ]]; then
+                    # server name before the last underscore
+                    fav="${FVColor}(${favorite%_*})${Color_Off}"
+                else
+                    fav="${FVColor}(Favorite)${Color_Off}"
+                fi
+                break
+            fi
+        done
+    fi
+    # Obfuscated
+    if [[ -z "$fav" && "$obfuscate" == "enabled" ]]; then
+        fav="${FVColor}(Obfuscated)${Color_Off}"
+    fi
+    # Onion or Double
+    if [[ -z "$fav" && "$server" == *"-"* && "$meshrouting" == "false" ]]; then
+        if [[ "$server" == *"onion"* ]]; then
+            fav="${FVColor}(Onion)${Color_Off}"
+        else
+            fav="${FVColor}(Double)${Color_Off}"
+        fi
+    fi
+    # Virtual
+    if [[ -z "$fav" && "${servername,,}" == *"virtual"* ]]; then
+        fav="${FVColor}(Virtual)${Color_Off}"
+    fi
 }
 function set_vars_techpro {
     # The technology and protocol to display
@@ -954,63 +1106,6 @@ function set_vars_indicators {
         sshi="${FIColor}SSH${Color_Off}"
     fi
     #
-}
-function set_vars_other {
-    # Set other variables and colors
-    #
-    # main_logo connection status and transfer stats
-    if [[ "$status" == "connected" ]]; then
-        statusc="${CNColor}$status${Color_Off}"
-        statuscl="${CNColor}${status^}${Color_Off}:"
-        transferc="${DLColor}\u25bc $transferd ${ULColor} \u25b2 $transferu ${Color_Off}"
-    else
-        statusc="${DNColor}$status${Color_Off}"
-        statuscl="${DNColor}${status^}${Color_Off}"
-        transferc=""
-    fi
-    #
-    # Meshnet Routing status
-    meshrouting="false"
-    if [[ "$status" == "connected" && "$meshnet" == "enabled" && "$nordhost" != *"nordvpn.com"* ]]; then
-        meshrouting="true"
-    fi
-    #
-    # Favorite|Dedicated|Obfuscated|Onion|Double|Virtual label
-    fav=""
-    if [[ "$status" == "connected" ]]; then
-        #
-        if [[ "$server" == "${dipwhere,,}" ]]; then
-            fav="${FVColor}(Dedicated)${Color_Off}"
-        fi
-        # favoritelist is populated in 'function start' if the file exists
-        # check if favoritelist exists and is not empty
-        if [[ -z "$fav" && -v favoritelist && ${#favoritelist[@]} -gt 0 ]]; then
-            for favorite in "${favoritelist[@]}"; do
-                # server number after the last underscore
-                favserver="${favorite##*_}"
-                if [[ "${favserver,,}" == "$server" ]]; then
-                    fav="${FVColor}(Favorite)${Color_Off}"
-                    break
-                fi
-            done
-        fi
-        #
-        if [[ -z "$fav" && "$obfuscate" == "enabled" ]]; then
-            fav="${FVColor}(Obfuscated)${Color_Off}"
-        fi
-        #
-        if [[ -z "$fav" && "$server" == *"-"* && "$meshrouting" == "false" ]]; then
-            if [[ "$server" == *"onion"* ]]; then
-                fav="${FVColor}(Onion)${Color_Off}"
-            else
-                fav="${FVColor}(Double)${Color_Off}"
-            fi
-        fi
-        #
-        if [[ -z "$fav" && "${servername,,}" == *"virtual"* ]]; then
-            fav="${FVColor}(Virtual)${Color_Off}"
-        fi
-    fi
 }
 #
 # =====================================================================
@@ -1147,14 +1242,14 @@ function setting_getvars {
     #
     chgloc=""
     case "$1" in
-        "firewall")             chgname="Firewall"; chgvar="$firewall"; chgind="$fw";;
+        "firewall")             chgname="the Firewall"; chgvar="$firewall"; chgind="$fw";;
         "routing")              chgname="Routing"; chgvar="$routing"; chgind="$rt";;
         "analytics")            chgname="Analytics"; chgvar="$analytics"; chgind="$an";;
-        "killswitch")           chgname="Kill Switch"; chgvar="$killswitch"; chgind="$ks";;
+        "killswitch")           chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks";;
         "threatprotectionlite") chgname="Threat Protection Lite"; chgvar="$tplite"; chgind="$tp";;
         "obfuscate")            chgname="Obfuscate"; chgvar="$obfuscate"; chgind="$ob";;
         "notify")               chgname="Notify"; chgvar="$notify"; chgind="$no";;
-        "tray")                 chgname="Tray"; chgvar="$tray"; chgind="$tr";;
+        "tray")                 chgname="the Tray"; chgvar="$tray"; chgind="$tr";;
         "autoconnect")          chgname="Auto-Connect"; chgvar="$autoconnect"; chgind="$ac"; chgloc="$acwhere";;
         "ipv6")                 chgname="IPv6"; chgvar="$ipversion6"; chgind="$ip6";;
         "meshnet")              chgname="Meshnet"; chgvar="$meshnet"; chgind="$mn";;
@@ -1616,6 +1711,7 @@ function customdns_menu {
             "Flush DNS Cache")
                 heading "Flush DNS Cache" "txt"
                 echo -e "${LColor}sudo resolvectl flush-caches${Color_Off}"
+                echo -e "${FColor}(CTRL-C x4 to quit)${Color_Off}"
                 echo
                 if command -v "resolvectl" &> /dev/null; then
                     sudo echo
@@ -2131,7 +2227,7 @@ function service_logs {
 function script_info {
     # display the customization options from the top of the script
     echo
-    echo "$0"
+    echo -e "${EColor}$0${Color_Off}"
     echo
     startline=$(grep -m1 -n "Customization" "$0" | cut -f1 -d':')
     endline=$(grep -m1 -n "=End=" "$0" | cut -f1 -d':')
@@ -2142,7 +2238,31 @@ function script_info {
         cat -n "$0" | head -n "$endline" | tail -n "$numlines"
     fi
     echo
-    echo "Need to edit the script to change these settings."
+    if [[ "$externalsource" =~ ^[Yy]$ ]]; then
+        echo
+        echo -e "${WColor}External Source In Use:${Color_Off}"
+        echo -e "${FColor}$configfile${Color_Off}"
+        echo
+        if app_exists "highlight"; then
+            highlight -l -O xterm256 "$configfile"
+        else
+            cat -n "$configfile"
+        fi
+        echo
+        echo "Diff - comments are ignored."
+        echo -e "Left = ${EColor}$0${Color_Off}"
+        echo -e "Right = ${FColor}$configfile${Color_Off}"
+        if ! command -v colordiff &> /dev/null; then
+            echo "'sudo apt install colordiff' to add colors."
+            echo
+            diff --side-by-side <(awk '!/^#/ && !/^$/ { print } /End Diff/ { exit }' "$0") <(awk '!/^#/ && !/^$/ { print } /End Diff/ { exit }' "$configfile")
+        else
+            echo
+            diff --side-by-side <(awk '!/^#/ && !/^$/ { print } /End Diff/ { exit }' "$0") <(awk '!/^#/ && !/^$/ { print } /End Diff/ { exit }' "$configfile") | colordiff
+        fi
+        echo
+        openlink "$configfile" "ask" "exit"
+    fi
     echo
     openlink "$0" "ask" "exit"
     setting_menu
@@ -2480,14 +2600,14 @@ function favorites_menu {
                 favorites_menu
                 ;;
             "Add Current Server")
-                favname="$(echo "$city" | tr -d ' _')_$server"  # remove any space or underscore
+                favdefault="$(echo "$city" | tr -d ' _')_$server"  # remove any space or underscore
                 #
                 heading "Add $server to Favorites" "txt"
                 echo -e "Format:  AnyName${H2Color}<underscore>${Color_Off}ActualServerNumber"
                 echo "Examples:  Netflix_$server  Gaming_$server"
                 echo -e "Note: The ${EColor}_$server${Color_Off} part will be added automatically."
                 echo
-                echo -e "Default: ${FColor}$favname${Color_Off}"
+                echo -e "Default: ${FColor}$favdefault${Color_Off}"
                 echo
                 echo -e "${FColor}(Hit 'Enter' for default or '$upmenu' to quit)${Color_Off}"
                 echo
@@ -2495,7 +2615,7 @@ function favorites_menu {
                 if [[ "$favadd" = "$upmenu" ]]; then
                     favorites_menu
                 fi
-                favadd=${favadd:-$favname}
+                favadd=${favadd:-$favdefault}
                 if [[ "$favadd" != *"$server"* ]]; then
                     favadd="${favadd}_${server}"
                 fi
@@ -5244,9 +5364,9 @@ function app_exists {
     fi
 }
 function start {
-    # commands to run when the script first starts
-    set_colors
-    echo
+    # function external_source runs first, then function start
+    # colors are set in function external_source
+    #
     if [[ -n $SSH_TTY ]]; then
         # Check if the script is being run in an ssh session
         echo -e "${FColor}(The script is running over SSH)${Color_Off}"
@@ -5408,15 +5528,6 @@ start
 # Whoops! Connection failed. Please try again. If the problem persists, contact our customer support.
 #   Change technology setting and retest.  NordLynx to OpenVPN or vice versa.
 #
-# Whoops! Connection failed. Please try again. If the problem persists, contact our customer support.
-#   On Ubuntu 22.04 - Make a symbolic link - https://redd.it/ttlwuv
-#       sudo ln -s /usr/bin/resolvectl /usr/bin/systemd-resolve
-#
-# After system crash or hard restart
-# 'Whoops! Connection failed. Please try again. If problem persists, contact our customer support.'
-#   sudo chattr -i -a /var/lib/nordvpn/data/.config.ovpn
-#   sudo chmod ugo+w /var/lib/nordvpn/data/.config.ovpn
-#
 # "Whoops! Cannot reach System Daemon"
 #   Check that the service is started
 #       systemctl is-active nordvpnd
@@ -5429,12 +5540,6 @@ start
 # GPG error: https//repo.nordvpn.com: The following signatures couldn't be verified
 # because the public key is not available: NO_PUBKEY
 #   sudo wget https://repo.nordvpn.com/gpg/nordvpn_public.asc -O - | sudo apt-key add -
-#
-# 'Your account has expired. Renew your subscription now to continue
-#   enjoying the ultimate privacy and security with NordVPN.'
-#   delete: /var/lib/nordvpn/data/settings.dat
-#   delete: /home/username/.config/nordvpn/nordvpn.conf
-#   nordvpn login
 #
 # OpenVPN config files
 #   https://support.nordvpn.com/Connectivity/Linux/1061938702/How-to-connect-to-NordVPN-using-Linux-Network-Manager.htm
