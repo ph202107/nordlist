@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# February 28, 2025
+# March 1, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -132,8 +132,8 @@ serversfile="/home/$USER/Downloads/nord_allservers.json"
 favoritesfile="/home/$USER/Downloads/nord_favorites.txt"
 #
 # Favorite servers are labelled as (Favorite) above the main menu.
-# You can choose to display the favorite name instead. eg. For a favorite server
-# named "Gaming_ca1672" display (Gaming) instead of (Favorite).  "y" or "n"
+# You can choose to display the favorite name instead. eg. For a favorite
+# named "Gaming_ca1672" display (Gaming) instead of (Favorite). "y" or "n"
 showfavname="n"
 #
 # Specify the absolute path and filename to save a copy of the
@@ -753,42 +753,42 @@ function set_colors {
 function external_source {
     # To preserve your modifications when the script is updated.
     # This applies to all variables and functions from line 1 of the script
-    # up to and including function set_colors.  Includes location variables,
+    # up to and including function set_colors. Includes location variables,
     # allowlist commands, the Main Menu, etc.
     #
     # Step One:
-    # - Modify functions and configure the customization options in "nordlist.sh".
-    # - Set the customization option externalsource="y". Do this now to copy later.
+    # - Modify your settings and functions in nordlist.sh as needed.
+    # - Set the customization option externalsource="y". Do this before copying.
     # - Save the file.
     #
     # Step Two:
-    # - Navigate to the directory that has "nordlist.sh" and in the terminal run:
+    # - Navigate to the directory containing nordlist.sh and in the terminal run:
     #   awk 'NR==1, /End Diff/ { print }' nordlist.sh > nordlist_config.sh
-    # - This will overwrite any existing "nordlist_config.sh".
-    # - Note that "nordlist_config.sh" does not need to be executable.
+    # - This will overwrite any existing nordlist_config.sh.
+    # - Note that nordlist_config.sh does not need to be executable.
     #
-    # Step Three (Optional):
-    # - Open "nordlist_config.sh" with any text editor.
-    # - Delete the nordvirtual array from "nordlist_config.sh" to use the
-    #   updated list of Virtual Servers included with script updates.
-    #     eg. "nordvirtual=( "Accra" "Algeria" "Algiers" ...)"
-    # - Delete unmodified functions, variables, comments.
-    # - Add your own comments to identify this as a settings file.
-    # - Make further changes to the Main Menu, location variables, options,
-    #   color scheme, etc.
+    # Step Three:
+    # - Open nordlist_config.sh with any text editor.
+    # - Delete the nordvirtual array.  The updated array in nordlist.sh will
+    #   be used instead.  eg. "nordvirtual=( "Accra" "Algeria" "Algiers" ... )"
+    # - Remove unmodified functions, variables, or comments, if preferred.
     #
-    # Your customizations and modifications are preserved.
-    # When the script is updated, just set externalsource="y" in "nordlist.sh".
+    # Your customizations are saved in nordlist_config.sh. Any new modifications
+    # should be made there, not in nordlist.sh.
     #
-    # The settings added to "nordlist_config.sh" will override the settings
-    # in "nordlist.sh".  No variables or functions should be deleted from
-    # "nordlist.sh".  Set externalsource="n" to revert to local settings.
+    # When nordlist is updated, just set externalsource="y" in nordlist.sh.
+    # There is no need to recreate nordlist_config.sh or edit nordlist.sh again.
     #
-    # Customization options, variables, and functions may change with script
-    # updates and can be viewed in the github commit or with 'diff'.
-    # A side-by-side diff output can be viewed in "Settings - Script".  If your
-    # saved functions are affected, your external source will need to be updated
-    # to maintain script functionality.
+    # Settings in nordlist_config.sh override those in nordlist.sh.
+    # If a setting is missing, nordlist.sh will use its default value.
+    # Do not delete variables or functions from nordlist.sh.
+    # Set externalsource="n" to revert to default settings.
+    #
+    # Customization options, variables, and functions may change with updates.
+    # Compare changes using 'diff' or check GitHub commits.
+    # A side-by-side diff output is available in "Settings - Script".
+    # If your saved functions are affected, nordlist_config.sh will need to be
+    # updated to maintain script functionality.
     #
     #
     set_colors
@@ -1851,13 +1851,21 @@ function allowlist_setting {
     fi
     echo
     echo -e "${LColor}function allowlist_commands${Color_Off}"
-    startline=$(grep -m1 -n "allowlist_start" "$0" | cut -f1 -d':')
-    endline=$(( $(grep -m1 -n "allowlist_end" "$0" | cut -f1 -d':') - 1 ))
+    #
+    allowloc="$0"
+    if [[ "$externalsource" =~ ^[Yy]$ ]]; then
+        if [[ -f "$configfile" ]] && grep -iq "function allowlist_commands {" "$configfile"; then
+            allowloc="$configfile"
+            echo -e "${FColor}Source: $configfile${Color_Off}"
+        fi
+    fi
+    startline=$(grep -m1 -n "allowlist_start" "$allowloc" | cut -f1 -d':')
+    endline=$(( $(grep -m1 -n "allowlist_end" "$allowloc" | cut -f1 -d':') - 1 ))
     numlines=$(( endline - startline ))
     if app_exists "highlight"; then
-        highlight -l -O xterm256 "$0" | head -n "$endline" | tail -n "$numlines"
+        highlight -l -O xterm256 "$allowloc" | head -n "$endline" | tail -n "$numlines"
     else
-        cat -n "$0" | head -n "$endline" | tail -n "$numlines"
+        cat -n "$allowloc" | head -n "$endline" | tail -n "$numlines"
     fi
     echo
     echo -e "Type ${WColor}C${Color_Off} to clear the current allowlist."
@@ -1876,8 +1884,9 @@ function allowlist_setting {
             set_vars
             ;;
         [Ee])
+            echo -e "${FColor}$allowloc${Color_Off}"
             echo -e "Modify ${LColor}function allowlist_commands${Color_Off} starting on ${FColor}line $(( startline + 1 ))${Color_Off}"
-            openlink "$0" "noask" "exit"
+            openlink "$allowloc" "noask" "exit"
             ;;
         *)
             echo "No changes made."
@@ -2226,6 +2235,7 @@ function service_logs {
 }
 function script_info {
     # display the customization options from the top of the script
+    # if externalsource is used, display the contents and a side-by-side diff
     echo
     echo -e "${EColor}$0${Color_Off}"
     echo
@@ -2238,7 +2248,7 @@ function script_info {
         cat -n "$0" | head -n "$endline" | tail -n "$numlines"
     fi
     echo
-    if [[ "$externalsource" =~ ^[Yy]$ ]]; then
+    if [[ "$externalsource" =~ ^[Yy]$ && -f "$configfile" ]]; then
         echo
         echo -e "${WColor}External Source In Use:${Color_Off}"
         echo -e "${FColor}$configfile${Color_Off}"
