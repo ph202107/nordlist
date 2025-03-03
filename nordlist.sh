@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# March 1, 2025
+# March 3, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -749,80 +749,6 @@ function set_colors {
 }
 #
 # ==End Diff===========================================================
-#
-function external_source {
-    # To preserve your modifications when the script is updated.
-    # This applies to all variables and functions from line 1 of the script
-    # up to and including function set_colors. Includes location variables,
-    # allowlist commands, the Main Menu, etc.
-    #
-    # Step One:
-    # - Modify your settings and functions in nordlist.sh as needed.
-    # - Set the customization option externalsource="y". Do this before copying.
-    # - Save the file.
-    #
-    # Step Two:
-    # - Navigate to the directory containing nordlist.sh and in the terminal run:
-    #   awk 'NR==1, /End Diff/ { print }' nordlist.sh > nordlist_config.sh
-    # - This will overwrite any existing nordlist_config.sh.
-    # - Note that nordlist_config.sh does not need to be executable.
-    #
-    # Step Three:
-    # - Open nordlist_config.sh with any text editor.
-    # - Delete the nordvirtual array.  The updated array in nordlist.sh will
-    #   be used instead.  eg. "nordvirtual=( "Accra" "Algeria" "Algiers" ... )"
-    # - Remove unmodified functions, variables, or comments, if preferred.
-    #
-    # Your customizations are saved in nordlist_config.sh. Any new modifications
-    # should be made there, not in nordlist.sh.
-    #
-    # When nordlist is updated, just set externalsource="y" in nordlist.sh.
-    # There is no need to recreate nordlist_config.sh or edit nordlist.sh again.
-    #
-    # Settings in nordlist_config.sh override those in nordlist.sh.
-    # If a setting is missing, nordlist.sh will use its default value.
-    # Do not delete variables or functions from nordlist.sh.
-    # Set externalsource="n" to revert to default settings.
-    #
-    # Customization options, variables, and functions may change with updates.
-    # Compare changes using 'diff' or check GitHub commits.
-    # A side-by-side diff output is available in "Settings - Script".
-    # If your saved functions are affected, nordlist_config.sh will need to be
-    # updated to maintain script functionality.
-    #
-    #
-    set_colors
-    echo
-    #
-    if [[ ! "$externalsource" =~ ^[Yy]$ ]]; then
-        return
-    fi
-    #
-    configfile="$(dirname "${BASH_SOURCE[0]}")/nordlist_config.sh"
-    #
-    if [[ ! -f "$configfile" ]]; then
-        echo -e "${WColor}Error: '$configfile' does not exist.${Color_Off}"; echo
-        exit 1
-    fi
-    if [[ ! -r "$configfile" ]]; then
-        echo -e "${WColor}Error: '$configfile' is not readable.${Color_Off}"; echo
-        exit 1
-    fi
-    # shellcheck disable=SC1090 # non-constant source
-    if ! source "$configfile"; then
-        echo -e "${WColor}Error: Failed to source '$configfile'.${Color_Off}"; echo
-        exit 1
-    fi
-    set_colors  # update color scheme after source
-    echo
-    echo -e "${EColor}$0${Color_Off}"
-    echo -e "${DColor}Settings are being sourced from:${Color_Off}"
-    echo -e "${FColor}$configfile${Color_Off}"
-    echo
-}
-#
-external_source
-#
 # =====================================================================
 #
 function set_vars {
@@ -985,7 +911,7 @@ function set_vars_fav {
         fav="${FVColor}(Dedicated)${Color_Off}"
     fi
     # Favorite
-    # favoritelist is populated in 'function start' if the file exists
+    # the favoritelist array is populated in 'function start' if the file exists
     # check if favoritelist exists and is not empty
     if [[ -z "$fav" && -v favoritelist && ${#favoritelist[@]} -gt 0 ]]; then
         for favorite in "${favoritelist[@]}"; do
@@ -2248,7 +2174,7 @@ function script_info {
         cat -n "$0" | head -n "$endline" | tail -n "$numlines"
     fi
     echo
-    if [[ "$externalsource" =~ ^[Yy]$ && -f "$configfile" ]]; then
+    if [[ "$externalsource" =~ ^[Yy]$ ]] && [[ -f "$configfile" ]]; then
         echo
         echo -e "${WColor}External Source In Use:${Color_Off}"
         echo -e "${FColor}$configfile${Color_Off}"
@@ -2259,9 +2185,9 @@ function script_info {
             cat -n "$configfile"
         fi
         echo
-        echo "Diff - comments are ignored."
-        echo -e "Left = ${EColor}$0${Color_Off}"
-        echo -e "Right = ${FColor}$configfile${Color_Off}"
+        echo "Diff - comments outside functions are ignored"
+        echo -e "Left = Defaults ${DColor}$0${Color_Off}"
+        echo -e "Right = Config ${EColor}$configfile${Color_Off}"
         if ! command -v colordiff &> /dev/null; then
             echo "'sudo apt install colordiff' to add colors."
             echo
@@ -4876,13 +4802,13 @@ function openlink {
     # $3 = "exit" - exit after opening
     #
     if [[ "$usingssh" == "true" ]]; then
-        echo
-        echo -e "${FColor}The script is running over SSH${Color_Off}"
+        echo -e "${FColor}(The script is running over SSH)${Color_Off}"
         echo
     fi
     if [[ "$2" == "ask" || "$usingssh" == "true" ]]; then
         read -n 1 -r -p "$(echo -e "Open ${EColor}$1${Color_Off} ? (y/n) ")"; echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo
             return
         fi
     fi
@@ -5343,6 +5269,91 @@ function exit_status {
 #
 # =====================================================================
 #
+function external_source {
+    # Preserve your modifications when nordlist is updated by creating a
+    # separate config file and sourcing it from the main script.
+    #
+    # This applies to all the variables and functions from the top of the
+    # script up to and including function set_colors.
+    # Includes the location variables, allowlist commands, the Main Menu, etc.
+    #
+    # Set the customization option externalsource="y"
+    # Save and then run nordlist.sh
+    # You will be prompted to create "nordlist_config.sh" in the same directory.
+    # Note that nordlist_config.sh does not need to be executable.
+    # Delete the existing file if you wish to recreate it.
+    #
+    # Modify your settings and functions in nordlist_config.sh as needed.
+    # Your customizations are saved there, not in nordlist.sh.
+    #
+    # When nordlist is updated, just set externalsource="y" in nordlist.sh. There
+    # is no need to recreate nordlist_config.sh or edit nordlist.sh any further.
+    #
+    # Settings in nordlist_config.sh override those in nordlist.sh.
+    # If a setting is missing, nordlist.sh will use its default value.
+    # Do not delete variables or functions from nordlist.sh.
+    # Set externalsource="n" to revert to default settings.
+    #
+    # Customization options, variables, and functions may change with updates.
+    # Compare changes using 'diff' or check GitHub commits.
+    # A side-by-side diff output is available in "Settings - Script".
+    # If your saved functions are affected, nordlist_config.sh will need to
+    # be updated.
+    #
+    #
+    configfile="$(dirname "${BASH_SOURCE[0]}")/nordlist_config.sh"
+    #
+    if [[ ! -f "$configfile" ]]; then
+        echo -e "${WColor}Error: $configfile does not exist.${Color_Off}"
+        echo
+        read -n 1 -r -p "Create the file? (y/n) "; echo
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo -e "Set ${FColor}externalsource=\"n\"${Color_Off} to run without a config file."; echo
+            exit 1
+        fi
+        if ! touch "$configfile"; then
+            echo -e "${WColor}Error: Failed to create $configfile${Color_Off}"; echo
+            exit 1
+        fi
+        echo -e "Created: ${EColor}$configfile${Color_Off}"
+        echo
+        if ! awk '/Customization/, /End Diff/ { print } /End Diff/ { exit }' "$0" > "$configfile"; then
+            echo -e "${WColor}Error: Failed to populate $configfile${Color_Off}"; echo
+            exit 1
+        fi
+        # remove nordvirtual array from newly created config file
+        if grep -iq "^nordvirtual=(" "$configfile"; then
+            if ! awk '!found && /^nordvirtual=\(/ { found=1; next } found && /^\)/ { found=0; next } !found' "$configfile" > "${configfile}.tmp"; then
+                echo -e "${WColor}Error: Failed to process nordvirtual array.${Color_Off}"; echo
+                exit 1
+            fi
+            if ! mv "${configfile}.tmp" "$configfile"; then
+                echo -e "${WColor}Error: Failed to rename temp file ${configfile}.tmp${Color_Off}"; echo
+                exit 1
+            fi
+            echo -e "${WColor}Removed${Color_Off} the nordvirtual array from ${EColor}$configfile${Color_Off}"
+            echo "The updated array in $(basename "$0") will be used instead."
+            echo
+        fi
+        #
+        openlink "$configfile" "ask" "exit"
+    fi
+    if [[ ! -r "$configfile" ]]; then
+        echo -e "${WColor}Error: '$configfile' is not readable.${Color_Off}"; echo
+        exit 1
+    fi
+    # shellcheck disable=SC1090 # non-constant source
+    if ! source "$configfile"; then
+        echo -e "${WColor}Error: Failed to source '$configfile'.${Color_Off}"; echo
+        exit 1
+    fi
+    set_colors  # update color scheme after source
+    echo -e "${EColor}$0${Color_Off}"
+    echo -e "${DColor}Settings are being sourced from:${Color_Off}"
+    echo -e "${FColor}$configfile${Color_Off}"
+    echo
+}
 function app_exists {
     # check if nordvpn and third party applications are installed
     # $1 = app to check.  use "start" to initialize the array
@@ -5364,6 +5375,7 @@ function app_exists {
                 echo -e "${DIColor}N${Color_Off} $app"
             fi
         done
+        echo
         return
     fi
     # check the nordlist_apps array to confirm the program is available
@@ -5374,41 +5386,47 @@ function app_exists {
     fi
 }
 function start {
-    # function external_source runs first, then function start
-    # colors are set in function external_source
+    # the commands to run when the script first starts
     #
+    echo
+    set_colors
+    # check if the script is being run in an ssh session
     if [[ -n $SSH_TTY ]]; then
-        # Check if the script is being run in an ssh session
         echo -e "${FColor}(The script is running over SSH)${Color_Off}"
         echo
         usingssh="true"
     else
         usingssh="false"
     fi
+    # check bash version
     if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 2) )); then
         echo "Bash Version $BASH_VERSION"
-        echo -e "${WColor}Bash v4.2 or higher is required.${Color_Off}"
+        echo -e "${WColor}Bash v4.2 or higher is required.${Color_Off}"; echo
         exit 1
     fi
+    # load external source
+    if [[ "$externalsource" =~ ^[Yy]$ ]]; then
+        external_source
+    fi
+    # change the terminal window titlebar text. Tested with gnome-terminal.
     if [[ -n "$titlebartext" ]]; then
-        # Change the terminal window titlebar text. Tested with gnome-terminal.
         if [[ "$usingssh" == "true" ]]; then
             echo -ne "\033]2;$titlebartext $USER@$HOSTNAME\007"
         else
             echo -ne "\033]2;$titlebartext\007"
         fi
     fi
+    # check installed apps
     app_exists "start"
-    echo
     if app_exists "nordvpn"; then
         nordvpn --version
         echo
     else
         echo -e "${WColor}The NordVPN Linux client could not be found.${Color_Off}"
-        echo "https://nordvpn.com/download/"
-        echo
+        echo "https://nordvpn.com/download/"; echo
         exit 1
     fi
+    # check service
     if ! systemctl is-active --quiet nordvpnd; then
         echo -e "${WColor}nordvpnd.service is not active${Color_Off}"
         echo -e "${EColor}Starting the service... ${Color_Off}"
@@ -5416,14 +5434,13 @@ function start {
         sudo systemctl start nordvpnd.service || exit
         echo
     fi
-    #
+    # check if you are logged in.  This will cause a delay every time the script starts.
     checklogin="n"
     if [[ "$checklogin" =~ ^[Yy]$ ]]; then
-        # Check if you are logged in.  This will cause a delay every time the script starts.
         login_check
     fi
     #
-    # read favoritelist array into memory if the file exists
+    # read the favoritelist array into memory if the file exists
     # will be checked on every 'set_vars' call for the main_logo (Favorite) label
     if [[ -f "$favoritesfile" ]]; then
         readarray -t favoritelist < "$favoritesfile"
