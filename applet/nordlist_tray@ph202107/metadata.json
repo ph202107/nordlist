@@ -1,0 +1,8 @@
+{
+    "uuid": "nordlist_tray@ph202107",
+    "name": "Nordlist Applet",
+    "description": "Displays VPN status and runs nordlist bash script.",
+    "version": "1.0",
+    "icon": "network-vpn",
+    "max-instances": 1
+}
