@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# March 3, 2025
+# March 13, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -41,11 +41,11 @@
 #
 # "sudo apt install wireguard wireguard-tools speedtest-cli iperf3 highlight"
 #
-# For VPN On/Off status on the desktop I use the Linux Mint Cinnamon
-# applet "Bash Sensors".  Highly recommended for Cinnamon DE users.
-# Screenshot: https://github.com/ph202107/nordlist/blob/main/screenshots
-# When the status icon is clicked, it will launch this script in a new
-# terminal. The config is in the "Notes" at the bottom of the script.
+# For VPN On/Off status on the desktop I've written a simple applet
+# for the Linux Mint Cinnamon Desktop.  It displays the current VPN
+# connection status (blue icon = connected, red icon = disconnected),
+# and when clicked it launches nordlist.sh in a new terminal window.
+# Setup and config is in the "Notes" at the bottom of the script.
 #
 # =====================================================================
 # Sudo Usage
@@ -182,14 +182,14 @@ exitload="n"
 # Requires 'curl' and 'jq'.  Connects to ipinfo.io.  "y" or "n"
 exitip="n"
 #
-# Reload the "Bash Sensors" Cinnamon applet when the script exits.
+# Reload the Nordlist Cinnamon applet when the script exits.
 # This will change the icon color (for connection status) immediately.
-# Only for the Cinnamon DE with "Bash Sensors" installed. "y" or "n"
-exitappletb="n"
+# Only for the Cinnamon DE with the applet installed. "y" or "n"
+exitappletvpn="n"
 #
 # Reload the "Network Manager" Cinnamon applet when the script exits.
 # This removes duplicate "nordlynx" entries from the applet. "y" or "n"
-exitappletn="n"
+exitappletnm="n"
 #
 # Open http links in a new Firefox window.  "y" or "n"
 # Choose "n" to use the default browser or method.
@@ -272,7 +272,7 @@ nordvirtual=(
 # Main Menu
 # ==========
 #
-# The Main Menu starts on line 379 (function main_menu).
+# See "function main_menu" for a guide to customize the main menu.
 # Configure the first ten main menu items to suit your needs.
 #
 # Enjoy!
@@ -1539,9 +1539,9 @@ function autoconnect_setting {
         echo -e "${FColor}(Hit 'Enter' for default or '$upmenu' to quit.)${Color_Off}"
         echo
         if [[ -n $acwhere ]]; then
-            echo -e "${FColor}Default:${Color_Off} ${LColor}$acwhere${Color_Off}"
+            echo -e "Default: ${LColor}$acwhere${Color_Off}"
         else
-            echo -e "${FColor}Default:${Color_Off} ${LColor}Automatic${Color_Off}"
+            echo -e "Default: ${LColor}Automatic${Color_Off}"
         fi
         echo
         echo "(The input location will remain as default until the script exits.)"
@@ -1657,7 +1657,7 @@ function customdns_menu {
                 echo
                 echo -e "${FColor}(Hit 'Enter' for default or '$upmenu' to quit.)${Color_Off}"
                 echo
-                echo -e "Default: ${FColor}$default_dnshost${Color_Off}"
+                echo -e "Default: ${LColor}$default_dnshost${Color_Off}"
                 echo
                 read -r -p "Enter any hostname: "; echo
                 parent_menu
@@ -2543,9 +2543,9 @@ function favorites_menu {
                 echo "Examples:  Netflix_$server  Gaming_$server"
                 echo -e "Note: The ${EColor}_$server${Color_Off} part will be added automatically."
                 echo
-                echo -e "Default: ${FColor}$favdefault${Color_Off}"
-                echo
                 echo -e "${FColor}(Hit 'Enter' for default or '$upmenu' to quit)${Color_Off}"
+                echo
+                echo -e "Default: ${LColor}$favdefault${Color_Off}"
                 echo
                 read -r -p "Enter the server name: " favadd
                 if [[ "$favadd" = "$upmenu" ]]; then
@@ -3903,7 +3903,7 @@ function host_change {
     echo -e "Host Server: ${LColor}$nordhost${Color_Off}"
     echo
     echo "Choose a new Hostname/IP for testing"
-    read -r -p "'Enter' for default [$default_vpnhost]: " nordhost
+    read -r -p "Hit 'Enter' for default [$default_vpnhost]: " nordhost
     nordhost=${nordhost:-$default_vpnhost}
     echo
     echo -e "Now using ${LColor}$nordhost${Color_Off} for testing."
@@ -5105,12 +5105,12 @@ function reload_applet {
     #
     if [[ "$usingssh" == "true" ]]; then return; fi
     #
-    if [[ "$exitappletb" =~ ^[Yy]$ ]]; then
-        # reload 'bash-sensors@pkkk' - changes the icon color (for connection status) immediately.
-        dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+    if [[ "$exitappletvpn" =~ ^[Yy]$ ]]; then
+        # reload 'nordlist_tray@ph202107' - changes the icon color (for connection status) immediately.
+        dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
         wait
     fi
-    if [[ "$exitappletn" =~ ^[Yy]$ ]]; then
+    if [[ "$exitappletnm" =~ ^[Yy]$ ]]; then
         # reload 'network@cinnamon.org' - removes extra 'nordlynx' entries.
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'network@cinnamon.org' string:'APPLET'
         wait
@@ -5280,11 +5280,12 @@ function external_source {
     # Set the customization option externalsource="y"
     # Save and then run nordlist.sh
     # You will be prompted to create "nordlist_config.sh" in the same directory.
-    # Note that nordlist_config.sh does not need to be executable.
     # Delete the existing file if you wish to recreate it.
+    # Note that nordlist_config.sh does not need to be executable.
     #
     # Modify your settings and functions in nordlist_config.sh as needed.
     # Your customizations are saved there, not in nordlist.sh.
+    # Unmodified functions can be completely removed from nordlist_config.sh.
     #
     # When nordlist is updated, just set externalsource="y" in nordlist.sh. There
     # is no need to recreate nordlist_config.sh or edit nordlist.sh any further.
@@ -5322,21 +5323,16 @@ function external_source {
             echo -e "${WColor}Error: Failed to populate $configfile${Color_Off}"; echo
             exit 1
         fi
-        # remove nordvirtual array from newly created config file
+        # remove the nordvirtual array
         if grep -iq "^nordvirtual=(" "$configfile"; then
-            if ! awk '!found && /^nordvirtual=\(/ { found=1; next } found && /^\)/ { found=0; next } !found' "$configfile" > "${configfile}.tmp"; then
+            if ! sed -i '/^nordvirtual=(/,/^)/c\# (nordvirtual array was removed)' "$configfile"; then
                 echo -e "${WColor}Error: Failed to process nordvirtual array.${Color_Off}"; echo
                 exit 1
             fi
-            if ! mv "${configfile}.tmp" "$configfile"; then
-                echo -e "${WColor}Error: Failed to rename temp file ${configfile}.tmp${Color_Off}"; echo
-                exit 1
-            fi
-            echo -e "${WColor}Removed${Color_Off} the nordvirtual array from ${EColor}$configfile${Color_Off}"
+            echo -e "${WColor}Removed${Color_Off} the nordvirtual array from $(basename "$configfile")"
             echo "The updated array in $(basename "$0") will be used instead."
             echo
         fi
-        #
         openlink "$configfile" "ask" "exit"
     fi
     if [[ ! -r "$configfile" ]]; then
@@ -5457,58 +5453,38 @@ start
 # Notes
 # ======
 #
-# Bash-Sensors Applet for Cinnamon Desktop (Recommended)
-#
+# Nordlist Applet for the Cinnamon Desktop Environment
 #   Shows the NordVPN connection status in the panel and runs nordlist.sh when clicked.
-#   Mint-Menu - "Applets" - Download tab - "Bash-Sensors" - Install - Manage tab - (+)Add to panel
-#   https://cinnamon-spices.linuxmint.com/applets/view/231
 #
-#   To use the icons from https://github.com/ph202107/nordlist/tree/main/icons
-#   Download the icons to your device and modify "PATH_TO_ICON" in the command below.
-#   Green = Connected, Red = Disconnected.  Screenshot:  https://github.com/ph202107/nordlist/blob/main/screenshots
-#       Title:  NordVPN
-#       Refresh Interval:  15 seconds or choose
-#       Shell:  bash
-#       Command 1: blank
-#       Two Line Mode:  Off
-#       Dynamic Icon:  On
-#       Static Icon or Command:
-#           if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then echo "PATH_TO_ICON/nord.round.green.png"; else echo "PATH_TO_ICON/nord.round.red.png"; fi
-#       Dynamic Tooltip:  On
-#       Tooltip Command:
-#           To show the connection status and city:
-#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
-#           To show the entire output of "nordvpn status":
-#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
-#       Command on Applet Click:
-#           gnome-terminal -- bash -c "/PATH/TO/SCRIPT/nordlist.sh; exec bash"
-#       Display Output:  Off
-#       Command on Startup:  blank
+# Download the Applet:
+#   cd ~/Downloads
+#   wget -O nordlist-main.zip https://github.com/ph202107/nordlist/archive/refs/heads/main.zip
+#   unzip nordlist-main.zip
+#   cp -r nordlist-main/applet/nordlist_tray@ph202107 ~/.local/share/cinnamon/applets/
+#   # Optional cleanup
+#   rm -rf nordlist-main.zip nordlist-main
 #
-#   To use unicode symbols
-#   Green Checkmark = Connected, Red X = Disconnected
-#   Alternate Symbols: https://unicode-table.com/en/sets/check/
-#       Title:  NordVPN
-#       Refresh Interval:  15 seconds or choose
-#       Shell:  bash
-#       Command 1:
-#           if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then echo -e "\u2705"; else echo -e "\u274c"; fi
-#       Two Line Mode:  Off
-#       Dynamic Icon:  Off
-#       Static Icon or Command: blank
-#       Dynamic Tooltip:  On
-#       Tooltip Command:
-#           To show the connection status and city:
-#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -i -E "Status|City"
-#           To show the entire output of "nordvpn status":
-#               echo "NordVPN"; nordvpn status | tr -d '\r' | tr -d '-' | grep -v -i -E "update|feature"
-#       Command on Applet Click:
-#           gnome-terminal -- bash -c "/PATH/TO/SCRIPT/nordlist.sh; exec bash"
-#       Display Output:  Off
-#       Command on Startup:  blank
+# Modify the Applet:
+#   The applet does not yet have a configuration dialogue box.
+#   In the meantime you must edit the applet directly to specify the nordlist.sh location.
+#   eg.
+#   nano ~/.local/share/cinnamon/applets/nordlist_tray@ph202107/applet.js
 #
-#   Command to reload the Bash-Sensors applet:
-#       dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
+#   _updateLoop() {
+#       Modify the refresh interval if desired.  Default is 15 seconds
+#
+#   Required:
+#   on_applet_clicked(event) {
+#       Modify the path to your nordlist.sh location.
+#
+# Enable the Applet:
+#   Right-click on the Cinnamon panel and select "Applets".
+#   Or on Linux Mint open the Mint-Menu and type "Applets".
+#   Find "Nordlist Applet" (nordlist_tray@ph202107) in the list.
+#   Click "Add" (+) to add the applet to your panel.
+#
+# Command to reload the Nordlist Applet (if needed):
+#   dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
 #
 # =====================================================================
 #
