@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# March 13, 2025
+# March 16, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -5435,7 +5435,6 @@ function start {
     if [[ "$checklogin" =~ ^[Yy]$ ]]; then
         login_check
     fi
-    #
     # read the favoritelist array into memory if the file exists
     # will be checked on every 'set_vars' call for the main_logo (Favorite) label
     if [[ -f "$favoritesfile" ]]; then
@@ -5456,32 +5455,34 @@ start
 # Nordlist Applet for the Cinnamon Desktop Environment
 #   Shows the NordVPN connection status in the panel and runs nordlist.sh when clicked.
 #
-# Download the Applet:
+# Delete the Existing Applet:
+#   Right-click on the Cinnamon panel and select "Applets".
+#   Or on Linux Mint open the Mint-Menu and type "Applets".
+#   Click the "Manage" tab.
+#   Find and select "Nordlist Applet" (nordlist_tray@ph202107) in the list.
+#   Click "Uninstall" (X) to delete the applet.
+#   Restart Cinnamon (Ctrl-Alt-Esc) or (Alt-F2 "r" "Enter")
+#
+# Download the Updated Applet:
 #   cd ~/Downloads
 #   wget -O nordlist-main.zip https://github.com/ph202107/nordlist/archive/refs/heads/main.zip
 #   unzip nordlist-main.zip
 #   cp -r nordlist-main/applet/nordlist_tray@ph202107 ~/.local/share/cinnamon/applets/
-#   # Optional cleanup
-#   rm -rf nordlist-main.zip nordlist-main
-#
-# Modify the Applet:
-#   The applet does not yet have a configuration dialogue box.
-#   In the meantime you must edit the applet directly to specify the nordlist.sh location.
-#   eg.
-#   nano ~/.local/share/cinnamon/applets/nordlist_tray@ph202107/applet.js
-#
-#   _updateLoop() {
-#       Modify the refresh interval if desired.  Default is 15 seconds
-#
-#   Required:
-#   on_applet_clicked(event) {
-#       Modify the path to your nordlist.sh location.
+#   rm -rf nordlist-main.zip nordlist-main  # Optional cleanup
 #
 # Enable the Applet:
 #   Right-click on the Cinnamon panel and select "Applets".
 #   Or on Linux Mint open the Mint-Menu and type "Applets".
-#   Find "Nordlist Applet" (nordlist_tray@ph202107) in the list.
+#   Click the "Manage" tab.
+#   Find and select "Nordlist Applet" (nordlist_tray@ph202107) in the list.
 #   Click "Add" (+) to add the applet to your panel.
+#   Restart Cinnamon (Ctrl-Alt-Esc) or (Alt-F2 "r" "Enter")
+#
+# Configure the Applet
+#   Right-click on the Nordlist Applet and choose "Configure"
+#   Set your update interval and full path to nordlist.sh
+#   Use the absolute path, eg. "/home/username/Scripts/nordlist.sh"
+#   Restart Cinnamon (Ctrl-Alt-Esc) or (Alt-F2 "r" "Enter")
 #
 # Command to reload the Nordlist Applet (if needed):
 #   dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
