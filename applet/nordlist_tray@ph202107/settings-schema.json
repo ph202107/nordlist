@@ -1,0 +1,16 @@
+{
+    "refresh-interval": {
+        "type": "spinbutton",
+        "default": 15,
+        "min": 5,
+        "max": 3600,
+        "step": 5,
+        "units": "seconds",
+        "description": "Update interval"
+    },
+    "script-path": {
+        "type": "entry",
+        "default": "/home/username/Scripts/nordlist.sh",
+        "description": "Absolute path to nordlist.sh"
+    }
+}
