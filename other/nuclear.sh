@@ -65,7 +65,7 @@ function trashnord {
     linebreak "Quit Nord & Stop Service"
     nordvpn set killswitch disabled
     nordvpn disconnect
-    reload_cinnapplet
+    reload_applet
     if nordvpn logout --help | grep -q -i "persist-token"; then
         linecolor "cyan" "nordvpn logout --persist-token"
         nordvpn logout --persist-token
@@ -183,21 +183,15 @@ function changelog {
     linecolor "green" "https://nordvpn.com/blog/nordvpn-linux-release-notes/"
     linecolor "green" "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/"
 }
-function reload_cinnapplet {
-    # reload the "bash-sensors" Cinnamon applet
+function reload_applet {
+    # reload the Nordlist Cinnamon applet
     # changes the icon color for connection status immediately
-    # does nothing if there is no applet or if it's not used with nordvpn
     #
-    directory="/home/$USER/.cinnamon/configs/bash-sensors@pkkk"
+    directory="/home/$USER/.cinnamon/configs/nordlist_tray@ph202107"
     desktop_env="$(echo "$XDG_CURRENT_DESKTOP" | tr '[:upper:]' '[:lower:]')"
     #
-    # check if the directory exists and the Cinnamon Desktop is in use
     if [[ -d "$directory" ]] && [[ "$desktop_env" == *"cinnamon"* ]]; then
-        # search for "nordvpn" within the config file
-        if grep -rqi --include='*.json' "nordvpn" "$directory"; then
-            # reload the applet
-            dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'bash-sensors@pkkk' string:'APPLET'
-        fi
+        dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
     fi
 }
 function edit_script {
@@ -270,7 +264,7 @@ linebreak
 #
 # function default_settings may contain a "connect" command
 if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then
-    reload_cinnapplet
+    reload_applet
 fi
 #
 # Alternate install method:
