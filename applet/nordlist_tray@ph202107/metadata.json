@@ -1,8 +1,10 @@
 {
     "uuid": "nordlist_tray@ph202107",
     "name": "Nordlist Applet",
-    "description": "Displays VPN status and runs nordlist bash script.",
-    "version": "1.0",
+    "description": "Displays VPN status and runs Nordlist bash script.",
     "icon": "network-vpn",
+    "version": "1.2",
+    "author": "ph202107",
+    "url": "https://github.com/ph202107/nordlist",
     "max-instances": 1
 }
