@@ -57,11 +57,16 @@
 #
 # =====================================================================
 #
+# This variable can be used to set the paths below, or set each path
+# individually. This is the directory from which the script is run:
+jd2base="$(dirname "${BASH_SOURCE[0]}")"
+#
 # Specify the full path and filename for the server list.
-jdlist="/home/$USER/Downloads/nord_jd2servers.txt"
+# eg. jdlist="/home/$USER/Downloads/nord_jd2servers.txt"
+jdlist="$jd2base/nord_jd2servers.txt"
 #
 # Specify the full path and filename for the log file.
-logfile="/home/$USER/Downloads/nord_jd2log.txt"
+logfile="$jd2base/nord_jd2log.txt"
 #
 # Automatically open a terminal window and follow the log. "y" or "n"
 # Tested with gnome-terminal, see "function logstart" for more options.

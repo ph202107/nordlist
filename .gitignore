@@ -1,0 +1,9 @@
+nordlist_config*
+nord_allservers*
+nord_favorites*
+nord_logs*
+nord_jd2servers*
+nord_jd2log*
+*.conf
+*.txt
+

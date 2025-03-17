@@ -184,24 +184,16 @@ function changelog {
     linecolor "green" "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/"
 }
 function reload_applet {
-    # reload the Nordlist Cinnamon applet
-    # changes the icon color for connection status immediately
-    #
-    directory="/home/$USER/.cinnamon/configs/nordlist_tray@ph202107"
-    desktop_env="$(echo "$XDG_CURRENT_DESKTOP" | tr '[:upper:]' '[:lower:]')"
-    #
-    if [[ -d "$directory" ]] && [[ "$desktop_env" == *"cinnamon"* ]]; then
+    # reload the Nordlist Applet to change the icon color immediately
+    if [[ -d "/home/$USER/.local/share/cinnamon/applets/nordlist_tray@ph202107" ]]; then
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
     fi
 }
 function edit_script {
     # check for a default editor otherwise use nano
-    if [[ -n "$VISUAL" ]]; then
-        editor="$VISUAL"
-    elif [[ -n "$EDITOR" ]]; then
-        editor="$EDITOR"
-    else
-        editor="nano"
+    if [[ -n "$VISUAL" ]]; then editor="$VISUAL"
+    elif [[ -n "$EDITOR" ]]; then editor="$EDITOR"
+    else editor="nano"
     fi
     "$editor" "$0"
     exit
@@ -261,11 +253,7 @@ nordvpn status
 linebreak "\n$(linecolor "green" "Completed \u2705")" # unicode checkmark
 nordvpn --version
 linebreak
-#
-# function default_settings may contain a "connect" command
-if [[ "$( nordvpn status | awk -F ': ' '/Status/{print tolower($2)}' )" == "connected" ]]; then
-    reload_applet
-fi
+reload_applet
 #
 # Alternate install method:
 #  sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)

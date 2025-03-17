@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# March 16, 2025
+# March 17, 2025
 #
 # This script works with the NordVPN Linux CLI.  I started
 # writing it to save some keystrokes on my Home Theatre PC.
@@ -67,6 +67,12 @@
 # Please refer to 'function external_source' for details.  "y" or "n"
 externalsource="n"
 #
+# Set the default location to save nordlist related files.
+# By default nord_allservers.json, nord_favorites.txt, etc. will be saved
+# in the same directory as nordlist.sh.  You can specify any default path,
+# eg. nordlistbase="/home/$USER/Downloads" or set each path individually.
+nordlistbase="$(dirname "${BASH_SOURCE[0]}")"
+#
 # Specify your P2P preferred location.  (Optional)
 # eg. p2pwhere="Canada" or p2pwhere="Toronto"
 p2pwhere=""
@@ -124,12 +130,12 @@ wgdir="/home/$USER/Downloads"
 # Specify the absolute path and filename to store a .json of all the
 # NordVPN servers (about 20MB). Avoids API server timeouts.  Create the
 # list at:  Tools - NordVPN API - All VPN Servers
-serversfile="/home/$USER/Downloads/nord_allservers.json"
+serversfile="$nordlistbase/nord_allservers.json"
 #
 # Specify the absolute path and filename to store a local list of your
 # favorite NordVPN servers.  eg. Low ping servers or streaming servers.
 # Create the list in: 'Favorites'
-favoritesfile="/home/$USER/Downloads/nord_favorites.txt"
+favoritesfile="$nordlistbase/nord_favorites.txt"
 #
 # Favorite servers are labelled as (Favorite) above the main menu.
 # You can choose to display the favorite name instead. eg. For a favorite
@@ -138,7 +144,7 @@ showfavname="n"
 #
 # Specify the absolute path and filename to save a copy of the
 # nordvpnd.service logs.  Create the file in: Settings - Logs
-nordlogfile="/home/$USER/Downloads/nord_logs.txt"
+nordlogfile="$nordlistbase/nord_logs.txt"
 # Also display this number of lines from the tail of the log.
 loglines="100"
 #
