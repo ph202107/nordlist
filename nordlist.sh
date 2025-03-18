@@ -1,51 +1,70 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# March 17, 2025
-#
-# This script works with the NordVPN Linux CLI.  I started
-# writing it to save some keystrokes on my Home Theatre PC.
-# It keeps evolving and is still a work in progress. Bash
-# scripting is new to me and I'm learning as I go.  I added a
-# lot of comments to help fellow newbies customize the script.
+# March 18, 2025
 #
 # Suggestions and feedback are welcome!  Create a new issue here:
 # https://github.com/ph202107/nordlist
-#
-# Screenshots:
-# https://github.com/ph202107/nordlist/tree/main/screenshots
 #
 # =====================================================================
 # Instructions
 # =============
 #
-# 1) Save as nordlist.sh
-#       For convenience I use a directory in my PATH (echo $PATH)
-#       eg. /home/username/.local/bin/nordlist.sh
-# 2) Make the script executable with
-#       "chmod +x nordlist.sh"
-# 3) To generate ASCII images and to use NordVPN API functions
-#       these small programs are required
-#       eg. "sudo apt install figlet lolcat curl jq"
-# 4) At the terminal run "nordlist.sh"
+# 1a) Users with 'git' can clone the repo.
+#     Note: All user-generated files are by default saved to the same directory
+#     as nordlist.sh.  eg. nordlist_config.sh, nord_favorites.txt, etc.
+#     To keep these files in a separate directory, configure the 'nordlistbase'
+#     option below and move any existing files there.
+#       git clone https://github.com/ph202107/nordlist.git
+#
+# 1b) To download or update manually, open a terminal and follow these steps to
+#     create a 'nordlist' folder in the home directory and add it to your $PATH.
+#     Change the directory as you prefer.
+#       cd ~
+#       wget -O ~/nordlist-main.zip https://github.com/ph202107/nordlist/archive/refs/heads/main.zip
+#       unzip ~/nordlist-main.zip
+#       mkdir -p ~/nordlist
+#       # Overwrite existing nordlist files but preserve nordlist_config.sh, etc.
+#       cp -r ~/nordlist-main/* ~/nordlist/
+#       rm -rf ~/nordlist-main.zip ~/nordlist-main
+#       chmod +x ~/nordlist/nordlist.sh
+#       # Optional: Add nordlist folder to $PATH to run the script from anywhere.
+#       echo 'export PATH="$HOME/nordlist:$PATH"' >> ~/.bashrc
+#       source ~/.bashrc
+#
+# 2) Add External Programs
+#       sudo apt update
+#       # To display ASCII images and to use NordVPN API functions:
+#       sudo apt install figlet lolcat curl jq
+#       # Optional:
+#       sudo apt install wireguard wireguard-tools speedtest-cli iperf3 highlight
+#
+# 3) To add or update the Nordlist Cinnamon Applet
+#       rm -rf ~/.local/share/cinnamon/applets/nordlist_tray@ph202107
+#       cp -r ~/nordlist/applet/nordlist_tray@ph202107 ~/.local/share/cinnamon/applets/
+#       Restart Cinnamon (Ctrl-Alt-Esc)
+#       If the applet is not in the panel:
+#           Right-Click on the Cinnamon panel and choose "Applets".
+#           Click the 'Manage' tab, select 'Nordlist Applet', and click 'Add' (+).
+#           Restart Cinnamon (Ctrl-Alt-Esc)
+#       Right-Click on the Nordlist Applet to configure the refresh interval and path.
+#       Restart Cinnamon (Ctrl-Alt-Esc)
+#
+# 4) Change the script behavior by configuring the 'Customization' options below.
+#
+# 5) Run the script by clicking the Nordlist Applet or open a terminal and enter:
+#       nordlist.sh
 #       (Or "./nordlist.sh" from the directory if it's not in $PATH)
 #
 # =====================================================================
-# Other Programs Used
-# ====================
+# Nordlist Applet
+# ================
 #
-# wireguard-tools   Tools-WireGuard         (function wireguard_gen)
-# speedtest-cli     Tools-Speed Tests       (function speedtest_menu)
-# iperf3            Meshnet-Speed Tests     (function speedtest_iperf3)
-# highlight         Settings-Script         (function script_info)
-#
-# "sudo apt install wireguard wireguard-tools speedtest-cli iperf3 highlight"
-#
-# For VPN On/Off status on the desktop I've written a simple applet
-# for the Linux Mint Cinnamon Desktop.  It displays the current VPN
-# connection status (blue icon = connected, red icon = disconnected),
-# and when clicked it launches nordlist.sh in a new terminal window.
-# Setup and config is in the "Notes" at the bottom of the script.
+# For VPN On/Off status on the desktop I've written a simple applet for the
+# Linux Mint Cinnamon Desktop. It displays the current VPN connection status in
+# the panel (blue icon = connected, red icon = disconnected) and when clicked
+# it launches nordlist.sh in a new terminal window.
+# https://github.com/ph202107/nordlist/tree/main/screenshots
 #
 # =====================================================================
 # Sudo Usage
@@ -67,10 +86,10 @@
 # Please refer to 'function external_source' for details.  "y" or "n"
 externalsource="n"
 #
-# Set the default location to save nordlist related files.
-# By default nord_allservers.json, nord_favorites.txt, etc. will be saved
-# in the same directory as nordlist.sh.  You can specify any default path,
-# eg. nordlistbase="/home/$USER/Downloads" or set each path individually.
+# Set the location to save user-generated files (nord_favorites.txt etc).
+# The default location is the same directory as nordlist.sh. You can specify any
+# path to keep these files separate. eg. nordlistbase="/home/$USER/nordlist_files"
+# or set the path for each file individually.
 nordlistbase="$(dirname "${BASH_SOURCE[0]}")"
 #
 # Specify your P2P preferred location.  (Optional)
@@ -1934,7 +1953,6 @@ function logout_nord {
         echo
         nordvpn logout
     fi
-    wait
     echo
 }
 function account_menu {
@@ -3812,72 +3830,55 @@ function nordapi_menu {
     done
 }
 function city_count {
-    # list all the available cities by using the Nord CLI
+    #
+    heading "All Countries and Cities by using Nord CLI" "txt"
     #
     allcountries=()
     allcities=()
     virtualcountries=()
     virtualcities=()
     #
-    create_list "country" "count"
+    declare -A nordvirtual_map
+    for element in "${nordvirtual[@]}"; do
+        element="${element//\'/}"           # remove apostrophe for Laos
+        nordvirtual_map["${element,,}"]=1   # lowercase for comparison
+    done
     #
-    heading "All Countries and Cities by using Nord CLI" "txt"
-    # must use var "$xcountry" for command: create_list "city"
+    create_list "country" "count"
     for xcountry in "${countrylist[@]}"
     do
-        virtualcountry="false"
-        for element in "${nordvirtual[@]}"
-        do
-            if [[ "${element,,}" == "${xcountry,,}" ]]; then
-                virtualcountry="true"
-                echo "$xcountry*"
-                allcountries+=( "$xcountry*" )
-                virtualcountries+=( "$xcountry*" )
-                break
-            fi
-        done
-        if [[ "$virtualcountry" == "false" ]]; then
-            echo "$xcountry"
-            allcountries+=( "$xcountry" )
-        fi
+        xcountry_lower="${xcountry,,}"
+        is_virtual_country=$([[ -n "${nordvirtual_map[$xcountry_lower]}" ]] && echo "*")
+        #
+        echo "$xcountry$is_virtual_country"
+        allcountries+=( "$xcountry$is_virtual_country" )
+        [[ -n "$is_virtual_country" ]] && virtualcountries+=( "$xcountry*" )
+        #
         create_list "city" "count"
-        for ccity in "${citylist[@]}"
+        for xcity in "${citylist[@]}"
         do
-            virtualcity="false"
-            for element in "${nordvirtual[@]}"
-            do
-                if [[ "${element,,}" == "${ccity,,}" ]]; then
-                    virtualcity="true"
-                    echo "    $ccity*"
-                    if [[ "$virtualcountry" == "true" ]]; then
-                        virtualcities+=( "$xcountry* $ccity*" )
-                        allcities+=( "$ccity* $xcountry*" )
-                    else
-                        virtualcities+=( "$xcountry $ccity*" )
-                        allcities+=( "$ccity* $xcountry" )
-                    fi
-                    break
-                fi
-            done
-            if [[ "$virtualcity" == "false" ]]; then
-                echo "    $ccity"
-                allcities+=( "$ccity $xcountry" )
-            fi
+            xcity_lower="${xcity,,}"
+            is_virtual_city=$([[ -n "${nordvirtual_map[$xcity_lower]}" ]] && echo "*")
+            #
+            echo "    $xcity$is_virtual_city"
+            formatted_pair="$xcity$is_virtual_city $xcountry$is_virtual_country"
+            allcities+=( "$formatted_pair" )
+            [[ -n "$is_virtual_city" ]] && virtualcities+=( "$formatted_pair" )
         done
         echo
     done
     #
-    #heading "All Countries" "txt"
-    #printf '%s\n' "${allcountries[@]}" | sort
+    heading "All Countries" "txt"
+    printf '%s\n' "${allcountries[@]}" | sort
     #
-    #heading "All Cities" "txt"
-    #printf '%s\n' "${allcities[@]}" | sort
+    heading "All Cities" "txt"
+    printf '%s\n' "${allcities[@]}" | sort
     #
-    #heading "Virtual Countries" "txt"
-    #printf '%s\n' "${virtualcountries[@]}" | sort
+    heading "Virtual Countries" "txt"
+    printf '%s\n' "${virtualcountries[@]}" | sort
     #
-    #heading "Virtual Cities" "txt"
-    #printf '%s\n' "${virtualcities[@]}" | sort
+    heading "Virtual Cities" "txt"
+    printf '%s\n' "${virtualcities[@]}" | sort
     #
     echo
     echo "========================="
@@ -5114,12 +5115,10 @@ function reload_applet {
     if [[ "$exitappletvpn" =~ ^[Yy]$ ]]; then
         # reload 'nordlist_tray@ph202107' - changes the icon color (for connection status) immediately.
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
-        wait
     fi
     if [[ "$exitappletnm" =~ ^[Yy]$ ]]; then
         # reload 'network@cinnamon.org' - removes extra 'nordlynx' entries.
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'network@cinnamon.org' string:'APPLET'
-        wait
     fi
 }
 function ping_host {
@@ -5283,10 +5282,11 @@ function external_source {
     # script up to and including function set_colors.
     # Includes the location variables, allowlist commands, the Main Menu, etc.
     #
-    # Set the customization option externalsource="y"
+    # Set the customization option externalsource="y".
+    # Set the customization option for "nordlistbase".
     # Save and then run nordlist.sh
-    # You will be prompted to create "nordlist_config.sh" in the same directory.
-    # Delete the existing file if you wish to recreate it.
+    # You will be prompted to create "nordlist_config.sh" in the $nordlistbase
+    # directory.  Delete the existing file if you wish to recreate it.
     # Note that nordlist_config.sh does not need to be executable.
     #
     # Modify your settings and functions in nordlist_config.sh as needed.
@@ -5307,8 +5307,7 @@ function external_source {
     # If your saved functions are affected, nordlist_config.sh will need to
     # be updated.
     #
-    #
-    configfile="$(dirname "${BASH_SOURCE[0]}")/nordlist_config.sh"
+    configfile="$nordlistbase/nordlist_config.sh"
     #
     if [[ ! -f "$configfile" ]]; then
         echo -e "${WColor}Error: $configfile does not exist.${Color_Off}"
@@ -5458,44 +5457,7 @@ start
 # Notes
 # ======
 #
-# Nordlist Applet for the Cinnamon Desktop Environment
-#   Shows the NordVPN connection status in the panel and runs nordlist.sh when clicked.
-#
-# Delete the Existing Applet:
-#   Right-click on the Cinnamon panel and select "Applets".
-#   Or on Linux Mint open the Mint-Menu and type "Applets".
-#   Click the "Manage" tab.
-#   Find and select "Nordlist Applet" (nordlist_tray@ph202107) in the list.
-#   Click "Uninstall" (X) to delete the applet.
-#   Restart Cinnamon (Ctrl-Alt-Esc) or (Alt-F2 "r" "Enter")
-#
-# Download the Updated Applet:
-#   cd ~/Downloads
-#   wget -O nordlist-main.zip https://github.com/ph202107/nordlist/archive/refs/heads/main.zip
-#   unzip nordlist-main.zip
-#   cp -r nordlist-main/applet/nordlist_tray@ph202107 ~/.local/share/cinnamon/applets/
-#   rm -rf nordlist-main.zip nordlist-main  # Optional cleanup
-#
-# Enable the Applet:
-#   Right-click on the Cinnamon panel and select "Applets".
-#   Or on Linux Mint open the Mint-Menu and type "Applets".
-#   Click the "Manage" tab.
-#   Find and select "Nordlist Applet" (nordlist_tray@ph202107) in the list.
-#   Click "Add" (+) to add the applet to your panel.
-#   Restart Cinnamon (Ctrl-Alt-Esc) or (Alt-F2 "r" "Enter")
-#
-# Configure the Applet
-#   Right-click on the Nordlist Applet and choose "Configure"
-#   Set your update interval and full path to nordlist.sh
-#   Use the absolute path, eg. "/home/username/Scripts/nordlist.sh"
-#   Restart Cinnamon (Ctrl-Alt-Esc) or (Alt-F2 "r" "Enter")
-#
-# Command to reload the Nordlist Applet (if needed):
-#   dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
-#
-# =====================================================================
-#
-# Add repository and install:
+# Add NordVPN repository and install nordvpn CLI:
 #   cd ~/Downloads
 #   wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn-release/nordvpn-release_1.0.0_all.deb
 #   sudo apt install ~/Downloads/nordvpn-release_1.0.0_all.deb

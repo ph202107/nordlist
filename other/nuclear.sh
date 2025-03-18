@@ -66,16 +66,9 @@ function trashnord {
     nordvpn set killswitch disabled
     nordvpn disconnect
     reload_applet
-    if nordvpn logout --help | grep -q -i "persist-token"; then
-        linecolor "cyan" "nordvpn logout --persist-token"
-        nordvpn logout --persist-token
-    else
-        linecolor "cyan" "nordvpn logout"
-        nordvpn logout
-    fi
-    wait
+    linecolor "cyan" "nordvpn logout --persist-token"
+    nordvpn logout --persist-token
     sudo systemctl stop nordvpnd.service
-    wait
     linebreak "Flush iptables"
     flushtables
     linebreak "Purge nordvpn"
@@ -103,7 +96,6 @@ function installnord {
     sudo apt update
     linebreak "Install $nord_version"
     sudo apt install $nord_version -y
-    wait
 }
 function loginnord {
     linebreak "Check Group"
@@ -127,7 +119,6 @@ function loginnord {
     if [[ -n $logintoken ]]; then
         linebreak "Login (token)"
         nordvpn login --token "$logintoken"
-        wait
     else
         linebreak "Login (browser)"
         nordvpn login
@@ -199,6 +190,8 @@ function edit_script {
     exit
 }
 #
+# =====================================================================
+#
 clear -x
 if command -v figlet &> /dev/null; then
     linecolor "red" "$(figlet -f slant NUCLEAR)"
@@ -233,19 +226,25 @@ echo
 echo
 read -n 1 -r -p "Go nuclear? (y/n/E) "; echo
 echo
-if [[ $REPLY =~ ^[Ee]$ ]]; then
-    edit_script
-elif [[ $REPLY =~ ^[Yy]$ ]]; then
-    trashnord
-    installnord
-    loginnord
-    changelog
-    default_settings
-else
-    linebreak
-    linecolor "red" "*** ABORT ***"
-    echo
-fi
+#
+case "$REPLY" in
+    [Ee])
+        edit_script
+        ;;
+    [Yy])
+        trashnord
+        installnord
+        loginnord
+        changelog
+        default_settings
+        ;;
+    *)
+        linebreak
+        linecolor "red" "*** ABORT ***"
+        echo
+        ;;
+esac
+#
 linebreak "nordvpn settings"
 nordvpn settings
 linebreak "nordvpn status"

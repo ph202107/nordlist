@@ -10,7 +10,7 @@
     },
     "script-path": {
         "type": "entry",
-        "default": "/home/username/Scripts/nordlist.sh",
+        "default": "/home/username/nordlist/nordlist.sh",
         "description": "Absolute path to nordlist.sh"
     }
 }
