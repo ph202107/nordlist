@@ -50,7 +50,7 @@
 #       Right-Click on the Nordlist Applet to configure the refresh interval and path.
 #       Restart Cinnamon (Ctrl-Alt-Esc)
 #
-# 4) Change the script behavior by configuring the 'Customization' options below.
+# 4) Change the script behavior and appearance by configuring the options below.
 #
 # 5) Run the script by clicking the Nordlist Applet or open a terminal and enter:
 #       nordlist.sh
