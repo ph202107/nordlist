@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# March 18, 2025
+# March 19, 2025
 #
 # Suggestions and feedback are welcome!  Create a new issue here:
 # https://github.com/ph202107/nordlist
@@ -10,11 +10,11 @@
 # Instructions
 # =============
 #
-# 1a) Users with 'git' can clone the repo.
+# 1a) Can use 'git' to clone the repo.
 #     Note: All user-generated files are by default saved to the same directory
-#     as nordlist.sh.  eg. nordlist_config.sh, nord_favorites.txt, etc.
-#     To keep these files in a separate directory, configure the 'nordlistbase'
-#     option below and move any existing files there.
+#     as nordlist.sh.  eg. "nord_favorites.txt"
+#     To store these files in a separate directory, configure the 'nordlistbase'
+#     option or set the path for each file individually.
 #       git clone https://github.com/ph202107/nordlist.git
 #
 # 1b) To download or update manually, open a terminal and follow these steps to
@@ -24,47 +24,54 @@
 #       wget -O ~/nordlist-main.zip https://github.com/ph202107/nordlist/archive/refs/heads/main.zip
 #       unzip ~/nordlist-main.zip
 #       mkdir -p ~/nordlist
-#       # Overwrite existing nordlist files but preserve nordlist_config.sh, etc.
+#       # Overwrites existing nordlist files but preserves nordlist_config.sh, etc.
 #       cp -r ~/nordlist-main/* ~/nordlist/
 #       rm -rf ~/nordlist-main.zip ~/nordlist-main
 #       chmod +x ~/nordlist/nordlist.sh
+#
 #       # Optional: Add nordlist folder to $PATH to run the script from anywhere.
 #       echo 'export PATH="$HOME/nordlist:$PATH"' >> ~/.bashrc
 #       source ~/.bashrc
 #
-# 2) Add External Programs
+# 2) Install External Programs
 #       sudo apt update
 #       # To display ASCII images and to use NordVPN API functions:
 #       sudo apt install figlet lolcat curl jq
-#       # Optional:
+#       # Optional utilities:
 #       sudo apt install wireguard wireguard-tools speedtest-cli iperf3 highlight
 #
-# 3) To add or update the Nordlist Cinnamon Applet
-#       rm -rf ~/.local/share/cinnamon/applets/nordlist_tray@ph202107
-#       cp -r ~/nordlist/applet/nordlist_tray@ph202107 ~/.local/share/cinnamon/applets/
-#       Restart Cinnamon (Ctrl-Alt-Esc)
-#       If the applet is not in the panel:
-#           Right-Click on the Cinnamon panel and choose "Applets".
-#           Click the 'Manage' tab, select 'Nordlist Applet', and click 'Add' (+).
+# 3) Install or Update the Nordlist Applet  (Only for for the Cinnamon Desktop Environment)
+#       For VPN On/Off status on the desktop I've written a simple applet for the
+#       Linux Mint Cinnamon Desktop. It displays the current VPN connection status in
+#       the panel (blue icon = connected, red icon = disconnected) and when clicked
+#       it launches nordlist.sh in a new terminal window.
+#       https://github.com/ph202107/nordlist/tree/main/screenshots
+#
+#       Uninstall the Applet:
+#           Right-click on the Cinnamon panel and select "Applets".
+#           Or on Linux Mint open the Mint-Menu and type "Applets".
+#           Click the "Manage" tab and select "Nordlist Applet" (nordlist_tray@ph202107)
+#           Click "Uninstall" (X) to delete the applet.
+#           Restart Cinnamon (Ctrl-Alt-Esc) or (Alt-F2 "r" "Enter")
+#
+#       Install or Update the Applet:
+#           # If there is an existing applet please uninstall it first (see above).
+#           cp -r ~/nordlist/applet/nordlist_tray@ph202107 ~/.local/share/cinnamon/applets/
+#           Right-click on the Cinnamon panel and select "Applets".
+#           Click the "Manage" tab and select "Nordlist Applet" (nordlist_tray@ph202107)
+#           Click "Add" (+) to add the applet to your panel.
 #           Restart Cinnamon (Ctrl-Alt-Esc)
-#       Right-Click on the Nordlist Applet to configure the refresh interval and path.
-#       Restart Cinnamon (Ctrl-Alt-Esc)
+#
+#       Configure the Applet
+#           Right-click on the Nordlist Applet in the panel and choose "Configure"
+#           Set your update interval and full path to nordlist.sh
+#           Use the absolute path, eg. "/home/username/nordlist/nordlist.sh"
+#           Restart Cinnamon (Ctrl-Alt-Esc)
 #
 # 4) Change the script behavior and appearance by configuring the options below.
 #
-# 5) Run the script by clicking the Nordlist Applet or open a terminal and enter:
-#       nordlist.sh
-#       (Or "./nordlist.sh" from the directory if it's not in $PATH)
-#
-# =====================================================================
-# Nordlist Applet
-# ================
-#
-# For VPN On/Off status on the desktop I've written a simple applet for the
-# Linux Mint Cinnamon Desktop. It displays the current VPN connection status in
-# the panel (blue icon = connected, red icon = disconnected) and when clicked
-# it launches nordlist.sh in a new terminal window.
-# https://github.com/ph202107/nordlist/tree/main/screenshots
+# 5) Run the script by clicking the Nordlist Applet, or open a terminal and enter:
+#       nordlist.sh   (Or "./nordlist.sh" from the directory if it's not in $PATH)
 #
 # =====================================================================
 # Sudo Usage
@@ -86,10 +93,10 @@
 # Please refer to 'function external_source' for details.  "y" or "n"
 externalsource="n"
 #
-# Set the location to save user-generated files (nord_favorites.txt etc).
-# The default location is the same directory as nordlist.sh. You can specify any
-# path to keep these files separate. eg. nordlistbase="/home/$USER/nordlist_files"
+# The default location to save user-generated files is the same directory
+# as nordlist.sh. You can specify any path to store these files separately,
 # or set the path for each file individually.
+# eg. nordlistbase="/home/$USER/nordlist_files"
 nordlistbase="$(dirname "${BASH_SOURCE[0]}")"
 #
 # Specify your P2P preferred location.  (Optional)
@@ -5283,9 +5290,10 @@ function external_source {
     # Includes the location variables, allowlist commands, the Main Menu, etc.
     #
     # Set the customization option externalsource="y".
-    # Set the customization option for "nordlistbase".
+    # Set the customization option "nordlistbase", or set the absolute path in
+    # the "configfile" variable below. Default is the same dir as nordlist.sh.
     # Save and then run nordlist.sh
-    # You will be prompted to create "nordlist_config.sh" in the $nordlistbase
+    # You will be prompted to create "nordlist_config.sh" in the specified
     # directory.  Delete the existing file if you wish to recreate it.
     # Note that nordlist_config.sh does not need to be executable.
     #
@@ -5405,6 +5413,9 @@ function start {
         echo -e "${WColor}Bash v4.2 or higher is required.${Color_Off}"; echo
         exit 1
     fi
+    # create the nordlistbase directory if it doesn't exist
+    mkdir -p "$nordlistbase"
+    #
     # load external source
     if [[ "$externalsource" =~ ^[Yy]$ ]]; then
         external_source
@@ -5457,7 +5468,7 @@ start
 # Notes
 # ======
 #
-# Add NordVPN repository and install nordvpn CLI:
+# Add NordVPN repository and install the nordvpn CLI:
 #   cd ~/Downloads
 #   wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn-release/nordvpn-release_1.0.0_all.deb
 #   sudo apt install ~/Downloads/nordvpn-release_1.0.0_all.deb
