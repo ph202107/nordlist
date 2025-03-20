@@ -1,7 +1,14 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.20.0 on Linux Mint 21.3
-# March 19, 2025
+# Tested with NordVPN Version 3.20.1 on Linux Mint 21.3
+# March 20, 2025
+#
+# Unofficial bash script to use with the NordVPN Linux CLI.
+# Tested on Linux Mint with gnome-terminal and Bash v5.
+# Should work fine on Ubuntu but is not tested with other distros.
+# Fully customizable. All menu options and locations can be changed.
+# Screenshots: https://github.com/ph202107/nordlist/tree/main/screenshots
+# This script was made for personal use, there is no affiliation with NordVPN.
 #
 # Suggestions and feedback are welcome!  Create a new issue here:
 # https://github.com/ph202107/nordlist
@@ -10,7 +17,7 @@
 # Instructions
 # =============
 #
-# 1a) Can use 'git' to clone the repo.
+# 1a) Use 'git' to clone the repo.
 #     Note: All user-generated files are by default saved to the same directory
 #     as nordlist.sh.  eg. "nord_favorites.txt"
 #     To store these files in a separate directory, configure the 'nordlistbase'
@@ -24,12 +31,12 @@
 #       wget -O ~/nordlist-main.zip https://github.com/ph202107/nordlist/archive/refs/heads/main.zip
 #       unzip ~/nordlist-main.zip
 #       mkdir -p ~/nordlist
-#       # Overwrites existing nordlist files but preserves nordlist_config.sh, etc.
+#       # Overwrites existing nordlist files but preserves nord_favorites.txt, etc.
 #       cp -r ~/nordlist-main/* ~/nordlist/
 #       rm -rf ~/nordlist-main.zip ~/nordlist-main
 #       chmod +x ~/nordlist/nordlist.sh
 #
-#       # Optional: Add nordlist folder to $PATH to run the script from anywhere.
+#       # Optional: Add the nordlist folder to $PATH to run the script from anywhere.
 #       echo 'export PATH="$HOME/nordlist:$PATH"' >> ~/.bashrc
 #       source ~/.bashrc
 #
@@ -41,9 +48,8 @@
 #       sudo apt install wireguard wireguard-tools speedtest-cli iperf3 highlight
 #
 # 3) Install or Update the Nordlist Applet  (Only for for the Cinnamon Desktop Environment)
-#       For VPN On/Off status on the desktop I've written a simple applet for the
-#       Linux Mint Cinnamon Desktop. It displays the current VPN connection status in
-#       the panel (blue icon = connected, red icon = disconnected) and when clicked
+#       The Nordlist Applet displays the current VPN connection status in the
+#       panel (blue icon = connected, red icon = disconnected) and when clicked
 #       it launches nordlist.sh in a new terminal window.
 #       https://github.com/ph202107/nordlist/tree/main/screenshots
 #
