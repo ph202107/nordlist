@@ -160,7 +160,7 @@ meshnetdir="/home/$USER/Downloads"
 wgdir="/home/$USER/Downloads"
 #
 # Specify the absolute path and filename to store a .json of all the
-# NordVPN servers (about 20MB). Avoids API server timeouts.  Create the
+# NordVPN servers (about 25MB). Avoids API server timeouts.  Create the
 # list at:  Tools - NordVPN API - All VPN Servers
 serversfile="$nordlistbase/nord_allservers.json"
 #
@@ -5296,10 +5296,9 @@ function external_source {
     # Includes the location variables, allowlist commands, the Main Menu, etc.
     #
     # Set the customization option externalsource="y".
-    # Set the customization option "nordlistbase", or set the absolute path in
-    # the "configfile" variable below. Default is the same dir as nordlist.sh.
+    # Set the customization option for "nordlistbase".
     # Save and then run nordlist.sh
-    # You will be prompted to create "nordlist_config.sh" in the specified
+    # You will be prompted to create "nordlist_config.sh" in the "$nordlistbase"
     # directory.  Delete the existing file if you wish to recreate it.
     # Note that nordlist_config.sh does not need to be executable.
     #
