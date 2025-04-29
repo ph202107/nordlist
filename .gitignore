@@ -6,4 +6,5 @@ nord_jd2servers*
 nord_jd2log*
 *.conf
 *.txt
+*.log
 

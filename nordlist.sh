@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.20.1 on Linux Mint 21.3
-# April 6, 2025
+# Tested with NordVPN Version 3.20.2 on Linux Mint 21.3
+# April 29, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -18,12 +18,12 @@
 # Instructions
 # =============
 #
-# 1a) Use 'git' to clone the repo.
+# 1a) Use 'git' to clone the repo:
+#       git clone https://github.com/ph202107/nordlist.git
 #     Note: All user-generated files are by default saved to the same directory
 #     as nordlist.sh.  eg. "nord_favorites.txt"
 #     To store these files in a separate directory, configure the 'nordlistbase'
 #     option or set the path for each file individually.
-#       git clone https://github.com/ph202107/nordlist.git
 #
 # 1b) To download or update manually, open a terminal and follow these steps to
 #     create a 'nordlist' folder in the home directory and add it to your $PATH.
@@ -106,6 +106,8 @@ externalsource="n"
 # eg. nordlistbase="/home/$USER/nordlist_files"
 nordlistbase="$(dirname "${BASH_SOURCE[0]}")"
 #
+# =====================================================================
+#
 # Specify your P2P preferred location.  (Optional)
 # eg. p2pwhere="Canada" or p2pwhere="Toronto"
 p2pwhere=""
@@ -115,7 +117,7 @@ p2pwhere=""
 # eg. obwhere="United_States" or obwhere="Los_Angeles"
 obwhere=""
 #
-# Specify the first hop to use for Double_VPN. (Optional)
+# Specify the exit hop to use for Double_VPN. (Optional)
 # The location must have Double_VPN servers available.
 # eg. dblwhere="United_Kingdom" or dblwhere="Sweden"
 dblwhere=""
@@ -2423,7 +2425,7 @@ function iptables_menu {
 #
 function favorites_verify {
     parent="Favorites"
-    heading "Check for Obsolete Favorites" "txt"
+    heading "Check for Obsolete Favorites" "txt" "alt"
     echo -e "Compare: ${EColor}$favoritesfile${Color_Off}"
     echo "Last Modified: $( date -r "$favoritesfile" )"
     echo -e "Against: ${EColor}$serversfile${Color_Off}"
@@ -2632,20 +2634,17 @@ function create_list_virtual {
     # $1 = "countries" - virtual locations in "nordvpn countries"
     # $1 = "cities" - virtual locations in "nordvpn cities $xcountry"
     #
-    # initialize or empty the array (VL setting can change after array creation)
+    if [[ "$virtual" != "enabled" ]] || ! app_exists "unbuffer"; then
+        return
+    fi
+    #
     if [[ "$1" == "countries" ]]; then
-        declare -gA virtual_countries=()
         nvcommand=( unbuffer nordvpn countries )
     elif [[ "$1" == "cities" && -n "$xcountry" ]]; then
-        declare -gA virtual_cities=()
         nvcommand=( unbuffer nordvpn cities "$xcountry" )
     else
         echo -e "${WColor}Invalid argument. ($1) ($xcountry)${Color_Off}"; echo
         return 1
-    fi
-    #
-    if [[ "$virtual" != "enabled" ]] || ! app_exists "unbuffer"; then
-        return
     fi
     # the nordvirtual array holds the blue-colored elements (virtual locations)
     readarray -t nordvirtual < <(
@@ -2687,6 +2686,7 @@ function create_list_country {
     # modcountrylist = modified country names for the "Countries" selection menu.  shortened names and/or marked with an asterisk.
     #
     countrylist=()
+    declare -gA virtual_countries=()
     modcountrylist=()
     virtualnote="false"
     #
@@ -2763,6 +2763,7 @@ function create_list_city {
     fi
     #
     citylist=()
+    declare -gA virtual_cities=()
     modcitylist=()
     virtualnote="false"
     #
