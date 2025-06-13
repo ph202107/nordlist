@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.20.2 on Linux Mint 21.3
-# April 29, 2025
+# Tested with NordVPN Version 3.20.3 on Linux Mint 21.3
+# June 12, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
 # Should work fine on Ubuntu but is not tested with other distros.
 # Fully customizable. All menu options and locations can be changed.
-# Includes a basic applet for the Cinnamon Desktop.
+# Includes a basic applet for the Cinnamon Desktop (optional).
 # Screenshots: https://github.com/ph202107/nordlist/tree/main/screenshots
 # This script was made for personal use, there is no affiliation with NordVPN.
 #
@@ -48,7 +48,8 @@
 #       # Optional utilities:
 #       sudo apt install wireguard wireguard-tools speedtest-cli iperf3 highlight
 #
-# 3) Install or Update the Nordlist Applet  (Only for for the Cinnamon Desktop Environment)
+# 3) Install or Update the Nordlist Applet (Optional)
+#       Only for for the Cinnamon Desktop Environment.
 #       The Nordlist Applet displays the current VPN connection status in the
 #       panel (blue icon = connected, red icon = disconnected) and when clicked
 #       it launches nordlist.sh in a new terminal window.
@@ -106,7 +107,7 @@ externalsource="n"
 # eg. nordlistbase="/home/$USER/nordlist_files"
 nordlistbase="$(dirname "${BASH_SOURCE[0]}")"
 #
-# =====================================================================
+# ==============
 #
 # Specify your P2P preferred location.  (Optional)
 # eg. p2pwhere="Canada" or p2pwhere="Toronto"
@@ -2650,7 +2651,6 @@ function create_list_virtual {
     readarray -t nordvirtual < <(
         # Execute the command as an array
         "${nvcommand[@]}" |
-        tr -d '\r' |
         cat -v |
         awk '{
             for (i=1; i<=NF; i++) {
@@ -2692,7 +2692,6 @@ function create_list_country {
     #
     readarray -t countrylist < <(
         nordvpn countries |
-        tr -d '\r' |
         awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' |
         sort
     )

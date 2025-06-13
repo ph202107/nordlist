@@ -21,6 +21,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.20.0"      # 21 Jan 2025 Significant security improvements. NordWhisper technology added.
 #nord_version="nordvpn=3.20.1"      # 20 Mar 2025 Kill Switch, LAN-Discovery, general improvements. NordWhisper log messages fix.
 #nord_version="nordvpn=3.20.2"      # 29 Apr 2025 Bug fixes.
+#nord_version="nordvpn=3.20.3"      # 11 Jun 2025 Bug fixes: postquantum, firewall, allowlist, autoconnect.
 #
 # Login using a token, or leave blank to log in using a web browser.
 # To create a token visit https://my.nordaccount.com/ - Services - NordVPN - Manual Setup - Generate New Token
