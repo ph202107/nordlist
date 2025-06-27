@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 3.20.3 on Linux Mint 21.3
-# June 12, 2025
+# Tested with NordVPN Version 4.0.0 on Linux Mint 21.3
+# June 27, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -271,8 +271,8 @@ upmenu="0"
 fast_menu="n"
 #
 # Automatically change these settings without prompting:  Firewall,
-# Routing, Analytics, KillSwitch, TPLite, Notify, Tray, AutoConnect,
-# IPv6, LAN-Discovery, Virtual-Location, Post-Quantum
+# Routing, User-Consent, KillSwitch, TPLite, Notify, Tray, AutoConnect,
+# LAN-Discovery, Virtual-Location, Post-Quantum
 fast_setting="n"
 #
 # When choosing a country from the 'Countries' menu, immediately
@@ -352,7 +352,7 @@ function set_defaults {
     setting_enable "routing"            # typically this setting should be enabled
     #setting_disable "routing"
     #
-    setting_enable "analytics"
+    setting_enable "analytics"          # 'User-Consent' setting
     #setting_disable "analytics"
     #
     #setting_enable "threatprotectionlite"  # disables Custom-DNS
@@ -367,8 +367,8 @@ function set_defaults {
     #setting_enable "tray"
     setting_disable "tray"
     #
-    #setting_enable "ipv6"
-    setting_disable "ipv6"
+    #setting_enable "ipv6"              # ipv6 setting removed in v4.0.0
+    #setting_disable "ipv6"
     #
     #setting_enable "meshnet"           # disables post-quantum
     #setting_disable "meshnet"
@@ -670,11 +670,12 @@ function indicators_display {
     #indsep="\u2758"    # unicode vertical line
     indsep="\u00B7"     # unicode middle-dot
     #
+    indall=()
     if [[ "$1" == "short" ]]; then
         echo -n "Current settings: "
         indall=( "$techpro" "$fw" "$ks" "$ob" "$mn" "$pq" )
     else
-        indall=( "$techpro" "$fw" "$rt" "$an" "$ks" "$tp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$pq" "$al" )
+        indall=( "$techpro" "$fw" "$rt" "$uc" "$ks" "$tp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$pq" "$al" )
         if [[ -n "$fst" ]]; then indall+=( "$fst" ); fi
         if [[ -n "$sshi" ]]; then indall+=( "$sshi" ); fi
     fi
@@ -786,7 +787,7 @@ function set_vars {
     #
     allvars=(
         status servername nordhost server ipaddr country city transferd transferu uptime
-        technology protocol firewall fwmark routing analytics killswitch tplite obfuscate notify
+        technology protocol firewall fwmark routing userconsent killswitch tplite obfuscate notify
         tray autoconnect ipversion6 meshnet customdns dns_servers landiscovery virtual postquantum
     )
     # Reset all vars to ensure stale data is never used.
@@ -854,7 +855,7 @@ function set_vars {
             *"firewall:"*)      firewall="${line##*: }";;
             *"firewall mark"*)  fwmark="${line##*: }";;
             *"routing"*)        routing="${line##*: }";;
-            *"analytics"*)      analytics="${line##*: }";;
+            *"consent"*)        userconsent="${line##*: }";;
             *"kill"*)           killswitch="${line##*: }";;
             *"threat"*)         tplite="${line##*: }";;
             *"obfuscate"*)      obfuscate="${line##*: }";;
@@ -878,6 +879,7 @@ function set_vars {
     done
     # default to "disabled" if not found
     obfuscate="${obfuscate:-disabled}"
+    ipversion6="${ipversion6:-disabled}"
     postquantum="${postquantum:-disabled}"
     #
     # handle allowlist separately
@@ -1016,7 +1018,7 @@ function set_vars_indicators {
     #   ["$indkey"]="$indstatus"
         ["fw"]="$firewall"
         ["rt"]="$routing"
-        ["an"]="$analytics"
+        ["uc"]="$userconsent"
         ["ks"]="$killswitch"
         ["tp"]="$tplite"
         ["ob"]="$obfuscate"
@@ -1204,7 +1206,7 @@ function setting_getvars {
     case "$1" in
         "firewall")             chgname="the Firewall"; chgvar="$firewall"; chgind="$fw";;
         "routing")              chgname="Routing"; chgvar="$routing"; chgind="$rt";;
-        "analytics")            chgname="Analytics"; chgvar="$analytics"; chgind="$an";;
+        "analytics")            chgname="User-Consent"; chgvar="$userconsent"; chgind="$uc";;
         "killswitch")           chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks";;
         "threatprotectionlite") chgname="Threat Protection Lite"; chgvar="$tplite"; chgind="$tp";;
         "obfuscate")            chgname="Obfuscate"; chgvar="$obfuscate"; chgind="$ob";;
@@ -1393,7 +1395,7 @@ function setting_menu {
     indicators_display
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "Analytics" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "Post-Quantum" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "Post-Quantum" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
@@ -1402,7 +1404,7 @@ function setting_menu {
             "Protocol")         techpro_menu;;
             "Firewall")         firewall_setting;;
             "Routing")          routing_setting;;
-            "Analytics")        analytics_setting;;
+            "User-Consent")     userconsent_setting;;
             "KillSwitch")       killswitch_setting;;
             "TPLite")           tplite_setting;;
             "Obfuscate")        obfuscate_setting;;
@@ -1458,14 +1460,19 @@ function routing_setting {
     echo
     setting_change "routing"
 }
-function analytics_setting {
-    heading "Analytics"
+function userconsent_setting {
+    heading "User-Consent"
     echo
-    echo "Help NordVPN improve by sending anonymous aggregate data: "
-    echo "crash reports, OS version, marketing performance, and "
-    echo "feature usage data. (Nothing that could identify you.)"
+    echo "Analytics: Help NordVPN improve by sending anonymous aggregate data: "
+    echo "crash reports, OS version, marketing performance, and feature usage data."
+    echo "(Nothing that could identify you.)"
     echo
-    setting_change "analytics"
+    echo "Privacy Consent (v4.0.0+): When enabled, Nord will collect limited app"
+    echo "performance data to help spot issues faster and focus on features."
+    echo "When disabled, Nord will only collect the essentials needed for the app"
+    echo "to work properly. Your online activity stays private. Always."
+    echo
+    setting_change "analytics"  # Nord command to change the user-consent setting
 }
 function killswitch_setting {
     heading "Kill Switch"
@@ -1589,11 +1596,20 @@ function autoconnect_setting {
 function ipv6_setting {
     heading "IPv6"
     echo "Enable or disable NordVPN IPv6 support."
-    echo
     echo "Also refer to:"
     echo "https://support.nordvpn.com/hc/en-us/articles/20164669224337"
     echo
-    setting_change "ipv6"
+    #
+    echo -e "${WColor}Note:${Color_Off} v4.0.0 changelog, 26 June 2025"
+    echo "'IPv6 has privacy gaps we can't ignore. The technology is still"
+    echo "vulnerable to WebRTC leaks, so we're putting its support on hold."
+    echo "That means the nordvpn set ipv6 command is no longer available,"
+    echo "and IPv6 options won't appear in settings.'"
+    echo; echo
+    read -n 1 -s -r -p "Press any key to continue... "; echo
+    setting_menu
+    #
+    #setting_change "ipv6"
 }
 function customdns_menu {
     heading "Custom-DNS"
@@ -4042,7 +4058,7 @@ function allservers_update {
     # backup the current json
     backup_file "$serversfile"
     #
-    read -n 1 -r -p "Download an updated .json? (~20MB) (y/n) "; echo
+    read -n 1 -r -p "Download an updated .json? (~25MB) (y/n) "; echo
     echo
     parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -4113,7 +4129,7 @@ function allservers_menu {
     else
         echo -e "${WColor}$serversfile does not exist.${Color_Off}"
         echo
-        read -n 1 -r -p "Download the .json? (~20MB) (y/n) "; echo
+        read -n 1 -r -p "Download the .json? (~25MB) (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             touch "$serversfile"

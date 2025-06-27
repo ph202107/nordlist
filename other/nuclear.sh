@@ -9,12 +9,6 @@
 # List available versions with: "apt list -a nordvpn"
 #
 nord_version="nordvpn"              # install the latest version available
-#nord_version="nordvpn=3.18.0"      # 09 May 2024 Tray icon. Fix Meshnet Routing kill switch.
-#nord_version="nordvpn=3.18.1"      # 10 May 2024 Fix potential security vulnerabilities. Allowlist issue: https://github.com/NordSecurity/nordvpn-linux/issues/406
-#nord_version="nordvpn=3.18.2"      # 11 Jun 2024 Fix allowlist and lan-discovery. Option to disable Tray. Snapstore available. Allowlist issue: https://github.com/NordSecurity/nordvpn-linux/issues/461
-#nord_version="nordvpn=3.18.3"      # 22 Jul 2024 Bug fixes. Option to disable virtual locations. Allowlist issue:  https://github.com/NordSecurity/nordvpn-linux/issues/512
-#nord_version="nordvpn=3.18.4"      # 19 Aug 2024 Bug fixes - routing, tray, dedicated-ip, gateway, allowlist.
-#nord_version="nordvpn=3.18.5"      # 05 Sep 2024 Internal changes.
 #nord_version="nordvpn=3.19.0"      # 30 Sep 2024 Post-Quantum VPN added.
 #nord_version="nordvpn=3.19.1"      # 18 Nov 2024 Bugfixes. Meshnet fileshare library changed.
 #nord_version="nordvpn=3.19.2"      # 27 Nov 2024 OpenVPN bugfix.
@@ -22,6 +16,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.20.1"      # 20 Mar 2025 Kill Switch, LAN-Discovery, general improvements. NordWhisper log messages fix.
 #nord_version="nordvpn=3.20.2"      # 29 Apr 2025 Bug fixes.
 #nord_version="nordvpn=3.20.3"      # 11 Jun 2025 Bug fixes: postquantum, firewall, allowlist, autoconnect.
+#nord_version="nordvpn=4.0.0"       # 26 Jun 2025 New privacy consent, ipv6 removed, faster connection times
 #
 # Login using a token, or leave blank to log in using a web browser.
 # To create a token visit https://my.nordaccount.com/ - Services - NordVPN - Manual Setup - Generate New Token
