@@ -2,8 +2,8 @@
 #
 # Basic script to upgrade, reinstall, or downgrade the NordVPN client.
 #
-# Only tested on Linux Mint.  The script flushes iptables and
-# deletes directories, review carefully before use.  Do not use.
+# Only tested on Linux Mint.
+# This script deletes directories, review carefully before use.
 #
 # Choose the NordVPN app version to install
 # List available versions with: "apt list -a nordvpn"
@@ -35,6 +35,7 @@ function default_settings {
     #nordvpn set tray disabled
     #nordvpn set notify disabled
     #nordvpn set virtual-location disabled
+    #nordvpn set analytics enabled
     #nordvpn set post-quantum enabled
     #nordvpn connect --group P2P United_States
     #nordvpn set killswitch enabled
@@ -67,8 +68,6 @@ function trashnord {
     linecolor "cyan" "nordvpn logout --persist-token"
     nordvpn logout --persist-token
     sudo systemctl stop nordvpnd.service
-    linebreak "Flush iptables"
-    flushtables
     linebreak "Purge nordvpn"
     sudo apt autoremove --purge nordvpn -y
     linebreak "Remove Folders"
@@ -114,6 +113,9 @@ function loginnord {
         linecolor "cyan" "Trying: sudo systemctl start nordvpnd.service"
         sudo systemctl start nordvpnd.service || exit
     fi
+    linebreak "Disable Analytics"
+    # https://github.com/NordSecurity/nordvpn-linux/issues/958
+    nordvpn set analytics disabled
     if [[ -n $logintoken ]]; then
         linebreak "Login (token)"
         nordvpn login --token "$logintoken"
@@ -134,34 +136,6 @@ function loginnord {
     fi
     linebreak "Account"
     nordvpn account
-}
-function flushtables {
-    linecolor "cyan" "iptables before:"
-    sudo iptables -S
-    echo
-    linecolor "red" "*** Flush ***"
-    echo
-    # https://www.cyberciti.biz/tips/linux-iptables-how-to-flush-all-rules.html
-    # Accept all traffic first to avoid ssh lockdown
-    sudo iptables -P INPUT ACCEPT
-    sudo iptables -P FORWARD ACCEPT
-    sudo iptables -P OUTPUT ACCEPT
-    # Flush All Iptables Chains/Firewall rules
-    sudo iptables -F
-    # Delete all Iptables Chains
-    sudo iptables -X
-    # Flush all counters
-    sudo iptables -Z
-    # Flush and delete all nat and  mangle
-    sudo iptables -t nat -F
-    sudo iptables -t nat -X
-    sudo iptables -t mangle -F
-    sudo iptables -t mangle -X
-    sudo iptables -t raw -F
-    sudo iptables -t raw -X
-    #
-    linecolor "cyan" "iptables after:"
-    sudo iptables -S
 }
 function changelog {
     linebreak "Changelog"

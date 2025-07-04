@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 4.0.0 on Linux Mint 21.3
-# June 27, 2025
+# July 4, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -87,9 +87,8 @@
 #
 #   These functions will ask for a sudo password:
 #   - function restart_service
-#   - function iptables_status
-#   - function iptables_flush
 #   - function wireguard_gen
+#   - function nftables_menu "nft list"
 #   - function customdns_menu "Flush DNS Cache"
 #
 # =====================================================================
@@ -553,6 +552,7 @@ function main_menu {
                 main_menu
                 ;;
         esac
+        COLUMNS="$menuwidth"
     done
     exit
 }
@@ -1187,6 +1187,7 @@ function techpro_menu {
                 fi
                 ;;
         esac
+        COLUMNS="$menuwidth"
     done
     #
     if [[ "$1" == "back" ]]; then
@@ -1395,7 +1396,7 @@ function setting_menu {
     indicators_display
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "Post-Quantum" "Allowlist" "Account" "Restart" "Reset" "IPTables" "Logs" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "Post-Quantum" "Allowlist" "Account" "Restart" "Reset" "NFTables" "Logs" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
@@ -1421,7 +1422,7 @@ function setting_menu {
             "Account")          account_menu;;
             "Restart")          restart_service;;
             "Reset")            reset_app;;
-            "IPTables")         iptables_menu;;
+            "NFTables")         nftables_menu;;
             "Logs")             service_logs;;
             "Script")           script_info;;
             "Defaults")         set_defaults_ask;;
@@ -1462,6 +1463,7 @@ function routing_setting {
 }
 function userconsent_setting {
     heading "User-Consent"
+    echo "Refer to:  https://my.nordaccount.com/legal/privacy-policy/"
     echo
     echo "Analytics: Help NordVPN improve by sending anonymous aggregate data: "
     echo "crash reports, OS version, marketing performance, and feature usage data."
@@ -2288,119 +2290,71 @@ function set_defaults_ask {
 #
 # =====================================================================
 #
-function iptables_status {
-    echo
-    main_logo "stats_only"
-    echo -e "Firewall Mark: ${LColor}$fwmark${Color_Off}"
-    echo
-    if [[ -n "${allowlist[*]}" ]]; then
-        printf '%s\n' "${allowlist[@]}"
-    fi
-    echo
-    echo -e "${LColor}sudo iptables -S${Color_Off}"
-    sudo iptables -S
-    echo
-    COLUMNS="$menuwidth"
-}
-function iptables_flush {
-    echo
-    echo -e "${WColor}Flush the IPTables and clear all of your Firewall rules.${Color_Off}"
-    echo
-    read -n 1 -r -p "Proceed? (y/n) "; echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo
-        echo "No changes made."
-        echo
-        return
-    fi
-    # https://www.cyberciti.biz/tips/linux-iptables-how-to-flush-all-rules.html
-    echo
-    echo -e "${LColor}IPTables Before:${Color_Off}"
-    sudo iptables -S
-    echo
-    echo -e "${WColor}Flushing the IPTables${Color_Off}"
-    # Accept all traffic first to avoid ssh lockdown
-    sudo iptables -P INPUT ACCEPT
-    sudo iptables -P FORWARD ACCEPT
-    sudo iptables -P OUTPUT ACCEPT
-    # Flush All Iptables Chains/Firewall rules
-    sudo iptables -F
-    # Delete all Iptables Chains
-    sudo iptables -X
-    # Flush all counters
-    sudo iptables -Z
-    # Flush and delete all nat and  mangle
-    sudo iptables -t nat -F
-    sudo iptables -t nat -X
-    sudo iptables -t mangle -F
-    sudo iptables -t mangle -X
-    sudo iptables -t raw -F
-    sudo iptables -t raw -X
-    echo
-    echo -e "${EColor}IPTables After:${Color_Off}"
-    sudo iptables -S
-    echo
-    echo -e "${FColor}Restart the service and reconnect VPN to recreate the iptables rules.${Color_Off}"
-    echo
-}
-function iptables_menu {
-    heading "IPTables"
+function nftables_menu {
+    heading "NFTables"
     parent="Settings"
-    echo "Flushing the IPTables may help resolve problems enabling or"
-    echo "disabling the KillSwitch or with other connection issues."
-    echo
-    echo -e "${WColor}** WARNING **${Color_Off}"
-    echo "  - This will CLEAR all of your Firewall rules"
-    echo "  - Review 'function iptables_flush' before use"
-    echo "  - Commands require 'sudo'"
+    echo "View NFTables and routes, etc."
+    echo "Commands may require sudo."
     echo
     PS3=$'\n''Choose an option: '
-    submipt=("View IPTables" "Firewall" "Routing" "KillSwitch" "Meshnet" "LAN-Discovery" "Allowlist" "Flush IPTables" "Restart Service" "Ping Google" "Disconnect" "Exit")
+    submipt=("Nord" "nft list" "ip route" "ip rule" "ip addr" "ss -tunlp" "resolvectl" "Firewall" "Routing" "KillSwitch" "Meshnet" "LAN-Discovery" "Allowlist" "Restart Service" "Ping Google" "Disconnect" "Exit")
     select ipt in "${submipt[@]}"
     do
         parent_menu
+        echo
         case $ipt in
-            "View IPTables")
-                iptables_status
+            "Nord")
+                main_logo "stats_only"
+                ;;
+            "nft list")
+                echo -e "${LColor}sudo nft list ruleset${Color_Off}"
+                sudo nft list ruleset
+                echo
+                ;;
+            "ip route")
+                echo -e "${LColor}ip route show table all${Color_Off}"
+                ip route show table all
+                echo
+                ;;
+            "ip rule")
+                echo -e "${LColor}ip rule show${Color_Off}"
+                ip rule show
+                echo
+                ;;
+            "ip addr")
+                echo -e "${LColor}ip addr show${Color_Off}"
+                ip addr show
+                echo
+                ;;
+            "ss -tunlp")
+                echo -e "${LColor}ss -tunlp  (listening sockets)${Color_Off}"
+                ss -tunlp
+                echo
+                ;;
+            "resolvectl")
+                echo -e "${LColor}resolvectl status${Color_Off}"
+                resolvectl status
+                echo
                 ;;
             "Firewall")
-                echo
                 setting_change "firewall" "back"
-                iptables_status
                 ;;
             "Routing")
-                echo
                 setting_change "routing" "back"
-                iptables_status
                 ;;
             "KillSwitch")
-                echo
                 setting_change "killswitch" "back"
-                iptables_status
                 ;;
             "Meshnet")
-                echo
                 setting_change "meshnet" "back"
-                iptables_status
                 ;;
             "LAN-Discovery")
-                echo
                 setting_change "lan-discovery" "back"
-                iptables_status
                 ;;
             "Allowlist")
-                echo
                 allowlist_setting "back"
-                iptables_status
-                ;;
-            "Flush IPTables")
-                iptables_flush
                 ;;
             "Restart Service")
-                echo
-                echo "Recreate the Nord iptables rules by restarting the service"
-                echo "and reconnecting the VPN."
-                echo
                 read -n 1 -r -p "Disconnect the VPN and restart the service? (y/n) "; echo
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -2409,24 +2363,19 @@ function iptables_menu {
                     fi
                     disconnect_vpn "force"
                     restart_service "back"
-                    iptables_status
-                    ping_host "google.com" "show"
                 fi
                 ;;
             "Ping Google")
-                iptables_status
                 ping_host "google.com" "show"
                 ;;
             "Disconnect")
-                echo
                 if [[ "$status" == "connected" ]]; then
-                    read -n 1 -r -p "$(echo -e "${WColor}Disconnect the VPN?${Color_Off} (y/n) ")"; echo
+                    read -n 1 -r -p "Disconnect the VPN? (y/n) "; echo
                     echo
                     if [[ $REPLY =~ ^[Yy]$ ]]; then
                         disconnect_vpn "force"
                     fi
                 fi
-                iptables_status
                 ;;
             "Exit")
                 main_menu
@@ -2435,6 +2384,7 @@ function iptables_menu {
                 invalid_option "${#submipt[@]}" "$parent"
                 ;;
         esac
+        COLUMNS="$menuwidth"
     done
 }
 #
@@ -3913,6 +3863,7 @@ function nordapi_menu {
                 invalid_option "${#submapi[@]}" "$parent"
                 ;;
         esac
+        COLUMNS="$menuwidth"
     done
 }
 function city_count {
@@ -4289,6 +4240,7 @@ function allservers_menu {
                 invalid_option "${#submallvpn[@]}" "$parent"
                 ;;
         esac
+        COLUMNS="$menuwidth"
     done
 }
 function virtual_locations {
@@ -4460,6 +4412,7 @@ function tools_menu {
                 invalid_option "${#submtools[@]}" "$parent"
                 ;;
         esac
+        COLUMNS="$menuwidth"
     done
 }
 function wireguard_ks {
@@ -4798,6 +4751,7 @@ function speedtest_menu {
                 invalid_option "${#submspeed[@]}" "$parent"
                 ;;
         esac
+        COLUMNS="$menuwidth"
     done
 }
 #
@@ -5158,7 +5112,7 @@ function reload_applet {
     #
     if [[ "$usingssh" == "true" ]]; then return; fi
     #
-    if [[ "$exitappletvpn" =~ ^[Yy]$ ]]; then
+    if [[ "$exitappletvpn" =~ ^[Yy]$ ]] && [[ -d "/home/$USER/.local/share/cinnamon/applets/nordlist_tray@ph202107" ]]; then
         # reload 'nordlist_tray@ph202107' - changes the icon color (for connection status) immediately.
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
     fi
