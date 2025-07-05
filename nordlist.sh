@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 4.0.0 on Linux Mint 21.3
-# July 4, 2025
+# July 5, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -1039,20 +1039,20 @@ function set_vars_indicators {
         indstatus="${nordlist_indicators[$indkey]}"
         #
         if [[ "$indstatus" == "enabled" ]]; then
-            tmpcolor="${EColor}"
-            tmpicolor="${EIColor}"
+            TMPColor="${EColor}"
+            TMPIColor="${EIColor}"
         else
-            tmpcolor="${DColor}"
-            tmpicolor="${DIColor}"
+            TMPColor="${DColor}"
+            TMPIColor="${DIColor}"
         fi
         #
         case "$indkey" in
-            "ob")   obfuscatec="${tmpcolor}$indstatus${Color_Off}";;
-            "mn")   meshnetc="${tmpcolor}$indstatus${Color_Off}";;
-            "pq")   postquantumc="${tmpcolor}$indstatus${Color_Off}";;
+            "ob")   obfuscatec="${TMPColor}$indstatus${Color_Off}";;
+            "mn")   meshnetc="${TMPColor}$indstatus${Color_Off}";;
+            "pq")   postquantumc="${TMPColor}$indstatus${Color_Off}";;
         esac
         #
-        declare -g "$indkey=${tmpicolor}${indkey^^}${Color_Off}"
+        declare -g "$indkey=${TMPIColor}${indkey^^}${Color_Off}"
         #
     done
     #
@@ -1737,6 +1737,7 @@ function customdns_menu {
                 invalid_option "${#submcdns[@]}" "$parent"
                 ;;
         esac
+        COLUMNS="$menuwidth"
     done
 }
 function landiscovery_setting {
@@ -2089,6 +2090,7 @@ function account_menu {
                 invalid_option "${#submacct[@]}" "$parent"
                 ;;
         esac
+        COLUMNS="$menuwidth"
     done
 }
 #
@@ -2305,6 +2307,8 @@ function nftables_menu {
         case $ipt in
             "Nord")
                 main_logo "stats_only"
+                echo -e "Firewall Mark: ${LColor}$fwmark${Color_Off}"
+                echo
                 ;;
             "nft list")
                 echo -e "${LColor}sudo nft list ruleset${Color_Off}"

@@ -29,13 +29,14 @@ nordchangelog="/usr/share/doc/nordvpn/changelog.Debian.gz"
 function default_settings {
     linebreak "Apply Default Settings"
     #
-    # After installation is complete, these settings will be applied
+    # After installation is complete, these settings will be applied.
+    # Add or remove any settings as you prefer.
     #
-    #nordvpn set lan-discovery enabled
-    #nordvpn set tray disabled
-    #nordvpn set notify disabled
-    #nordvpn set virtual-location disabled
-    #nordvpn set analytics enabled
+    nordvpn set analytics enabled       # enables 'user-consent'
+    nordvpn set lan-discovery enabled
+    nordvpn set tray disabled
+    nordvpn set notify disabled
+    nordvpn set virtual-location disabled
     #nordvpn set post-quantum enabled
     #nordvpn connect --group P2P United_States
     #nordvpn set killswitch enabled
@@ -113,9 +114,13 @@ function loginnord {
         linecolor "cyan" "Trying: sudo systemctl start nordvpnd.service"
         sudo systemctl start nordvpnd.service || exit
     fi
+    #
     linebreak "Disable Analytics"
-    # https://github.com/NordSecurity/nordvpn-linux/issues/958
+    echo "Skip the user-consent prompt before login."
+    echo "https://github.com/NordSecurity/nordvpn-linux/issues/958"
+    echo "Refer to: https://my.nordaccount.com/legal/privacy-policy/"
     nordvpn set analytics disabled
+    #
     if [[ -n $logintoken ]]; then
         linebreak "Login (token)"
         nordvpn login --token "$logintoken"
