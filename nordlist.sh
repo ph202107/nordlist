@@ -1,12 +1,16 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 4.0.0 on Linux Mint 21.3
-# July 5, 2025
+# Tested with NordVPN Version 4.1.0 on Linux Mint 21.3
+# September 11, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
 # Should work fine on Ubuntu but is not tested with other distros.
-# Fully customizable. All menu options and locations can be changed.
+# Fully customizable.  All menu options and locations can be changed.
+# Includes brief descriptions of the various features.
+# Ideal for novice users unfamiliar with the CLI options and syntax.
+# Ideal for advanced users who prefer automation.
+# Can be used with remote admistration over SSH.
 # Includes a basic applet for the Cinnamon Desktop (optional).
 # Screenshots: https://github.com/ph202107/nordlist/tree/main/screenshots
 # This script was made for personal use, there is no affiliation with NordVPN.
@@ -123,8 +127,8 @@ obwhere=""
 dblwhere=""
 #
 # Specify your Onion_Over_VPN location. (Optional)
-# Typically Netherlands and Switzerland are available (~3 servers total)
-# eg. torwhere="Netherlands" or torwhere="Switzerland"
+# Typically Amsterdam, Stockholm, or Zurich.
+# eg. torwhere="Amsterdam" or torwhere="Stockholm"
 torwhere=""
 #
 # Specify your Dedicated_IP location. (Optional)
@@ -148,7 +152,7 @@ default_vpnhost="ca1576.nordvpn.com"
 #
 # Specify any hostname to lookup when testing DNS response time.
 # Can also enter a different hostname later.
-default_dnshost="reddit.com"
+default_dnshost="forums.linuxmint.com"
 #
 # Confirm the location of the NordVPN changelog on your system.
 nordchangelog="/usr/share/doc/nordvpn/changelog.Debian.gz"
@@ -328,8 +332,14 @@ function set_defaults {
     # at once and get back to a typical configuration.
     # Note: The VPN will be disconnected
     #
-    # Configure as needed and comment-out the line below.
-    echo -e "${WColor}** Edit 'function set_defaults' to configure this feature **${Color_Off}"; echo; return
+    # Configure as needed and set apply_defaults="y"
+    apply_defaults="n"
+    #
+    if [[ ! "$apply_defaults" =~ ^[Yy]$ ]]; then
+        echo -e "${WColor}** Edit 'function set_defaults' to configure this feature **${Color_Off}"
+        echo
+        return
+    fi
     #
     # For each setting uncomment one of the two choices (or neither).
     #
@@ -370,7 +380,7 @@ function set_defaults {
     #setting_disable "ipv6"
     #
     #setting_enable "meshnet"           # disables post-quantum
-    #setting_disable "meshnet"
+    #setting_disable "meshnet"          # Meshnet shutdown Dec 2025: https://nordvpn.com/blog/meshnet-shutdown/
     #
     setting_enable "lan-discovery"      # will remove private subnets from allowlist
     #setting_disable "lan-discovery"
@@ -673,8 +683,10 @@ function indicators_display {
     indall=()
     if [[ "$1" == "short" ]]; then
         echo -n "Current settings: "
+        # shellcheck disable=SC2154  # assigned in function set_vars_indicators with declare
         indall=( "$techpro" "$fw" "$ks" "$ob" "$mn" "$pq" )
     else
+        # shellcheck disable=SC2154  # assigned in function set_vars_indicators with declare
         indall=( "$techpro" "$fw" "$rt" "$uc" "$ks" "$tp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$pq" "$al" )
         if [[ -n "$fst" ]]; then indall+=( "$fst" ); fi
         if [[ -n "$sshi" ]]; then indall+=( "$sshi" ); fi
@@ -945,22 +957,19 @@ function set_vars_fav {
     fi
     # Favorite
     # the favoritelist array is populated in 'function start' if the file exists
-    # check if favoritelist exists and is not empty
-    if [[ -v favoritelist && ${#favoritelist[@]} -gt 0 ]]; then
-        for favorite in "${favoritelist[@]}"; do
-            # server number after the last underscore
-            favserver="${favorite##*_}"
-            if [[ "${favserver,,}" == "$server" ]]; then
-                if [[ "$showfavname" =~ ^[Yy]$ ]]; then
-                    # server name before the last underscore
-                    fav="${FVColor}(${favorite%_*})${Color_Off}"
-                else
-                    fav="${FVColor}(Favorite)${Color_Off}"
-                fi
-                return
+    for favorite in "${favoritelist[@]}"; do
+        # server number after the last underscore
+        favserver="${favorite##*_}"
+        if [[ "${favserver,,}" == "$server" ]]; then
+            if [[ "$showfavname" =~ ^[Yy]$ ]]; then
+                # server name before the last underscore
+                fav="${FVColor}(${favorite%_*})${Color_Off}"
+            else
+                fav="${FVColor}(Favorite)${Color_Off}"
             fi
-        done
-    fi
+            return
+        fi
+    done
     # Obfuscated
     if [[ "$obfuscate" == "enabled" ]]; then
         fav="${FVColor}(Obfuscated)${Color_Off}"
@@ -1597,12 +1606,9 @@ function autoconnect_setting {
 }
 function ipv6_setting {
     heading "IPv6"
-    echo "Enable or disable NordVPN IPv6 support."
-    echo "Also refer to:"
-    echo "https://support.nordvpn.com/hc/en-us/articles/20164669224337"
     echo
-    #
     echo -e "${WColor}Note:${Color_Off} v4.0.0 changelog, 26 June 2025"
+    echo
     echo "'IPv6 has privacy gaps we can't ignore. The technology is still"
     echo "vulnerable to WebRTC leaks, so we're putting its support on hold."
     echo "That means the nordvpn set ipv6 command is no longer available,"
@@ -2307,8 +2313,18 @@ function nftables_menu {
         case $ipt in
             "Nord")
                 main_logo "stats_only"
-                echo -e "Firewall Mark: ${LColor}$fwmark${Color_Off}"
+                echo -e "${EColor}Firewall Mark:${Color_Off} ${LColor}$fwmark${Color_Off}"
                 echo
+                if [[ "$customdns" == "enabled" ]]; then
+                    echo -e "${EColor}Current DNS:${Color_Off} ${DNSColor}$dns_servers${Color_Off}"
+                    echo
+                fi
+                if [[ "$allowlist_var" == "enabled" ]]; then
+                    echo -e "${EColor}Current Allowlist:${Color_Off}"
+                    echo -ne "${LColor}"
+                    printf '%s\n' "${allowlist[@]}"
+                    echo -e "${Color_Off}"
+                fi
                 ;;
             "nft list")
                 echo -e "${LColor}sudo nft list ruleset${Color_Off}"
@@ -2925,7 +2941,8 @@ function group_location {
             echo "Tools - NordVPN API - All VPN Servers"
             ;;
         "Onion_Over_VPN")
-            echo "Typically only Netherlands and Switzerland are available."
+            echo "Typically Amsterdam, Stockholm, and Zurich are available."
+            echo
             echo "For a list of $1 servers, visit:"
             echo "Tools - NordVPN API - All VPN Servers"
             ;;
@@ -3185,7 +3202,7 @@ function meshnet_filter {
                 read -r -p "nordvpn meshnet peer list --filter "
                 if [[ -n $REPLY ]]; then
                     heading "$REPLY" "txt"
-                    nordvpn meshnet peer list --filter $REPLY
+                    nordvpn meshnet peer list --filter "$REPLY"
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
                     echo
@@ -3230,24 +3247,14 @@ function meshnet_invite {
                 ;;
             "Invite Send")
                 heading "Invite Send" "txt" "alt"
-                echo "Send an invitation to join the mesh network."
+                echo "Send an invitation to join your mesh network."
                 echo
-                echo "Usage: nordvpn meshnet invite send [options] [email]"
-                echo
-                echo "Options:"
-                echo "  --allow-incoming-traffic"
-                echo "      Allow incoming traffic from the peer. (default: false)"
-                echo "  --allow-traffic-routing"
-                echo "      Allow the peer to route traffic through this device. (default: false)"
-                echo "  --allow-local-network-access"
-                echo "      Allow the peer access to the local network when routing. (default: false)"
-                echo "  --allow-peer-send-files"
-                echo "      Allow the peer to send you files. (default: false)"
+                echo "Enter the email address to invite."
                 meshnet_prompt
                 read -r -p "nordvpn meshnet invite send "
                 if [[ -n $REPLY ]]; then
                     echo
-                    nordvpn meshnet invite send $REPLY
+                    nordvpn meshnet invite send "$REPLY"
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
                     echo
@@ -3257,22 +3264,12 @@ function meshnet_invite {
                 heading "Invite Accept" "txt" "alt"
                 echo "Accept an invitation to join the inviter's mesh network."
                 echo
-                echo "Usage: nordvpn meshnet invite accept [options] [email]"
-                echo
-                echo "Options:"
-                echo "  --allow-incoming-traffic"
-                echo "      Allow incoming traffic from the peer. (default: false)"
-                echo "  --allow-traffic-routing"
-                echo "      Allow the peer to route traffic through this device. (default: false)"
-                echo "  --allow-local-network-access"
-                echo "      Allow the peer access to the local network when routing. (default: false)"
-                echo "  --allow-peer-send-files"
-                echo "      Allow the peer to send you files. (default: false)"
+                echo "Enter the inviter's email address to accept."
                 meshnet_prompt
                 read -r -p "nordvpn meshnet invite accept "
                 if [[ -n $REPLY ]]; then
                     echo
-                    nordvpn meshnet invite accept $REPLY
+                    nordvpn meshnet invite accept "$REPLY"
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
                     echo
@@ -3282,7 +3279,7 @@ function meshnet_invite {
                 heading "Invite Deny" "txt" "alt"
                 echo "Deny an invitation to join the inviter's mesh network."
                 echo
-                echo "Enter the email address to deny."
+                echo "Enter the inviter's email address to deny."
                 meshnet_prompt
                 read -r -p "nordvpn meshnet invite deny "
                 if [[ -n $REPLY ]]; then
@@ -3378,6 +3375,7 @@ function meshnet_fileshare {
                 read -r -p "nordvpn fileshare clear "
                 if [[ -n $REPLY ]]; then
                     echo
+                    # shellcheck disable=SC2086  # word splitting
                     nordvpn fileshare clear $REPLY
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
@@ -3436,6 +3434,7 @@ function meshnet_fileshare {
                 read -r -p "nordvpn fileshare accept --path '$meshnetdir' --background "
                 if [[ -n $REPLY ]]; then
                     echo
+                    # shellcheck disable=SC2086  # word splitting
                     nordvpn fileshare accept --path "$meshnetdir" --background $REPLY
                     meshnet_transfers "incoming"
                 else
@@ -3454,6 +3453,7 @@ function meshnet_fileshare {
                 read -r -p "nordvpn meshnet peer auto-accept "
                 if [[ -n $REPLY ]]; then
                     echo
+                    # shellcheck disable=SC2086  # word splitting
                     nordvpn meshnet peer auto-accept $REPLY
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
@@ -3470,6 +3470,7 @@ function meshnet_fileshare {
                 read -r -p "nordvpn fileshare cancel "
                 if [[ -n $REPLY ]]; then
                     echo
+                    # shellcheck disable=SC2086  # word splitting
                     nordvpn fileshare cancel $REPLY
                     meshnet_transfers
                 else
@@ -3513,6 +3514,8 @@ function meshnet_menu {
     echo "  same account are linked automatically."
     echo "Connect up to 50 external devices by sending invitations."
     echo "  Connections with an external device are isolated as a private pair."
+    echo
+    echo -e "${WColor}Meshnet shutdown Dec 2025: https://nordvpn.com/blog/meshnet-shutdown/${Color_Off}"
     echo
     echo -e "$mn Meshnet is $meshnetc."
     echo
@@ -3588,6 +3591,7 @@ function meshnet_menu {
                 read -r -p "nordvpn meshnet peer incoming "
                 if [[ -n $REPLY ]]; then
                     echo
+                    # shellcheck disable=SC2086  # word splitting
                     nordvpn meshnet peer incoming $REPLY
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
@@ -3601,6 +3605,7 @@ function meshnet_menu {
                 read -r -p "nordvpn meshnet peer routing "
                 if [[ -n $REPLY ]]; then
                     echo
+                    # shellcheck disable=SC2086  # word splitting
                     nordvpn meshnet peer routing $REPLY
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
@@ -3615,6 +3620,7 @@ function meshnet_menu {
                 read -r -p "nordvpn meshnet peer local "
                 if [[ -n $REPLY ]]; then
                     echo
+                    # shellcheck disable=SC2086  # word splitting
                     nordvpn meshnet peer local $REPLY
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
@@ -3628,6 +3634,7 @@ function meshnet_menu {
                 read -r -p "nordvpn meshnet peer fileshare "
                 if [[ -n $REPLY ]]; then
                     echo
+                    # shellcheck disable=SC2086  # word splitting
                     nordvpn meshnet peer fileshare $REPLY
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
@@ -3665,6 +3672,7 @@ function meshnet_menu {
                 read -r -p "nordvpn meshnet peer nickname "
                 if [[ -n $REPLY ]]; then
                     echo
+                    # shellcheck disable=SC2086  # word splitting
                     nordvpn meshnet peer nickname $REPLY
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
@@ -3681,6 +3689,7 @@ function meshnet_menu {
                 read -r -p "nordvpn meshnet "
                 if [[ -n $REPLY ]]; then
                     echo
+                    # shellcheck disable=SC2086  # word splitting
                     nordvpn meshnet $REPLY
                 else
                     echo -e "${DColor}(Skipped)${Color_Off}"
@@ -5456,6 +5465,11 @@ start
 # Notes
 # ======
 #
+# NordVPN Linux GUI:
+# https://support.nordvpn.com/hc/en-us/articles/20196094470929-Installing-NordVPN-on-Linux-distributions
+#   sh <(wget -qO - https://downloads.nordcdn.com/apps/linux/install.sh) -p nordvpn-gui
+# https://support.nordvpn.com/hc/en-us/articles/35078364516625-How-to-use-NordVPN-Linux-GUI
+#
 # Add NordVPN repository and install the nordvpn CLI:
 #   cd ~/Downloads
 #   wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn-release/nordvpn-release_1.0.0_all.deb
@@ -5463,7 +5477,7 @@ start
 #   sudo apt update
 #   sudo apt install nordvpn
 #
-# Alternate install method:
+# Alternate CLI install method:
 #   sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
 #   or
 #   sh <(wget -qO - https://downloads.nordcdn.com/apps/linux/install.sh)
@@ -5487,7 +5501,7 @@ start
 #   Show versions:
 #       apt list -a nordvpn
 #   Example:
-#       sudo apt install nordvpn=3.15.1
+#       sudo apt install nordvpn=4.0.0
 #
 # 'Whoops! /run/nordvpn/nordvpnd.sock not found.'
 #   sudo systemctl start nordvpnd.service
