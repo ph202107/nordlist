@@ -62,7 +62,7 @@ function list_socks5 {
         "san-francisco.us.socks.nordhold.net"
         "stockholm.se.socks.nordhold.net"
         #
-        # Server list retrieved via NordVPN Public API on 11 Sep 2025
+        # Server list retrieved via NordVPN Public API on 12 Sep 2025
         # Subject to change
         "socks-nl1.nordvpn.com (Amsterdam)"
         "socks-nl2.nordvpn.com (Amsterdam)"
@@ -134,6 +134,38 @@ function list_socks5 {
         "socks-se9.nordvpn.com (Stockholm)"
     )
 }
+function test_proxy {
+    #
+    proxy="$( echo "${xproxy}" | cut -f1 -d' ' )"
+    location="$( echo "${xproxy}" | cut -f2- -d' ' )"
+    #
+    echo
+    linecolor "cyan" "ping -c 3 ${proxy}"
+    echo
+    ping -c 3 "${proxy}"
+    echo
+    #
+    linecolor "cyan" "curl --proxy '${protocol}://${proxy}:${port}' --proxy-user '${user}:${pass}' --location '${site}'"
+    echo
+    curl --proxy "${protocol}://${proxy}:${port}" --proxy-user "${user}:${pass}" --location "${site}"
+    echo
+    echo
+    #
+    echo "${location}"
+    linecolor "yellow" "${protocol}://${proxy}:${port}"
+    linecolor "green" "${protocol}://${user}:${pass}@${proxy}:${port}"
+    echo
+    #
+    echo "File download speed test:"
+    linecolor "cyan" "curl --proxy '${protocol}://${user}:${pass}@${proxy}:${port}' --output '$localfile' '$remotefile'"
+    echo
+    if [[ "$speedtest" =~ ^[Yy]$ ]]; then
+        linecolor "yellow" "(CTRL-C to quit)"
+        echo
+        curl --proxy "${protocol}://${user}:${pass}@${proxy}:${port}" --output "$localfile" "$remotefile"
+        echo
+    fi
+}
 function linecolor {
     # echo colored text
     # $1=color  $2=text
@@ -157,11 +189,7 @@ function edit_script {
     exit
 }
 #
-if [[ -z "${user}" ]] || [[ -z "${pass}" ]]; then
-    linecolor "red" "Missing user/pass credentials."
-    exit
-fi
-#
+# Create the proxy array and set the port
 proxylist=()
 if [[ "${protocol,,}" == "https" ]]; then
     port="${https_port}"
@@ -170,17 +198,37 @@ elif [[ "${protocol,,}" == "socks5" ]]; then
     port="${socks5_port}"
     list_socks5
 else
-    linecolor "red" "Invalid Protocol: ${protocol}"
-    exit
+    port="N/A"
 fi
 proxylist+=( "Edit Script" "Exit" )
 #
+# Print the heading
 clear -x
-echo
-linecolor "green" "/// Test NordVPN Proxy ///"
+if command -v figlet &> /dev/null; then
+    linecolor "green" "$(figlet -f standard 'Test  Proxy')"
+else
+    echo
+    linecolor "green" "/// Test NordVPN Proxy ///"
+fi
 echo
 echo "Protocol= $(linecolor "yellow" "${protocol}")    Port= $(linecolor "yellow" "${port}")"
 echo
+#
+# Check for credentials
+if [[ -z "${user}" ]] || [[ -z "${pass}" ]]; then
+    linecolor "red" "Missing user/pass credentials."
+    echo
+    exit
+fi
+#
+# Check for valid protocol
+if [[ "${protocol,,}" != "https" && "${protocol,,}" != "socks5" ]]; then
+    linecolor "red" "Invalid Protocol: ${protocol}"
+    echo
+    exit
+fi
+#
+# Create the selection menu
 PS3=$'\n''Choose a Server: '
 select xproxy in "${proxylist[@]}"
 do
@@ -189,40 +237,14 @@ do
         exit
     elif [[ "${xproxy}" == "Edit Script" ]]; then
         edit_script
-        exit
     elif (( 1 <= REPLY )) && (( REPLY <= ${#proxylist[@]} )); then
-        #
-        proxy="$( echo "${xproxy}" | cut -f1 -d' ' )"
-        location="$( echo "${xproxy}" | cut -f2- -d' ' )"
-        #
-        echo
-        linecolor "cyan" "ping -c 3 ${proxy}"
-        echo
-        ping -c 3 "${proxy}"
-        echo
-        linecolor "cyan" "curl --proxy '${protocol}://${proxy}:${port}' --proxy-user '${user}:${pass}' --location '${site}'"
-        echo
-        curl --proxy "${protocol}://${proxy}:${port}" --proxy-user "${user}:${pass}" --location "${site}"
-        echo
-        echo
-        echo "${location}"
-        linecolor "yellow" "${protocol}://${proxy}:${port}"
-        linecolor "green" "${protocol}://${user}:${pass}@${proxy}:${port}"
-        echo
-        echo "File download speed test:"
-        linecolor "cyan" "curl --proxy '${protocol}://${user}:${pass}@${proxy}:${port}' --output '$localfile' '$remotefile'"
-        echo
-        if [[ "$speedtest" =~ ^[Yy]$ ]]; then
-            linecolor "yellow" "(CTRL-C to quit)"
-            echo
-            curl --proxy "${protocol}://${user}:${pass}@${proxy}:${port}" --output "$localfile" "$remotefile"
-            echo
-        fi
+        test_proxy
     else
         echo
         linecolor "red" "Invalid Option"
         echo
     fi
 done
+#
 # System config
 # https://forums.linuxmint.com/viewtopic.php?t=406463&sid=62c8a059e47b84548486020ee85354d1

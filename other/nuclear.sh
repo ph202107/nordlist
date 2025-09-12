@@ -15,6 +15,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=3.20.3"      # 11 Jun 2025 Bug fixes: postquantum, firewall, allowlist, autoconnect.
 #nord_version="nordvpn=4.0.0"       # 26 Jun 2025 New privacy consent, ipv6 removed, faster connection times
 #nord_version="nordvpn=4.1.0"       # 11 Sep 2025 Improved OpenVPN security, DNS NordWhisper fix, upgrades
+#nord_version="nordvpn=4.1.1"       # 12 Sep 2025 Hotfix for .rpm installs
 #
 # Login using a token, or leave blank to log in using a web browser.
 # To create a token visit https://my.nordaccount.com/ - Services - NordVPN - Manual Setup - Generate New Token
