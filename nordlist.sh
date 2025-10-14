@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 4.1.1 on Linux Mint 21.3
-# September 12, 2025
+# Tested with NordVPN Version 4.2.0 on Linux Mint 21.3
+# October 14, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -380,7 +380,7 @@ function set_defaults {
     #setting_disable "ipv6"
     #
     #setting_enable "meshnet"           # disables post-quantum
-    #setting_disable "meshnet"          # Meshnet shutdown Dec 2025: https://nordvpn.com/blog/meshnet-shutdown/
+    #setting_disable "meshnet"
     #
     setting_enable "lan-discovery"      # will remove private subnets from allowlist
     #setting_disable "lan-discovery"
@@ -1640,7 +1640,21 @@ function customdns_menu {
     PS3=$'\n''Choose an option: '
     # Note submcdns[@] - new entries should keep the same format for the "Test Servers" option
     # eg Name<space>DNS1<space>DNS2
-    submcdns=("Nord 103.86.96.100 103.86.99.100" "Nord-TPLite 103.86.96.96 103.86.99.99" "OpenDNS 208.67.220.220 208.67.222.222" "CB-Security 185.228.168.9 185.228.169.9" "AdGuard 94.140.14.14 94.140.15.15" "Quad9 9.9.9.9 149.112.112.11" "Cloudflare 1.0.0.1 1.1.1.1" "Google 8.8.4.4 8.8.8.8" "Specify or Default" "Disable Custom-DNS" "Flush DNS Cache" "Test Servers" "Exit")
+    submcdns=(
+        "Nord 103.86.96.100 103.86.99.100"
+        "Nord-TPLite 103.86.96.96 103.86.99.99"
+        "OpenDNS 208.67.220.220 208.67.222.222"
+        "CB-Security 185.228.168.9 185.228.169.9"
+        "AdGuard 94.140.14.14 94.140.15.15"
+        "Quad9 9.9.9.9 149.112.112.11"
+        "Cloudflare 1.0.0.1 1.1.1.1"
+        "Google 8.8.4.4 8.8.8.8"
+        "Specify or Default"
+        "Disable Custom-DNS"
+        "Flush DNS Cache"
+        "Test Servers"
+        "Exit"
+    )
     select cdns in "${submcdns[@]}"
     do
         parent_menu
@@ -3514,8 +3528,6 @@ function meshnet_menu {
     echo "  same account are linked automatically."
     echo "Connect up to 50 external devices by sending invitations."
     echo "  Connections with an external device are isolated as a private pair."
-    echo
-    echo -e "${WColor}Meshnet shutdown Dec 2025: https://nordvpn.com/blog/meshnet-shutdown/${Color_Off}"
     echo
     echo -e "$mn Meshnet is $meshnetc."
     echo

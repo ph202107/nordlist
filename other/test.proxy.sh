@@ -62,7 +62,7 @@ function list_socks5 {
         "san-francisco.us.socks.nordhold.net"
         "stockholm.se.socks.nordhold.net"
         #
-        # Server list retrieved via NordVPN Public API on 12 Sep 2025
+        # Server list retrieved via NordVPN Public API on 14 Oct 2025
         # Subject to change
         "socks-nl1.nordvpn.com (Amsterdam)"
         "socks-nl2.nordvpn.com (Amsterdam)"
@@ -140,6 +140,8 @@ function test_proxy {
     location="$( echo "${xproxy}" | cut -f2- -d' ' )"
     #
     echo
+    echo "${xproxy}"
+    echo
     linecolor "cyan" "ping -c 3 ${proxy}"
     echo
     ping -c 3 "${proxy}"
@@ -185,8 +187,17 @@ function edit_script {
     else
         editor="nano"
     fi
-    "$editor" "$0"
+    "$editor" "${0}"
     exit
+}
+function edit_prompt {
+    read -n 1 -r -p "Edit $(linecolor "green" "${0}") ? (y/n) "; echo
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        edit_script
+    else
+        exit
+    fi
 }
 #
 # Create the proxy array and set the port
@@ -218,32 +229,38 @@ echo
 if [[ -z "${user}" ]] || [[ -z "${pass}" ]]; then
     linecolor "red" "Missing user/pass credentials."
     echo
-    exit
+    edit_prompt
 fi
 #
 # Check for valid protocol
 if [[ "${protocol,,}" != "https" && "${protocol,,}" != "socks5" ]]; then
     linecolor "red" "Invalid Protocol: ${protocol}"
     echo
-    exit
+    edit_prompt
 fi
 #
 # Create the selection menu
 PS3=$'\n''Choose a Server: '
 select xproxy in "${proxylist[@]}"
 do
-    if [[ "${xproxy}" == "Exit" ]]; then
-        echo
-        exit
-    elif [[ "${xproxy}" == "Edit Script" ]]; then
-        edit_script
-    elif (( 1 <= REPLY )) && (( REPLY <= ${#proxylist[@]} )); then
-        test_proxy
-    else
-        echo
-        linecolor "red" "Invalid Option"
-        echo
-    fi
+    case "$xproxy" in
+        "Edit Script")
+            edit_script
+            ;;
+        "Exit")
+            echo
+            exit
+            ;;
+        *)
+            if (( 1 <= REPLY )) && (( REPLY <= ${#proxylist[@]} )); then
+                test_proxy
+            else
+                echo
+                linecolor "red" "Invalid Option"
+                echo
+            fi
+            ;;
+    esac
 done
 #
 # System config

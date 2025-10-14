@@ -77,7 +77,7 @@ notifications="y"
 #
 # Specify the minimum VPN uptime required before changing servers.
 # Prevents rapid server changes.  Value is in minutes.
-minuptime="6"
+minuptime="10"
 #
 # Specify alternate cities to use as the server lists are emptied.
 # These will be used in rotation.
