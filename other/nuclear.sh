@@ -13,6 +13,7 @@ nord_version="nordvpn"              # install the latest version available
 #nord_version="nordvpn=4.1.0"       # 11 Sep 2025 Improved OpenVPN security, DNS NordWhisper fix, upgrades
 #nord_version="nordvpn=4.1.1"       # 12 Sep 2025 Hotfix for .rpm installs
 #nord_version="nordvpn=4.2.0"       # 14 Oct 2025 Meshnet retained. Upgraded libraries. Fixes for analytics, mangle table.
+#nord_version="nordvpn=4.2.1"       # 29 Oct 2025 Fix for missing libxml2 during installation.
 #
 # Login using a token, or leave blank to log in using a web browser.
 # To create a token visit https://my.nordaccount.com/ - Services - NordVPN - Manual Setup - Generate New Token

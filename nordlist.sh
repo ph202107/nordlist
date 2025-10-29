@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 4.2.0 on Linux Mint 21.3
-# October 14, 2025
+# Tested with NordVPN Version 4.2.1 on Linux Mint 21.3
+# October 29, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -1911,26 +1911,35 @@ function allowlist_setting {
 # =====================================================================
 #
 function login_check {
-    if nordvpn account | grep -q -i "not logged in"; then
+    account_status=$(nordvpn account 2>&1)
+    local exit_code=$?
+    #
+    if echo "$account_status" | grep -q -i "not logged in"; then
         echo -e "${WColor}** You are not logged in. **${Color_Off}"
         echo
+        #
         read -n 1 -r -p "Log in with a token? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             login_token
             return
         fi
+        #
         read -n 1 -r -p "Log in with the web browser? (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             login_browser
         fi
+        #
+    elif [[ $exit_code -ne 0 ]]; then
+        echo -e "${WColor}Status check failed: ($exit_code)${Color_Off}"
+        echo "$account_status"
     else
         echo -e "${EColor}You are logged in.${Color_Off}"
         echo
-        nordvpn account
-        echo
+        echo "$account_status"
     fi
+    echo
 }
 function login_token {
     heading "Login (token)" "txt"
@@ -4136,10 +4145,10 @@ function allservers_menu {
                 ;;
             "Server Count")
                 heading "Servers in each Country" "txt"
-                jq -r 'group_by(.locations[0].country.name) | map({country: .[0].locations[0].country.name, total: length}) | sort_by(.country) | .[] | "\(.country) \(.total)"' "$serversfile"
+                jq -r 'group_by(.locations[0].country.name) | map({country: .[0].locations[0].country.name, total: length}) | sort_by(.country) | .[] | "\(.country) = \(.total)"' "$serversfile"
                 echo
                 heading "Servers in each City" "txt"
-                jq -r 'group_by(.locations[0].country.name + " " + .locations[0].country.city.name) | map({country: .[0].locations[0].country.name, city: .[0].locations[0].country.city.name, total: length}) | sort_by(.country, .city) | .[] | "\(.country) \(.city) \(.total)"' "$serversfile"
+                jq -r 'group_by(.locations[0].country.name + " " + .locations[0].country.city.name) | map({country: .[0].locations[0].country.name, city: .[0].locations[0].country.city.name, total: length}) | sort_by(.country, .city) | .[] | "\(.country), \(.city) = \(.total)"' "$serversfile"
                 echo
                 ;;
             "Double-VPN Servers")
@@ -4185,7 +4194,11 @@ function allservers_menu {
                 allservers_technology "NordWhisper"
                 ;;
             "Virtual Locations")
-                virtual_locations
+                heading "Virtual Locations" "txt"
+                jq -r '.[] | select(.specifications[] | .title == "Virtual Location") | "\(.locations[0].country.name), \(.locations[0].country.city.name)"' "$serversfile" | sort -u
+                echo
+                echo "Virtual Locations = $( jq -r '.[] | select(.specifications[] | .title == "Virtual Location") | "\(.locations[0].country.name), \(.locations[0].country.city.name)"' "$serversfile" | sort -u | wc -l )"
+                echo
                 ;;
             "Search Country")
                 # search for any country name rather than use a 'select' menu based on the CLI output
@@ -4267,27 +4280,6 @@ function allservers_menu {
         esac
         COLUMNS="$menuwidth"
     done
-}
-function virtual_locations {
-    heading "Virtual Locations" "txt"
-    #
-    echo -e "${H2Color}Virtual Country Locations${Color_Off}"
-    jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$serversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
-    echo; echo
-    echo "Virtual Country Locations = $( jq '.[] | select(.specifications[] | .title == "Virtual Location") | .locations[].country.name' "$serversfile" | sort -u | wc -l )"
-    echo
-    echo
-    echo -e "${H2Color}Virtual City Locations${Color_Off}"
-    jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$serversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
-    echo; echo
-    echo "Virtual City Locations = $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.city.name' "$serversfile" | tr ' ' '_' | sort -u | wc -l )"
-    echo
-    echo
-    echo -e "${H2Color}Virtual Country and City Locations${Color_Off}"
-    jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$serversfile" | tr ' ' '_' | sort -u | tr '\n' ' '
-    echo; echo
-    echo "Virtual Country and City Locations = $( jq '.[] | select(.specifications[] | select(.title == "Virtual Location")) | .locations[0].country.name, .locations[0].country.city.name' "$serversfile" | sort -u | wc -l )"
-    echo
 }
 function virtual_note {
     # make a note if virtual servers are in the list
