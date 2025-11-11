@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 4.2.1 on Linux Mint 21.3
-# October 29, 2025
+# Tested with NordVPN Version 4.2.2 on Linux Mint 21.3
+# November 11, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -167,7 +167,7 @@ meshnetdir="/home/$USER/Downloads"
 wgdir="/home/$USER/Downloads"
 #
 # Specify the absolute path and filename to store a .json of all the
-# NordVPN servers (about 25MB). Avoids API server timeouts.  Create the
+# NordVPN servers (about 30MB). Avoids API server timeouts.  Create the
 # list at:  Tools - NordVPN API - All VPN Servers
 serversfile="$nordlistbase/nord_allservers.json"
 #
@@ -250,7 +250,7 @@ menuwidth="80"
 #
 # Choose the maximum number of characters for country names in the
 # "Countries" menu. Shortens long names so the menu fits better in the
-# terminal window. Minimum is "6".  Leave blank to disable.
+# terminal window. Minimum is "8".  Leave blank to disable.
 charlimit="12"
 #
 # Choosing 'Exit' in a submenu will take you to the main menu.
@@ -341,60 +341,70 @@ function set_defaults {
         return
     fi
     #
+    # If the setting is not changed, show the (enabled/disabled) status for
+    # each setting anyway. "y" or "n"
+    show_all_statuses="n"
+    #
+    if [[ "$show_all_statuses" =~ ^[Yy]$ ]]; then
+        state="showstatus"
+    else
+        state=""
+    fi
+    #
     # For each setting uncomment one of the two choices (or neither).
     #
-    setting_enable "firewall"           # enables the firewall
-    #setting_disable "firewall"         # disables the firewall. also disables killswitch
+    setting_enable "firewall" "$state"      # enables the firewall
+    #setting_disable "firewall" "$state"    # disables the firewall. also disables killswitch
     #
-    setting_enable "killswitch"         # enables the kill switch. also enables firewall
-    #setting_disable "killswitch"
+    setting_enable "killswitch" "$state"    # enables the kill switch. also enables firewall
+    #setting_disable "killswitch" "$state"
     #
     # Required: Choose one of these options for Technology and Protocol
-    techpro_set "NordLynx" "UDP"        # disables obfuscate
-    #techpro_set "OpenVPN" "UDP"        # disables post-quantum
-    #techpro_set "OpenVPN" "TCP"        # disables post-quantum
-    #techpro_set "NordWhisper" "WT"     # disables obfuscate and post-quantum
+    techpro_set "NordLynx" "UDP"            # disables obfuscate
+    #techpro_set "OpenVPN" "UDP"            # disables post-quantum
+    #techpro_set "OpenVPN" "TCP"            # disables post-quantum
+    #techpro_set "NordWhisper" "WT"         # disables obfuscate and post-quantum
     #
-    #setting_enable "post-quantum"      # requires NordLynx, disables meshnet
-    setting_disable "post-quantum"
+    #setting_enable "post-quantum" "$state" # requires NordLynx, disables meshnet
+    setting_disable "post-quantum" "$state"
     #
-    setting_enable "routing"            # typically this setting should be enabled
-    #setting_disable "routing"
+    setting_enable "routing" "$state"       # typically this setting should be enabled
+    #setting_disable "routing" "$state"
     #
-    setting_enable "analytics"          # 'User-Consent' setting
-    #setting_disable "analytics"
+    setting_enable "analytics" "$state"     # 'User-Consent' setting
+    #setting_disable "analytics" "$state"
     #
-    #setting_enable "threatprotectionlite"  # disables Custom-DNS
-    setting_disable "threatprotectionlite"
+    #setting_enable "threatprotectionlite" "$state" # disables Custom-DNS
+    setting_disable "threatprotectionlite" "$state"
     #
-    #setting_enable "obfuscate"             # requires OpenVPN
-    setting_disable "obfuscate"
+    #setting_enable "obfuscate" "$state"    # requires OpenVPN
+    setting_disable "obfuscate" "$state"
     #
-    #setting_enable "notify"
-    setting_disable "notify"
+    #setting_enable "notify" "$state"
+    setting_disable "notify" "$state"
     #
-    #setting_enable "tray"
-    setting_disable "tray"
+    #setting_enable "tray" "$state"
+    setting_disable "tray" "$state"
     #
-    #setting_enable "ipv6"              # ipv6 setting removed in v4.0.0
-    #setting_disable "ipv6"
+    #setting_enable "ipv6" "$state"         # ipv6 setting removed in v4.0.0
+    #setting_disable "ipv6" "$state"
     #
-    #setting_enable "meshnet"           # disables post-quantum
-    #setting_disable "meshnet"
+    #setting_enable "meshnet" "$state"      # disables post-quantum
+    #setting_disable "meshnet" "$state"
     #
-    setting_enable "lan-discovery"      # will remove private subnets from allowlist
-    #setting_disable "lan-discovery"
+    setting_enable "lan-discovery" "$state" # will remove private subnets from allowlist
+    #setting_disable "lan-discovery" "$state"
     #
-    #setting_enable "virtual-location"
-    setting_disable "virtual-location"
+    #setting_enable "virtual-location" "$state"
+    setting_disable "virtual-location" "$state"
     #
-    #setting_enable "autoconnect"       # will use location "$acwhere" if specified above
-    setting_disable "autoconnect"
+    #setting_enable "autoconnect" "$state"  # applies the "$acwhere" location when changing from disabled to enabled
+    setting_disable "autoconnect" "$state"
     #
-    #setting_enable "dns"               # will use the "$default_dns" specified above.  disables threatprotectionlite
-    setting_disable "dns"
+    #setting_enable "dns"                   # applies the "$default_dns" specified above. disables threatprotectionlite
+    setting_disable "dns" "$state"
     #
-    #allowlist_commands                 # run your allowlist configuration commands
+    #allowlist_commands                     # run the allowlist configuration commands
     #
 }
 function main_menu {
@@ -2724,8 +2734,8 @@ function create_list_country {
         #
         # shorten long country names if the option is enabled
         if [[ -n "$charlimit" ]]; then
-            # minimum is 6 characters.  Austra|lia  Austri|a
-            if (( charlimit < 6 )); then charlimit="6"; fi
+            # minimum is 8 characters.  Maurita*|nia  Mauriti*|us  (VL)
+            if (( charlimit < 8 )); then charlimit="8"; fi
             #
             # special case
             mcountry="${mcountry/Lao_Peoples_Democratic_Republic/Laos}"
@@ -2854,17 +2864,23 @@ function country_menu {
     select xcountry in "${modcountrylist[@]}"
     do
         parent_menu
-        if [[ "$xcountry" == "Exit" ]]; then
-            main_menu
-        elif [[ "$xcountry" == "Random" ]]; then
-            xcountry="$rcountry"
-            city_menu
-        elif (( 1 <= REPLY )) && (( REPLY <= ${#modcountrylist[@]} )); then
-            country_name_restore
-            city_menu
-        else
-            invalid_option "${#modcountrylist[@]}" "$parent"
-        fi
+        case $xcountry in
+            "Exit")
+                main_menu
+                ;;
+            "Random")
+                xcountry="$rcountry"
+                city_menu
+                ;;
+            *)
+                if (( 1 <= REPLY )) && (( REPLY <= ${#modcountrylist[@]} )); then
+                    country_name_restore
+                    city_menu
+                else
+                    invalid_option "${#modcountrylist[@]}" "$parent"
+                fi
+                ;;
+        esac
     done
 }
 function city_menu {
@@ -4043,7 +4059,7 @@ function allservers_update {
     # backup the current json
     backup_file "$serversfile"
     #
-    read -n 1 -r -p "Download an updated .json? (~25MB) (y/n) "; echo
+    read -n 1 -r -p "Download an updated .json? (~30MB) (y/n) "; echo
     echo
     parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -4114,7 +4130,7 @@ function allservers_menu {
     else
         echo -e "${WColor}$serversfile does not exist.${Color_Off}"
         echo
-        read -n 1 -r -p "Download the .json? (~25MB) (y/n) "; echo
+        read -n 1 -r -p "Download the .json? (~30MB) (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             touch "$serversfile"
@@ -5168,7 +5184,7 @@ function server_load {
         # find the "id" of the current server from the local .json
         serverid=$( jq --arg host "$nordhost" '.[] | select(.hostname == $host) | .id' "$serversfile" )
         if [[ -n "$serverid" ]]; then
-            # query the api by the server id. this method downloads about 3KB instead of 20MB
+            # query the api by the server id. this method downloads about 3KB instead of 30MB
             sload=$( timeout 6 curl --silent "https://api.nordvpn.com/v1/servers?limit=1&filters\[servers.id\]=$serverid" | jq '.[].load' )
         else
             # servers may be added or removed
