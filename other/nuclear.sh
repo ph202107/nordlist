@@ -5,16 +5,18 @@
 # Only tested on Linux Mint.
 # This script deletes directories, review carefully before use.
 #
-# Choose the NordVPN app version to install
 # List available versions with: "apt list -a nordvpn"
 #
-nord_version="nordvpn"              # install the latest version available
-#nord_version="nordvpn=4.0.0"       # 26 Jun 2025 New privacy consent, ipv6 removed, faster connection times
-#nord_version="nordvpn=4.1.0"       # 11 Sep 2025 Improved OpenVPN security, DNS NordWhisper fix, upgrades
-#nord_version="nordvpn=4.1.1"       # 12 Sep 2025 Hotfix for .rpm installs
-#nord_version="nordvpn=4.2.0"       # 14 Oct 2025 Meshnet retained. Upgraded libraries. Fixes for analytics, mangle table.
-#nord_version="nordvpn=4.2.1"       # 29 Oct 2025 Fix for missing libxml2 during installation.
-#nord_version="nordvpn=4.2.2"       # 11 Nov 2025 Fix for excessive logging.
+available_versions=(    # these versions will be displayed on the selection menu
+    "nordvpn"           # install the latest version available
+    "nordvpn=4.0.0"     # 26 Jun 2025 New privacy consent, ipv6 removed, faster connection times
+    "nordvpn=4.1.0"     # 11 Sep 2025 Improved OpenVPN security, DNS NordWhisper fix, upgrades
+    "nordvpn=4.1.1"     # 12 Sep 2025 Hotfix for .rpm installs
+    "nordvpn=4.2.0"     # 14 Oct 2025 Meshnet retained. Upgraded libraries. Fixes for analytics, mangle table.
+    "nordvpn=4.2.1"     # 29 Oct 2025 Fix for missing libxml2 during installation.
+    "nordvpn=4.2.2"     # 11 Nov 2025 Fix for excessive logging.
+    "nordvpn=4.2.3"     # 21-Nov-2025 Raised the maximum HTTP response limit.
+)
 #
 # Login using a token, or leave blank to log in using a web browser.
 # To create a token visit https://my.nordaccount.com/ - Services - NordVPN - Manual Setup - Generate New Token
@@ -60,13 +62,14 @@ function linebreak {
 function trashnord {
     linebreak "Password"
     sudo echo "OK"
-    linebreak "Quit Nord & Stop Service"
+    linebreak "Quit Nord & Stop Services"
     nordvpn set killswitch disabled
     nordvpn disconnect
     reload_applet
     linecolor "cyan" "nordvpn logout --persist-token"
     nordvpn logout --persist-token
-    sudo systemctl stop nordvpnd.service
+    pkill norduserd || true
+    sudo systemctl stop nordvpnd.service || true
     linebreak "Purge nordvpn"
     sudo apt autoremove --purge nordvpn -y
     linebreak "Remove Folders"
@@ -91,7 +94,7 @@ function installnord {
     linebreak "Apt Update"
     sudo apt update
     linebreak "Install $nord_version"
-    sudo apt install $nord_version -y
+    sudo apt install "$nord_version" -y
 }
 function loginnord {
     linebreak "Check Group"
@@ -164,61 +167,96 @@ function edit_script {
     "$editor" "$0"
     exit
 }
+function choose_version {
+    clear -x
+    echo
+    linecolor "green" "///  NordVPN Version   ///"
+    echo
+    PS3=$'\n''Choose a Version: '
+    select choice in "${available_versions[@]}"
+    do
+        if (( 1 <= REPLY )) && (( REPLY <= ${#available_versions[@]} )); then
+            nord_version="$choice"
+            break
+        else
+            linecolor "red" "Invalid Option"
+        fi
+    done
+}
+function header {
+    clear -x
+    if command -v figlet &> /dev/null; then
+        linecolor "red" "$(figlet -f slant NUCLEAR)"
+    else
+        echo
+        linecolor "red" "///  NUCLEAR   ///"
+        echo
+    fi
+    echo
+    linecolor "green" "Currently installed:"
+    nordvpn --version
+    echo
+    linecolor "green" "Version to install:"
+    if [[ "$nord_version" == "nordvpn" ]]; then
+        echo "$nord_version  (latest available)"
+    else
+        echo "$nord_version"
+    fi
+    echo
+    linecolor "yellow" "Login Token:"
+    if [[ -n $logintoken ]]; then
+        echo "$logintoken"
+        echo
+        linecolor "yellow" "Token Expires:"
+        echo "$expires"
+    else
+        echo "No token. Log in with web browser."
+    fi
+    echo
+    echo -e "Type $(linecolor "green" "C") to choose another version."
+    echo -e "Type $(linecolor "cyan" "E") to edit the script."
+    echo
+    echo
+    read -n 1 -r -p "Go nuclear? (y/n/C/E) "; echo
+    echo
+}
 #
 # =====================================================================
 #
-clear -x
-if command -v figlet &> /dev/null; then
-    linecolor "red" "$(figlet -f slant NUCLEAR)"
-else
+if [[ "$EUID" -eq 0 ]]; then
+    linecolor "red" "Script should be run by the interactive user, not root."
+    linecolor "red" "Run './nuclear.sh' instead of 'sudo ./nuclear.sh'."
     echo
-    linecolor "red" "///  NUCLEAR   ///"
-    echo
+    exit 1
 fi
-echo
-linecolor "green" "Currently installed:"
-nordvpn --version
-echo
-linecolor "green" "Version to install:"
-if [[ "$nord_version" == "nordvpn" ]]; then
-    echo "$nord_version  (latest available)"
-else
-    echo "$nord_version"
-fi
-echo
-linecolor "yellow" "Login Token:"
-if [[ -n $logintoken ]]; then
-    echo "$logintoken"
-    echo
-    linecolor "yellow" "Token Expires:"
-    echo "$expires"
-else
-    echo "No token. Log in with web browser."
-fi
-echo
-echo -e "Type $(linecolor "green" "E") to edit the script."
-echo
-echo
-read -n 1 -r -p "Go nuclear? (y/n/E) "; echo
-echo
 #
-case "$REPLY" in
-    [Ee])
-        edit_script
-        ;;
-    [Yy])
-        trashnord
-        installnord
-        loginnord
-        changelog
-        default_settings
-        ;;
-    *)
-        linebreak
-        linecolor "red" "*** ABORT ***"
-        echo
-        ;;
-esac
+nord_version="${available_versions[0]}"
+#
+while true; do
+    header
+    case "$REPLY" in
+        [Cc])
+            choose_version
+            ;;
+        [Ee])
+            edit_script # will exit
+            ;;
+        [Yy])
+            trashnord
+            installnord
+            loginnord
+            changelog
+            default_settings
+            break
+            ;;
+        *)
+            linebreak
+            linecolor "red" "*** ABORT ***"
+            echo
+            break
+            ;;
+    esac
+done
 #
 linebreak "nordvpn settings"
 nordvpn settings
