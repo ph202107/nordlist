@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Tested with NordVPN Version 4.2.3 on Linux Mint 21.3
-# November 21, 2025
+# Tested with NordVPN Version 4.3.1 on Linux Mint 21.3
+# December 17, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -92,7 +92,7 @@
 #   These functions will ask for a sudo password:
 #   - function restart_service
 #   - function wireguard_gen
-#   - function nftables_menu "nft list"
+#   - function nftables_menu "nft list", "iptables"
 #   - function customdns_menu "Flush DNS Cache"
 #
 # =====================================================================
@@ -1954,7 +1954,7 @@ function login_check {
 function login_token {
     heading "Login (token)" "txt"
     echo "To create a token, login to your Nord Account and navigate to:"
-    echo "Services - NordVPN - Manual Setup - Generate New Token"
+    echo "NordVPN - Advanced settings - Access token"
     echo
     echo -e "${LColor}https://my.nordaccount.com/${Color_Off}"
     echo
@@ -2338,7 +2338,7 @@ function nftables_menu {
     echo "Commands may require sudo."
     echo
     PS3=$'\n''Choose an option: '
-    submipt=("Nord" "nft list" "ip route" "ip rule" "ip addr" "ss -tunlp" "resolvectl" "Firewall" "Routing" "KillSwitch" "Meshnet" "LAN-Discovery" "Allowlist" "Restart Service" "Ping Google" "Disconnect" "Exit")
+    submipt=("Nord" "nft list" "iptables" "ip route" "ip rule" "ip addr" "ss -tunlp" "resolvectl" "Firewall" "Routing" "KillSwitch" "Meshnet" "LAN-Discovery" "Allowlist" "Restart Service" "Ping Google" "Disconnect" "Exit")
     select ipt in "${submipt[@]}"
     do
         parent_menu
@@ -2362,6 +2362,11 @@ function nftables_menu {
             "nft list")
                 echo -e "${LColor}sudo nft list ruleset${Color_Off}"
                 sudo nft list ruleset
+                echo
+                ;;
+            "iptables")
+                echo -e "${LColor}sudo iptables -S${Color_Off}"
+                sudo iptables -S
                 echo
                 ;;
             "ip route")
@@ -2414,7 +2419,7 @@ function nftables_menu {
                     if [[ "$autoconnect" == "enabled" ]]; then
                         setting_change "autoconnect" "back"
                     fi
-                    disconnect_vpn "force"
+                    disconnect_vpn "force" "check_ks"
                     restart_service "back"
                 fi
                 ;;
@@ -2426,8 +2431,11 @@ function nftables_menu {
                     read -n 1 -r -p "Disconnect the VPN? (y/n) "; echo
                     echo
                     if [[ $REPLY =~ ^[Yy]$ ]]; then
-                        disconnect_vpn "force"
+                        disconnect_vpn "force" "check_ks"
                     fi
+                else
+                    echo -e "$statuscl"
+                    echo
                 fi
                 ;;
             "Exit")
@@ -2973,7 +2981,7 @@ function group_location {
     case "$1" in
         "Obfuscated_Servers")
             echo "For a list of supported locations, enable Obfuscate and visit:"
-            echo "Tools - NordVPN API - All Cities"
+            echo "Tools - NordVPN API - All Cities (CLI)"
             ;;
         "Double_VPN")
             echo "For a list of $1 server-pairs, visit:"
@@ -3854,7 +3862,7 @@ function nordapi_menu {
     echo
     PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
-    submapi=("Host Server Load" "Top 15 Recommended" "Top 15 By Country" "Top 15 By City" "Top 100 World" "All VPN Servers" "All Cities" "Change Host" "Connect" "Exit")
+    submapi=("Host Server Load" "Top 15 Recommended" "Top 15 By Country" "Top 15 By City" "Top 100 World" "All VPN Servers" "All Cities (CLI)" "Change Host" "Connect" "Exit")
     select napi in "${submapi[@]}"
     do
         parent_menu
@@ -3897,7 +3905,7 @@ function nordapi_menu {
             "All VPN Servers")
                 allservers_menu
                 ;;
-            "All Cities")
+            "All Cities (CLI)")
                 city_count
                 ;;
             "Change Host")
@@ -3974,13 +3982,13 @@ function city_count {
     echo
     echo "========================="
     echo "Total Countries    = ${#allcountries[@]}"
-    echo "      Cities       = ${#allcities[@]}"
+    echo "Total Cities       = ${#allcities[@]}"
     echo
     echo "Physical Countries = $(( ${#allcountries[@]} - ${#virtualcountries[@]} ))"
-    echo "         Cities    = $(( ${#allcities[@]} - ${#virtualcities[@]} ))"
+    echo "Physical Cities    = $(( ${#allcities[@]} - ${#virtualcities[@]} ))"
     echo
     echo "Virtual Countries* = ${#virtualcountries[@]}"
-    echo "        Cities*    = ${#virtualcities[@]}"
+    echo "Virtual Cities*    = ${#virtualcities[@]}"
     echo "========================="
     echo
     if [[ "$virtual" == "disabled" ]]; then
@@ -4230,9 +4238,9 @@ function allservers_menu {
                     echo
                 else
                     echo
-                    #heading "Servers in $searchcountry sorted by City" "txt"
-                    #jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -k2
-                    #echo
+                    heading "Servers in $searchcountry sorted by City" "txt"
+                    jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -k2
+                    echo
                     heading "Servers in $searchcountry sorted by Hostname" "txt"
                     jq -r --arg searchcountry "$searchcountry" '.[] | select(.locations[].country.name == $searchcountry) | "\(.hostname) (\(.locations[0].country.city.name))"' "$serversfile" | sort -V -k1
                     echo
@@ -5427,7 +5435,8 @@ function start {
     # check bash version
     if (( BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 2) )); then
         echo "Bash Version $BASH_VERSION"
-        echo -e "${WColor}Bash v4.2 or higher is required.${Color_Off}"; echo
+        echo -e "${WColor}Bash v4.2 or higher is required.${Color_Off}"
+        echo
         exit 1
     fi
     # create the nordlistbase directory if it doesn't exist
@@ -5458,9 +5467,27 @@ function start {
     # check service
     if ! systemctl is-active --quiet nordvpnd; then
         echo -e "${WColor}nordvpnd.service is not active${Color_Off}"
+        echo
         echo -e "${EColor}Starting the service... ${Color_Off}"
         echo "sudo systemctl start nordvpnd.service"
-        sudo systemctl start nordvpnd.service || exit
+        if ! sudo systemctl start nordvpnd.service; then
+            echo
+            echo -e "${WColor}Failed to start nordvpnd.service${Color_Off}"
+            echo
+            exit 1
+        fi
+        countdown_timer "10"     # pause in case the service starts and then stops
+        if ! systemctl is-active --quiet nordvpnd; then
+            echo -e "${WColor}nordvpnd.service failed to start${Color_Off}"
+            echo
+            echo "sudo systemctl status nordvpnd.service"
+            sudo systemctl status nordvpnd.service
+            echo
+            echo -e "View logs with: ${LColor}journalctl -u nordvpnd${Color_Off}"
+            echo
+            exit 1
+        fi
+        echo -e "${EColor}nordvpnd.service started successfully${Color_Off}"
         echo
     fi
     # check if you are logged in.  This will cause a delay every time the script starts.

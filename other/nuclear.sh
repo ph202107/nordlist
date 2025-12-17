@@ -9,19 +9,25 @@
 #
 available_versions=(    # these versions will be displayed on the selection menu
     "nordvpn"           # install the latest version available
-    "nordvpn=4.0.0"     # 26 Jun 2025 New privacy consent, ipv6 removed, faster connection times
     "nordvpn=4.1.0"     # 11 Sep 2025 Improved OpenVPN security, DNS NordWhisper fix, upgrades
     "nordvpn=4.1.1"     # 12 Sep 2025 Hotfix for .rpm installs
     "nordvpn=4.2.0"     # 14 Oct 2025 Meshnet retained. Upgraded libraries. Fixes for analytics, mangle table.
     "nordvpn=4.2.1"     # 29 Oct 2025 Fix for missing libxml2 during installation.
     "nordvpn=4.2.2"     # 11 Nov 2025 Fix for excessive logging.
-    "nordvpn=4.2.3"     # 21-Nov-2025 Raised the maximum HTTP response limit.
+    "nordvpn=4.2.3"     # 21 Nov 2025 Raised the maximum HTTP response limit.
+    "nordvpn=4.3.0"     # 16 Dec 2025 Bug fixes, GUI and tray improvements.
+    "nordvpn=4.3.1"     # 17 Dec 2025 Fix 4.3.0 service start. https://github.com/NordSecurity/nordvpn-linux/issues/1276
 )
+# Default choice for the version to install (first in the list).
+nord_version="${available_versions[0]}"
 #
-# Login using a token, or leave blank to log in using a web browser.
-# To create a token visit https://my.nordaccount.com/ - Services - NordVPN - Manual Setup - Generate New Token
+# Login using a token, leave blank to log in using a web browser, or specify a token later.
+# To create a token visit https://my.nordaccount.com/ - NordVPN - Advanced settings - Access token
 logintoken=""
-expires="Permanent"
+tokenexpires=""     # token expiry date (optional)
+#
+# Default option to run the "sudo apt update" command.  "y" or "n"
+perform_apt_update="y"
 #
 nordchangelog="/usr/share/doc/nordvpn/changelog.Debian.gz"
 #
@@ -30,7 +36,7 @@ function default_settings {
     linebreak "Apply Default Settings"
     #
     # After installation is complete, these settings will be applied.
-    # Add or remove any settings as you prefer.
+    # Add or remove any nordvpn settings as you prefer.
     #
     nordvpn set analytics enabled       # enables 'user-consent'
     nordvpn set lan-discovery enabled
@@ -46,10 +52,11 @@ function linecolor {
     # echo a colored line of text
     # $1=color  $2=text
     case $1 in
-        "green")   echo -e "\033[0;92m${2}\033[0m";;  # light green
-        "yellow")  echo -e "\033[0;93m${2}\033[0m";;  # light yellow
-        "cyan")    echo -e "\033[0;96m${2}\033[0m";;  # light cyan
-        "red")     echo -e "\033[1;31m${2}\033[0m";;  # bold red
+        "green")    echo -e "\033[0;92m${2}\033[0m";;    # light green
+        "yellow")   echo -e "\033[0;93m${2}\033[0m";;    # light yellow
+        "cyan")     echo -e "\033[0;96m${2}\033[0m";;    # light cyan
+        "purple")   echo -e "\033[0;95m${2}\033[0m";;    # light purple
+        "red")      echo -e "\033[1;31m${2}\033[0m";;    # bold red
     esac
 }
 function linebreak {
@@ -68,8 +75,8 @@ function trashnord {
     reload_applet
     linecolor "cyan" "nordvpn logout --persist-token"
     nordvpn logout --persist-token
-    pkill norduserd || true
-    sudo systemctl stop nordvpnd.service || true
+    sudo systemctl stop nordvpnd.service
+    sudo killall norduserd 2>/dev/null
     linebreak "Purge nordvpn"
     sudo apt autoremove --purge nordvpn -y
     linebreak "Remove Folders"
@@ -77,22 +84,51 @@ function trashnord {
     sudo rm -rf -v "/var/lib/nordvpn"
     sudo rm -rf -v "/var/run/nordvpn"
     rm -rf -v "/home/$USER/.config/nordvpn"
+    rm -rf -v "/home/$USER/.cache/nordvpn"
     # =================================================================
 }
 function installnord {
     linebreak "Add Repo"
-    if [[ -e /etc/apt/sources.list.d/nordvpn.list ]]; then
+    repo1="/etc/apt/sources.list.d/nordvpn.list"        # added by nord deb file
+    repo2="/etc/apt/sources.list.d/nordvpn-app.list"    # added by nord install.sh script
+    #
+    if [[ -e "$repo1" && -e "$repo2" ]]; then
+        linecolor "red" "Possible Conflict!"
+        echo "$repo1"
+        echo "$repo2"
+        echo -e "If you receive $(linecolor "red" "'configured multiple times'") warnings during 'apt update'"
+        echo "consider deleting one of the nordvpn repos.  For example:"
+        linecolor "red" "sudo rm $repo1"
+        echo
+        echo
+    fi
+    if [[ -e "$repo1" || -e "$repo2" ]]; then
         linecolor "green" "NordVPN repository found."
     else
         linecolor "green" "Adding the NordVPN repository."
         echo
-        cd "/home/$USER/Downloads" || exit
-        wget -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn-release/nordvpn-release_1.0.0_all.deb
+        download_path="/home/$USER/Downloads"
+        #
+        if ! cd "$download_path"; then
+            linecolor "red" "$download_path not found"
+            exit 1
+        fi
+        if ! wget -v -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn-release/nordvpn-release_1.0.0_all.deb; then
+            linecolor "red" "Failed to download the package."
+            exit 1
+        fi
         echo
-        sudo apt install "/home/$USER/Downloads/nordvpn-release_1.0.0_all.deb" -y
+        if ! sudo apt install "${download_path}/nordvpn-release_1.0.0_all.deb" -y; then
+            linecolor "red" "Failed to install the package."
+            exit 1
+        fi
     fi
     linebreak "Apt Update"
-    sudo apt update
+    if [[ "$perform_apt_update" =~ ^[Yy]$ ]]; then
+        sudo apt update
+    else
+        linecolor "red" "(Skipped)"
+    fi
     linebreak "Install $nord_version"
     sudo apt install "$nord_version" -y
 }
@@ -113,7 +149,25 @@ function loginnord {
     else
         linecolor "green" "Starting the service..."
         linecolor "cyan" "Trying: sudo systemctl start nordvpnd.service"
-        sudo systemctl start nordvpnd.service || exit
+        echo
+        if ! sudo systemctl start nordvpnd.service; then
+            linecolor "red" "Failed to start nordvpnd.service"
+            echo
+            exit 1
+        fi
+        sleep 10    # pause in case the service starts and then stops
+        if systemctl is-active --quiet nordvpnd; then
+            linecolor "green" "nordvpnd.service has started"
+        else
+            linecolor "red" "Failed to start nordvpnd.service"
+            echo
+            linecolor "cyan" "sudo systemctl status nordvpnd.service"
+            sudo systemctl status nordvpnd.service
+            echo
+            echo -e "View logs with: $(linecolor "cyan" "journalctl -u nordvpnd")"
+            echo
+            exit 1
+        fi
     fi
     #
     linebreak "Disable Analytics"
@@ -165,12 +219,14 @@ function edit_script {
     else editor="nano"
     fi
     "$editor" "$0"
-    exit
 }
 function choose_version {
     clear -x
     echo
     linecolor "green" "///  NordVPN Version   ///"
+    echo
+    echo -e "$(linecolor "red" "Note:") 4.3.0 nordvpnd.service may not start after clean install."
+    echo "(bug) https://github.com/NordSecurity/nordvpn-linux/issues/1276"
     echo
     PS3=$'\n''Choose a Version: '
     select choice in "${available_versions[@]}"
@@ -183,41 +239,69 @@ function choose_version {
         fi
     done
 }
+function add_token {
+    clear -x
+    echo
+    linecolor "yellow" "///  Login Token   ///"
+    echo
+    if [[ -n $logintoken ]]; then
+        linecolor "red" "Token cleared."
+        echo
+    fi
+    logintoken=""
+    tokenexpires=""
+    read -r -p "Enter the login token: " logintoken
+    if [[ -z $logintoken ]]; then
+        linecolor "red" "(No Token)"
+    fi
+}
 function header {
     clear -x
     if command -v figlet &> /dev/null; then
-        linecolor "red" "$(figlet -f slant NUCLEAR)"
+        linecolor "red" "$(figlet -f smslant NUCLEAR)"
     else
         echo
         linecolor "red" "///  NUCLEAR   ///"
         echo
     fi
     echo
-    linecolor "green" "Currently installed:"
+    echo -ne "$(linecolor "green" "Currently Installed: ")"
     nordvpn --version
     echo
-    linecolor "green" "Version to install:"
-    if [[ "$nord_version" == "nordvpn" ]]; then
-        echo "$nord_version  (latest available)"
+    echo -ne "$(linecolor "green" "Version to Install: ")"
+    if [[ "${nord_version,,}" == "nordvpn" ]]; then
+        echo "$nord_version (latest available)"
     else
         echo "$nord_version"
     fi
     echo
-    linecolor "yellow" "Login Token:"
+    echo -ne "$(linecolor "yellow" "Login Token: ")"
     if [[ -n $logintoken ]]; then
         echo "$logintoken"
-        echo
-        linecolor "yellow" "Token Expires:"
-        echo "$expires"
+        if [[ -n $tokenexpires ]]; then
+            echo
+            echo -ne "$(linecolor "yellow" "Token Expires: ")"
+            echo "$tokenexpires"
+        fi
     else
         echo "No token. Log in with web browser."
     fi
     echo
-    echo -e "Type $(linecolor "green" "C") to choose another version."
+    echo -ne "$(linecolor "purple" "Apt Update:") "
+    if [[ "$perform_apt_update" =~ ^[Yy]$ ]]; then
+        echo -e "\u2705"    # unicode checkmark
+    else
+        echo -e "\u274c"    # unicode X
+    fi
+    echo
+    echo
+    echo -e "Type $(linecolor "green" "V") to choose another version."
+    echo -e "Type $(linecolor "yellow" "T") to add/remove a token."
+    echo -e "Type $(linecolor "purple" "A") to enable/disable 'apt update'."
     echo -e "Type $(linecolor "cyan" "E") to edit the script."
     echo
     echo
-    read -n 1 -r -p "Go nuclear? (y/n/C/E) "; echo
+    read -n 1 -r -p "Go nuclear? (y/n/V/T/A/E) "; echo
     echo
 }
 #
@@ -230,16 +314,25 @@ if [[ "$EUID" -eq 0 ]]; then
     exit 1
 fi
 #
-nord_version="${available_versions[0]}"
-#
 while true; do
     header
     case "$REPLY" in
-        [Cc])
+        [Vv])
             choose_version
             ;;
+        [Tt])
+            add_token
+            ;;
+        [Aa])
+            if [[ ! "$perform_apt_update" =~ ^[Yy]$ ]]; then
+                perform_apt_update="y"
+            else
+                perform_apt_update="n"
+            fi
+            ;;
         [Ee])
-            edit_script # will exit
+            edit_script
+            exit
             ;;
         [Yy])
             trashnord
@@ -262,10 +355,13 @@ linebreak "nordvpn settings"
 nordvpn settings
 linebreak "nordvpn status"
 nordvpn status
-linebreak "\n$(linecolor "green" "Completed \u2705")" # unicode checkmark
+linebreak "\n$(linecolor "green" "Completed \u2705")"
 nordvpn --version
 linebreak
 reload_applet
 #
 # Alternate install method:
-#  sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
+#   sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
+# NordVPN GUI install;
+#   sh <(wget -qO - https://downloads.nordcdn.com/apps/linux/install.sh) -p nordvpn-gui
+#
