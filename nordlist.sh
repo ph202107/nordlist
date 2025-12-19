@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 4.3.1 on Linux Mint 21.3
-# December 17, 2025
+# December 19, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -398,6 +398,9 @@ function set_defaults {
     #setting_enable "virtual-location" "$state"
     setting_disable "virtual-location" "$state"
     #
+    setting_enable "arp-ignore" "$state"    # typically this setting should be enabled
+    #setting_disable "arp-ignore" "$state"
+    #
     #setting_enable "autoconnect" "$state"  # applies the "$acwhere" location when changing from disabled to enabled
     setting_disable "autoconnect" "$state"
     #
@@ -697,7 +700,7 @@ function indicators_display {
         indall=( "$techpro" "$fw" "$ks" "$ob" "$mn" "$pq" )
     else
         # shellcheck disable=SC2154  # assigned in function set_vars_indicators with declare
-        indall=( "$techpro" "$fw" "$rt" "$uc" "$ks" "$tp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$pq" "$al" )
+        indall=( "$techpro" "$fw" "$rt" "$uc" "$ks" "$tp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$pq" "$ai" "$al" )
         if [[ -n "$fst" ]]; then indall+=( "$fst" ); fi
         if [[ -n "$sshi" ]]; then indall+=( "$sshi" ); fi
     fi
@@ -811,6 +814,7 @@ function set_vars {
         status servername nordhost server ipaddr country city transferd transferu uptime
         technology protocol firewall fwmark routing userconsent killswitch tplite obfuscate notify
         tray autoconnect ipversion6 meshnet customdns dns_servers landiscovery virtual postquantum
+        arpignore
     )
     # Reset all vars to ensure stale data is never used.
     declare -g "${allvars[@]/%/=}"
@@ -897,6 +901,7 @@ function set_vars {
             *"discover"*)       landiscovery="${line##*: }";;
             *"virtual"*)        virtual="${line##*: }";;
             *"quantum"*)        postquantum="${line##*: }";;
+            *"ignore"*)         arpignore="${line##*: }";;
         esac
     done
     # default to "disabled" if not found
@@ -1050,6 +1055,7 @@ function set_vars_indicators {
         ["ld"]="$landiscovery"
         ["vl"]="$virtual"
         ["pq"]="$postquantum"
+        ["ai"]="$arpignore"
         ["al"]="$allowlist_var"
     )
     #
@@ -1239,6 +1245,7 @@ function setting_getvars {
         "lan-discovery")        chgname="LAN-Discovery"; chgvar="$landiscovery"; chgind="$ld";;
         "virtual-location")     chgname="Virtual-Location"; chgvar="$virtual"; chgind="$vl";;
         "post-quantum")         chgname="Post-Quantum VPN"; chgvar="$postquantum"; chgind="$pq";;
+        "arp-ignore")           chgname="ARP-Ignore"; chgvar="$arpignore"; chgind="$ai";;
         *)                      echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo; return;;
     esac
     #
@@ -1399,6 +1406,10 @@ function setting_disable {
             echo -e "${DColor}Disable${Color_Off} $chgname ${DNSColor}$dns_servers${Color_Off}"
             echo
             ;;
+        "arp-ignore")
+            echo -e "${WColor}Will respond to network ARP requests.${Color_Off}"
+            echo
+            ;;
     esac
     #
     nordvpn set "$1" disabled
@@ -1415,7 +1426,7 @@ function setting_menu {
     indicators_display
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "Post-Quantum" "Allowlist" "Account" "Restart" "Reset" "NFTables" "Logs" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "Post-Quantum" "ARP-Ignore" "Allowlist" "Account" "Restart" "Reset" "NFTables" "Logs" "Script" "Defaults" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
@@ -1437,6 +1448,7 @@ function setting_menu {
             "LAN-Discovery")    landiscovery_setting;;
             "Virtual-Loc")      virtual_setting;;
             "Post-Quantum")     postquantum_setting;;
+            "ARP-Ignore")       arpignore_setting;;
             "Allowlist")        allowlist_setting;;
             "Account")          account_menu;;
             "Restart")          restart_service;;
@@ -1844,6 +1856,15 @@ function postquantum_setting {
         #
     fi
     setting_change "post-quantum"
+}
+function arpignore_setting {
+    heading "ARP-Ignore"
+    echo
+    echo "Controls whether your device ignores or responds to ARP requests"
+    echo "while the VPN is active. By default, arp-ignore is on. This means"
+    echo "ARP requests are ignored to prevent VPN exposure."
+    echo
+    setting_change "arp-ignore"
 }
 function allowlist_setting {
     # $1 = "back" - return
@@ -2338,7 +2359,7 @@ function nftables_menu {
     echo "Commands may require sudo."
     echo
     PS3=$'\n''Choose an option: '
-    submipt=("Nord" "nft list" "iptables" "ip route" "ip rule" "ip addr" "ss -tunlp" "resolvectl" "Firewall" "Routing" "KillSwitch" "Meshnet" "LAN-Discovery" "Allowlist" "Restart Service" "Ping Google" "Disconnect" "Exit")
+    submipt=("Nord" "nft list" "iptables" "ip route" "ip rule" "ip addr" "ss -tunlp" "resolvectl" "Firewall" "Routing" "KillSwitch" "Meshnet" "LAN-Discovery" "ARP-Ignore" "Allowlist" "Restart Service" "Ping Google" "Disconnect" "Exit")
     select ipt in "${submipt[@]}"
     do
         parent_menu
@@ -2408,6 +2429,9 @@ function nftables_menu {
                 ;;
             "LAN-Discovery")
                 setting_change "lan-discovery" "back"
+                ;;
+            "ARP-Ignore")
+                setting_change "arp-ignore" "back"
                 ;;
             "Allowlist")
                 allowlist_setting "back"
