@@ -19,17 +19,17 @@ available_versions=(    # these versions will be displayed on the selection menu
     "nordvpn=4.3.1"     # 17 Dec 2025 Fix 4.3.0 service start. https://github.com/NordSecurity/nordvpn-linux/issues/1276
 )
 # Default choice for the version to install (first in the list).
-nord_version="${available_versions[0]}"
+install_version="${available_versions[0]}"
 #
 # Login using a token, leave blank to log in using a web browser, or specify a token later.
 # To create a token visit https://my.nordaccount.com/ - NordVPN - Advanced settings - Access token
-logintoken=""
-tokenexpires=""     # token expiry date (optional)
+login_token=""
+token_expires=""    # token expiry date (optional)
 #
 # Default option to run the "sudo apt update" command.  "y" or "n"
 perform_apt_update="y"
 #
-nordchangelog="/usr/share/doc/nordvpn/changelog.Debian.gz"
+nord_changelog="/usr/share/doc/nordvpn/changelog.Debian.gz"
 #
 #
 function default_settings {
@@ -65,6 +65,17 @@ function linebreak {
     linecolor "yellow" "==========================="
     linecolor "yellow" "$1"
     echo
+}
+function printascii {
+    # $1 = color, $2 = text
+    clear -x
+    if [[ "$figlet_exists" == "true" ]]; then
+        linecolor "$1" "$(figlet -f small "$2")"
+    else
+        echo
+        linecolor "$1" "///   $2   ///"
+        echo
+    fi
 }
 function trashnord {
     linebreak "Password"
@@ -129,8 +140,8 @@ function installnord {
     else
         linecolor "red" "(Skipped)"
     fi
-    linebreak "Install $nord_version"
-    sudo apt install "$nord_version" -y
+    linebreak "Install $install_version"
+    sudo apt install "$install_version" -y
 }
 function loginnord {
     linebreak "Check Group"
@@ -176,9 +187,9 @@ function loginnord {
     echo "Refer to: https://my.nordaccount.com/legal/privacy-policy/"
     nordvpn set analytics disabled
     #
-    if [[ -n $logintoken ]]; then
+    if [[ -n $login_token ]]; then
         linebreak "Login (token)"
-        nordvpn login --token "$logintoken"
+        nordvpn login --token "$login_token"
     else
         linebreak "Login (browser)"
         nordvpn login
@@ -199,9 +210,9 @@ function loginnord {
 }
 function changelog {
     linebreak "Changelog"
-    linecolor "green" "$nordchangelog"
+    linecolor "green" "$nord_changelog"
     echo
-    zcat "$nordchangelog" | head -n 15
+    zcat "$nord_changelog" | head -n 15
     echo
     linecolor "green" "https://nordvpn.com/blog/nordvpn-linux-release-notes/"
     linecolor "green" "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/"
@@ -221,10 +232,7 @@ function edit_script {
     "$editor" "$0"
 }
 function choose_version {
-    clear -x
-    echo
-    linecolor "green" "///  NordVPN Version   ///"
-    echo
+    printascii "green" "VERSION"
     echo -e "$(linecolor "red" "Note:") 4.3.0 nordvpnd.service may not start after clean install."
     echo "(bug) https://github.com/NordSecurity/nordvpn-linux/issues/1276"
     echo
@@ -232,7 +240,7 @@ function choose_version {
     select choice in "${available_versions[@]}"
     do
         if (( 1 <= REPLY )) && (( REPLY <= ${#available_versions[@]} )); then
-            nord_version="$choice"
+            install_version="$choice"
             break
         else
             linecolor "red" "Invalid Option"
@@ -240,48 +248,37 @@ function choose_version {
     done
 }
 function add_token {
-    clear -x
-    echo
-    linecolor "yellow" "///  Login Token   ///"
-    echo
-    if [[ -n $logintoken ]]; then
+    printascii "yellow" "TOKEN"
+    if [[ -n $login_token ]]; then
         linecolor "red" "Token cleared."
         echo
     fi
-    logintoken=""
-    tokenexpires=""
-    read -r -p "Enter the login token: " logintoken
-    if [[ -z $logintoken ]]; then
+    login_token=""
+    token_expires=""
+    read -r -p "Enter the login token: " login_token
+    if [[ -z $login_token ]]; then
         linecolor "red" "(No Token)"
     fi
 }
 function header {
-    clear -x
-    if command -v figlet &> /dev/null; then
-        linecolor "red" "$(figlet -f smslant NUCLEAR)"
-    else
-        echo
-        linecolor "red" "///  NUCLEAR   ///"
-        echo
-    fi
-    echo
+    printascii "red" "NUCLEAR"
     echo -ne "$(linecolor "green" "Currently Installed: ")"
-    nordvpn --version
+    echo "$current_version"
     echo
     echo -ne "$(linecolor "green" "Version to Install: ")"
-    if [[ "${nord_version,,}" == "nordvpn" ]]; then
-        echo "$nord_version (latest available)"
+    if [[ "${install_version,,}" == "nordvpn" ]]; then
+        echo "$install_version (latest available)"
     else
-        echo "$nord_version"
+        echo "$install_version"
     fi
     echo
     echo -ne "$(linecolor "yellow" "Login Token: ")"
-    if [[ -n $logintoken ]]; then
-        echo "$logintoken"
-        if [[ -n $tokenexpires ]]; then
+    if [[ -n $login_token ]]; then
+        echo "$login_token"
+        if [[ -n $token_expires ]]; then
             echo
             echo -ne "$(linecolor "yellow" "Token Expires: ")"
-            echo "$tokenexpires"
+            echo "$token_expires"
         fi
     else
         echo "No token. Log in with web browser."
@@ -294,12 +291,10 @@ function header {
         echo -e "\u274c"    # unicode X
     fi
     echo
-    echo
     echo -e "Type $(linecolor "green" "V") to choose another version."
     echo -e "Type $(linecolor "yellow" "T") to add/remove a token."
     echo -e "Type $(linecolor "purple" "A") to enable/disable 'apt update'."
     echo -e "Type $(linecolor "cyan" "E") to edit the script."
-    echo
     echo
     read -n 1 -r -p "Go nuclear? (y/n/V/T/A/E) "; echo
     echo
@@ -312,6 +307,14 @@ if [[ "$EUID" -eq 0 ]]; then
     linecolor "red" "Run './nuclear.sh' instead of 'sudo ./nuclear.sh'."
     echo
     exit 1
+fi
+#
+current_version="$(nordvpn --version)"
+#
+if command -v figlet &> /dev/null; then
+    figlet_exists="true"
+else
+    figlet_exists="false"
 fi
 #
 while true; do
@@ -343,9 +346,7 @@ while true; do
             break
             ;;
         *)
-            linebreak
-            linecolor "red" "*** ABORT ***"
-            echo
+            printascii "red" "ABORT"
             break
             ;;
     esac
