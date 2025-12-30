@@ -166,11 +166,28 @@ function loginnord {
             echo
             exit 1
         fi
-        sleep 10    # pause in case the service starts and then stops
-        if systemctl is-active --quiet nordvpnd; then
-            linecolor "green" "nordvpnd.service has started"
+        timeout="10"
+        count="0"
+        success="false"
+        echo -n "Waiting for service."
+        while [[ "$count" -lt "$timeout" ]]
+        do
+            if systemctl is-active --quiet nordvpnd; then
+                sleep 1     # pause in case service starts and stops
+                if systemctl is-active --quiet nordvpnd; then
+                    success="true"
+                    break
+                fi
+            fi
+            echo -n "."
+            sleep 1
+            ((count++))
+        done
+        echo
+        if [[ "$success" = "true" ]]; then
+            linecolor "green" "nordvpnd.service has started."
         else
-            linecolor "red" "Failed to start nordvpnd.service"
+            linecolor "red" "nordvpnd.service failed to start."
             echo
             linecolor "cyan" "sudo systemctl status nordvpnd.service"
             sudo systemctl status nordvpnd.service
@@ -309,13 +326,13 @@ if [[ "$EUID" -eq 0 ]]; then
     exit 1
 fi
 #
-current_version="$(nordvpn --version)"
-#
 if command -v figlet &> /dev/null; then
     figlet_exists="true"
 else
     figlet_exists="false"
 fi
+#
+current_version="$(nordvpn --version)"
 #
 while true; do
     header

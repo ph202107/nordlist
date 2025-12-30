@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 4.3.1 on Linux Mint 21.3
-# December 19, 2025
+# December 30, 2025
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -275,7 +275,7 @@ fast_menu="n"
 #
 # Automatically change these settings without prompting:  Firewall,
 # Routing, User-Consent, KillSwitch, TPLite, Notify, Tray, AutoConnect,
-# LAN-Discovery, Virtual-Location, Post-Quantum
+# LAN-Discovery, Virtual-Location, Post-Quantum, ARP-Ignore
 fast_setting="n"
 #
 # When choosing a country from the 'Countries' menu, immediately
@@ -1407,7 +1407,7 @@ function setting_disable {
             echo
             ;;
         "arp-ignore")
-            echo -e "${WColor}Will respond to network ARP requests.${Color_Off}"
+            echo -e "${WColor}Allow incoming ARP requests.${Color_Off}"
             echo
             ;;
     esac
@@ -1860,8 +1860,8 @@ function postquantum_setting {
 function arpignore_setting {
     heading "ARP-Ignore"
     echo
-    echo "Controls whether your device ignores or responds to ARP requests"
-    echo "while the VPN is active. By default, arp-ignore is on. This means"
+    echo "Controls whether your device ignores or responds to ARP requests while"
+    echo "the VPN is active.  By default arp-ignore is enabled, which means that"
     echo "ARP requests are ignored to prevent VPN exposure."
     echo
     setting_change "arp-ignore"
@@ -5241,7 +5241,7 @@ function server_load {
 }
 function ipinfo_curl {
     echo -n "External IP: "
-    response=$(timeout 5 curl --silent --fail "https://ipinfo.io/")
+    response=$(timeout 5 curl --silent "https://ipinfo.io/")
     #
     # request timeout or fail, or the json is empty
     if [[ $? -ne 0 || -z "$response" ]] || ! echo "$response" | jq empty 2>/dev/null; then
@@ -5491,20 +5491,40 @@ function start {
     # check service
     if ! systemctl is-active --quiet nordvpnd; then
         echo -e "${WColor}nordvpnd.service is not active${Color_Off}"
-        echo
-        echo -e "${EColor}Starting the service... ${Color_Off}"
-        echo "sudo systemctl start nordvpnd.service"
+        echo "Starting the service."
+        echo -e "${LColor}sudo systemctl start nordvpnd.service${Color_Off}"
         if ! sudo systemctl start nordvpnd.service; then
             echo
             echo -e "${WColor}Failed to start nordvpnd.service${Color_Off}"
             echo
             exit 1
         fi
-        countdown_timer "10"     # pause in case the service starts and then stops
-        if ! systemctl is-active --quiet nordvpnd; then
-            echo -e "${WColor}nordvpnd.service failed to start${Color_Off}"
+        #
+        looptimeout="10"
+        loopcount="0"
+        serviceup="false"
+        #
+        echo
+        echo -n "Waiting for nordvpnd.service."
+        while [[ "$loopcount" -lt "$looptimeout" ]]
+        do
+            if systemctl is-active --quiet nordvpnd; then
+                sleep 1     # pause in case service starts and stops
+                if systemctl is-active --quiet nordvpnd; then
+                    serviceup="true"
+                    break
+                fi
+            fi
+            echo -n "."
+            sleep 1
+            ((loopcount++))
+        done
+        echo
+        #
+        if [[ "$serviceup" = "false" ]]; then
+            echo -e "${WColor}nordvpnd.service failed to start.${Color_Off}"
             echo
-            echo "sudo systemctl status nordvpnd.service"
+            echo -e "${LColor}sudo systemctl status nordvpnd.service${Color_Off}"
             sudo systemctl status nordvpnd.service
             echo
             echo -e "View logs with: ${LColor}journalctl -u nordvpnd${Color_Off}"
