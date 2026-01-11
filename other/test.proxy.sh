@@ -5,7 +5,7 @@
 #
 # NordVPN Service Credentials (required)
 # These are not the same as the NordAccount email/password.
-# https://my.nordaccount.com - Services - NordVPN - Manual Setup
+# https://my.nordaccount.com - NordVPN - Manual Setup - Service Credentials
 user=""
 pass=""
 #
@@ -16,15 +16,19 @@ protocol="socks5"
 https_port="89"     # default: 89
 socks5_port="1080"  # default: 1080
 #
+# Maximum time allowed for curl to complete (seconds)
+maxtime="10"
+#
 # Returns the external IP and geolocation info
 site="https://ipinfo.io/"
+#site="https://ipapi.co/json"
 #
 # Perform a file download speed test using curl. "y" or "n"
 speedtest="n"
 localfile="/dev/null"
 remotefile="https://ash-speed.hetzner.com/100MB.bin"
 #remotefile="https://ash-speed.hetzner.com/1GB.bin"
-#remotefile="https://releases.ubuntu.com/focal/ubuntu-20.04.6-desktop-amd64.iso"
+#remotefile="https://releases.ubuntu.com/noble/ubuntu-24.04.3-desktop-amd64.iso"
 #
 #
 function list_https {
@@ -62,7 +66,7 @@ function list_socks5 {
         "san-francisco.us.socks.nordhold.net"
         "stockholm.se.socks.nordhold.net"
         #
-        # Server list retrieved via NordVPN Public API on 30 Dec 2025
+        # Server list retrieved via NordVPN Public API on 10 Jan 2026
         # Subject to change
         "socks-nl1.nordvpn.com (Amsterdam)"
         "socks-nl2.nordvpn.com (Amsterdam)"
@@ -140,16 +144,23 @@ function test_proxy {
     location="$( echo "${xproxy}" | cut -f2- -d' ' )"
     #
     echo
-    echo "${xproxy}"
+    linecolor "yellow" "${xproxy}"
     echo
     linecolor "cyan" "ping -c 3 ${proxy}"
     echo
     ping -c 3 "${proxy}"
     echo
     #
-    linecolor "cyan" "curl --proxy '${protocol}://${proxy}:${port}' --proxy-user '${user}:${pass}' --location '${site}'"
+    linecolor "cyan" "curl --max-time '${maxtime}' --proxy '${protocol}://${proxy}:${port}' --proxy-user '${user}:${pass}' --location '${site}'"
     echo
-    curl --proxy "${protocol}://${proxy}:${port}" --proxy-user "${user}:${pass}" --location "${site}"
+    if ! curl \
+        --max-time "${maxtime}" \
+        --proxy "${protocol}://${proxy}:${port}" \
+        --proxy-user "${user}:${pass}" \
+        --location "${site}"
+        then
+        linecolor "red" "Curl timed out or failed."
+    fi
     echo
     echo
     #
@@ -164,7 +175,12 @@ function test_proxy {
     if [[ "$speedtest" =~ ^[Yy]$ ]]; then
         linecolor "yellow" "(CTRL-C to quit)"
         echo
-        curl --proxy "${protocol}://${user}:${pass}@${proxy}:${port}" --output "$localfile" "$remotefile"
+        if ! curl \
+            --proxy "${protocol}://${user}:${pass}@${proxy}:${port}" \
+            --output "$localfile" "$remotefile"
+            then
+            linecolor "red" "Download failed."
+        fi
         echo
     fi
 }
@@ -179,64 +195,65 @@ function linecolor {
     esac
 }
 function edit_script {
+    # $1 = 'prompt' - prompt first
+    if [[ "$1" == "prompt" ]]; then
+        read -n 1 -r -p "Edit $(linecolor "green" "${0}") ? (y/n) "; echo
+        echo
+        if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
+            exit
+        fi
+    fi
     # check for a default editor otherwise use nano
-    if [[ -n "$VISUAL" ]]; then
-        editor="$VISUAL"
-    elif [[ -n "$EDITOR" ]]; then
-        editor="$EDITOR"
-    else
-        editor="nano"
+    if [[ -n "$VISUAL" ]]; then editor="$VISUAL"
+    elif [[ -n "$EDITOR" ]]; then editor="$EDITOR"
+    else editor="nano"
     fi
     "$editor" "${0}"
     exit
 }
-function edit_prompt {
-    read -n 1 -r -p "Edit $(linecolor "green" "${0}") ? (y/n) "; echo
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        edit_script
-    else
-        exit
-    fi
-}
 #
 # Create the proxy array and set the port
 proxylist=()
-if [[ "${protocol,,}" == "https" ]]; then
-    port="${https_port}"
-    list_https
-elif [[ "${protocol,,}" == "socks5" ]]; then
-    port="${socks5_port}"
-    list_socks5
-else
-    port="N/A"
-fi
+case "${protocol,,}" in
+    "https")
+        port="${https_port:-N/A}"
+        list_https
+        ;;
+    "socks5")
+        port="${socks5_port:-N/A}"
+        list_socks5
+        ;;
+    *)
+        port="N/A"
+        ;;
+esac
 proxylist+=( "Edit Script" "Exit" )
 #
 # Print the heading
 clear -x
 if command -v figlet &> /dev/null; then
-    linecolor "green" "$(figlet -f standard 'Test  Proxy')"
+    linecolor "green" "$(figlet -f small 'TEST PROXY')"
 else
     echo
-    linecolor "green" "/// Test NordVPN Proxy ///"
+    linecolor "green" "/// TEST PROXY ///"
+    echo
 fi
-echo
 echo "Protocol= $(linecolor "yellow" "${protocol}")    Port= $(linecolor "yellow" "${port}")"
 echo
 #
-# Check for credentials
+# Check for credentials, valid protocol and port
 if [[ -z "${user}" ]] || [[ -z "${pass}" ]]; then
     linecolor "red" "Missing user/pass credentials."
     echo
-    edit_prompt
-fi
-#
-# Check for valid protocol
-if [[ "${protocol,,}" != "https" && "${protocol,,}" != "socks5" ]]; then
-    linecolor "red" "Invalid Protocol: ${protocol}"
+    edit_script "prompt"
+elif [[ "${protocol,,}" != "https" && "${protocol,,}" != "socks5" ]]; then
+    linecolor "red" "Invalid Protocol: (${protocol})"
     echo
-    edit_prompt
+    edit_script "prompt"
+elif [[ -z "${port}" || "${port}" == "N/A" ]]; then
+    linecolor "red" "${protocol^} port not specified."
+    echo
+    edit_script "prompt"
 fi
 #
 # Create the selection menu

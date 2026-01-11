@@ -22,11 +22,11 @@
 #       Command to use = full path to this script
 #   Advanced Settings:
 #       To prevent excessive notifications and a reconnect timeout.
-#       Refer to the "minuptime" variable below.  Default=6
+#       Refer to the "minuptime" variable below.  Default=10
 #       "Reconnect: Seconds To Wait For IP Change"
-#           Default=300.  Enter a value greater than (minuptime * 60) eg "400"
+#           Default=300.  Enter a value greater than (minuptime * 60) eg "700"
 #       "Reconnect: Seconds to Wait for Offline"
-#            Default=60.  Enter a value greater than (minuptime * 60) eg "400"
+#            Default=60.  Enter a value greater than (minuptime * 60) eg "700"
 #   Usage: (JD2 toolbar button)
 #       "Perform a Reconnect"
 #
@@ -62,8 +62,8 @@
 jd2base="$(dirname "${BASH_SOURCE[0]}")"
 #
 # Specify the full path and filename for the server list.
-# eg. jdlist="/home/$USER/Downloads/nord_jd2servers.txt"
-jdlist="$jd2base/nord_jd2servers.txt"
+# eg. jd2list="/home/$USER/Downloads/nord_jd2servers.txt"
+jd2list="$jd2base/nord_jd2servers.txt"
 #
 # Specify the full path and filename for the log file.
 logfile="$jd2base/nord_jd2log.txt"
@@ -78,6 +78,18 @@ notifications="y"
 # Specify the minimum VPN uptime required before changing servers.
 # Prevents rapid server changes.  Value is in minutes.
 minuptime="10"
+#
+# If the connection to a server fails, remove that server from the server list. "y" or "n"
+removefailed="y"
+#
+# Reload the Nordlist Cinnamon applet when the script exits.
+# This will change the icon color (for connection status) immediately.
+# Only for the Cinnamon DE with the applet installed. "y" or "n"
+nordlistapplet="n"
+#
+# Reload the "Network Manager" Cinnamon applet when the script exits.
+# This removes duplicate "nordlynx" entries from the applet. "y" or "n"
+nmapplet="n"
 #
 # Specify alternate cities to use as the server lists are emptied.
 # These will be used in rotation.
@@ -112,7 +124,7 @@ function logstart {
     if [[ ! -e "$logfile" ]]; then
         # create the log file
         if ! touch "$logfile"; then
-            echo "Error: Failed to create log file at $logfile -Exit." >&2
+            echo "Error: Failed to create log file at $logfile. Exit." >&2
             exit 1
         fi
         log "Created: $logfile"
@@ -140,11 +152,11 @@ function logstart {
 }
 function checkserverlist {
     # check if the server list exists
-    if [[ ! -e "$jdlist" ]]; then
+    if [[ ! -e "$jd2list" ]]; then
         log "No server list found."
         # create the server list
-        if ! touch "$jdlist"; then
-            log "Failed to create a server list at $jdlist -Exit." "ERROR"
+        if ! touch "$jd2list"; then
+            log "Failed to create a server list at $jd2list. Exit." "ERROR"
             exit 1
         fi
         updateserverlist
@@ -153,38 +165,56 @@ function checkserverlist {
 function updateserverlist {
     log "Retrieving a server list from NordVPN API..."
     #
-    if ! curl "https://api.nordvpn.com/v1/servers/recommendations?limit=20" | jq -r '.[].hostname' > "$jdlist"; then
+    if ! curl "https://api.nordvpn.com/v1/servers/recommendations?limit=20" | jq -r '.[].hostname' > "$jd2list"; then
         log "Failed to retrieve a server list from API. Exit." "ERROR"
         exit 1
     fi
     # check if the server list is empty
-    if [[ ! -s "$jdlist" ]]; then
+    if [[ ! -s "$jd2list" ]]; then
         log "Server list is empty after retrieval. Exit." "ERROR"
         exit 1
     fi
-    echo "EOF" >> "$jdlist"
+    echo "EOF" >> "$jd2list"
     log "Server list retrieved successfully."
-    log "List: $jdlist"
+    log "List: $jd2list"
 }
 function getcurrentinfo {
     # current VPN status information
-    nordvpnstatus=$(nordvpn status)
-    #
-    if [[ $? -ne 0 || -z "$nordvpnstatus" ]]; then
-        log "Failed to retrieve 'nordvpn status' output. Exit." "ERROR"
+    if ! readarray -t nordvpnstatus < <(nordvpn status) || [[ "${#nordvpnstatus[@]}" -eq 0 ]]; then
+        log "Command 'nordvpn status' failure. Exit." "ERROR"
+        reload_applet
         exit 1
     fi
     #
-    currenthost=$(echo "$nordvpnstatus" | grep -i "Hostname" | cut -f2 -d' ')
-    shorthost=$(echo "$currenthost" | cut -f1 -d'.')
-    currentcity=$(echo "$nordvpnstatus" | grep -i "City" | cut -f2 -d':' | cut -c 2- | tr ' ' '_')
-    servercount=$(( $(wc -l < "$jdlist") - 1 ))
-    # default to NA
-    currenthost=${currenthost:-NA}
-    shorthost=${shorthost:-NA}
-    currentcity=${currentcity:-NA}
+    for line in "${nordvpnstatus[@]}"
+    do
+        lc_line="${line,,}"     # lowercase
+        case "$lc_line" in
+            *"status"*)
+                connectedstatus="${lc_line##*: }"
+                ;;
+            *"hostname"*)
+                currenthost="${lc_line##*: }"
+                shorthost="${currenthost%%.*}"
+                ;;
+            *"city"*)
+                rawcity="${line##*: }"
+                # replace all spaces with underscores
+                currentcity="${rawcity// /_}"
+                ;;
+            *"uptime"*)
+                norduptime="$line"
+                ;;
+        esac
+    done
+    # default to N/A
+    currenthost=${currenthost:-N/A}
+    shorthost=${shorthost:-N/A}
+    currentcity=${currentcity:-N/A}
     #
-    norduptime=$(echo "$nordvpnstatus" | grep -i "Uptime")
+    servercount=$(( $(wc -l < "$jd2list") - 1 ))
+    #
+    # calculate uptime in total minutes
     weeks=$(echo "$norduptime" | grep -oP '\d+(?= week)' | head -1)
     days=$(echo "$norduptime" | grep -oP '\d+(?= day)' | head -1)
     hours=$(echo "$norduptime" | grep -oP '\d+(?= hour)' | head -1)
@@ -199,6 +229,10 @@ function getcurrentinfo {
     waittime=$(( minuptime - currentuptime ))
 }
 function checkuptime {
+    if [[ "$connectedstatus" != "connected" ]]; then
+        log "VPN is not connected."
+        return
+    fi
     # check the current VPN uptime and pause if necessary
     if (( currentuptime < minuptime )); then
         log "VPN Uptime: ${currentuptime}m  Min: ${minuptime}m  Wait: ${waittime}m  PID: $$" "WARNING"
@@ -218,40 +252,53 @@ function checkuptime {
     log "VPN $norduptime"
 }
 function changeserver {
-    log "Current Server: $currentcity $shorthost"
-    # remove the current server from the list
-    if grep -q "$currenthost" "$jdlist"; then
-        grep -v "$currenthost" "$jdlist" > "${jdlist}.tmp" && mv "${jdlist}.tmp" "$jdlist"
-        log "Removed $shorthost from the server list."
-    else
-        log "$shorthost is not in the server list."
+    if [[ "$connectedstatus" == "connected" ]]; then
+        log "Current Server: $currentcity $shorthost"
+        # remove the current server from the list
+        if grep -q "$currenthost" "$jd2list"; then
+            grep -v "$currenthost" "$jd2list" > "${jd2list}.tmp" && mv "${jd2list}.tmp" "$jd2list"
+            log "Removed $shorthost from the server list."
+        else
+            log "$shorthost is not in the server list."
+        fi
     fi
     # get the next server from the top of the list
-    nextserver=$(head -n 1 "$jdlist" | cut -f1 -d'.')
+    nextserverhost=$( head -n 1 "$jd2list" )
+    # remove everything after the first '.'
+    nextserver="${nextserverhost%%.*}"
     #
     if [[ "$nextserver" == "EOF" ]]; then
         # no more servers, rotate to next city
         getnextcity
-        log "Server list empty. Connecting to: $nextcity" "NOTIFY"
+        log "Server list is empty. Connecting to $nextcity." "NOTIFY"
         if nordvpn connect "$nextcity"; then
             log "Connection successful."
+            reload_applet
         else
-            log "Connection failed: $nextcity -Exit." "ERROR"
+            log "Connection to $nextcity failed. Exit." "ERROR"
+            reload_applet
             exit 1
         fi
         sleep 3
         updateserverlist
-    else
-        # connect to the next server
-        log "Connect to the next server: $nextserver"
-        if nordvpn connect "$nextserver"; then
-            log "Connection successful."
-        else
-            log "Connection failed: $nextserver -Exit." "ERROR"
-            exit 1
-        fi
-        sleep 3
+        return
     fi
+    # connect to the next server
+    log "Connect to the next server: $nextserver"
+    if nordvpn connect "$nextserver"; then
+        log "Connection successful."
+        reload_applet
+    else
+        log "Connection to $nextserver failed. Exit." "ERROR"
+        if [[ "$removefailed" =~ ^[Yy]$ ]]; then
+            grep -v "$nextserverhost" "$jd2list" > "${jd2list}.tmp" && mv "${jd2list}.tmp" "$jd2list"
+            log "Removed $nextserverhost from the server list."
+        fi
+        reload_applet
+        exit 1
+    fi
+    # wait for other system notifications
+    #sleep 3
 }
 function getnextcity {
     index="0"   # first city is default.  array index starts at zero
@@ -262,6 +309,17 @@ function getnextcity {
         fi
     done
     nextcity="${cities[index]}"
+}
+function reload_applet {
+    # reload Cinnamon Desktop applets
+    if [[ "$nordlistapplet" =~ ^[Yy]$ ]] && [[ -d "/home/$USER/.local/share/cinnamon/applets/nordlist_tray@ph202107" ]]; then
+        # reload 'nordlist_tray@ph202107' - changes the icon color (for connection status) immediately.
+        dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
+    fi
+    if [[ "$nmapplet" =~ ^[Yy]$ ]]; then
+        # reload 'network@cinnamon.org' - removes extra 'nordlynx' entries.
+        dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'network@cinnamon.org' string:'APPLET'
+    fi
 }
 #
 # =====================================================================
