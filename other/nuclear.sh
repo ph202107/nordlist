@@ -133,6 +133,13 @@ function installnord {
             linecolor "red" "Failed to install the package."
             exit 1
         fi
+        echo
+        if [[ ! "$perform_apt_update" =~ ^[Yy]$ ]]; then
+            # apt update after adding repository
+            linecolor "green" "Enabling Apt Update."
+            perform_apt_update="y"
+            echo
+        fi
     fi
     linebreak "Apt Update"
     if [[ "$perform_apt_update" =~ ^[Yy]$ ]]; then
@@ -204,7 +211,7 @@ function loginnord {
     echo "Refer to: https://my.nordaccount.com/legal/privacy-policy/"
     nordvpn set analytics disabled
     #
-    if [[ -n $login_token ]]; then
+    if [[ -n "$login_token" ]]; then
         linebreak "Login (token)"
         nordvpn login --token "$login_token"
     else
@@ -266,14 +273,14 @@ function choose_version {
 }
 function add_token {
     printascii "yellow" "TOKEN"
-    if [[ -n $login_token ]]; then
+    if [[ -n "$login_token" ]]; then
         linecolor "red" "Token cleared."
         echo
     fi
     login_token=""
     token_expires=""
     read -r -p "Enter the login token: " login_token
-    if [[ -z $login_token ]]; then
+    if [[ -z "$login_token" ]]; then
         linecolor "red" "(No Token)"
     fi
 }
@@ -290,9 +297,9 @@ function header {
     fi
     echo
     echo -ne "$(linecolor "yellow" "Login Token: ")"
-    if [[ -n $login_token ]]; then
+    if [[ -n "$login_token" ]]; then
         echo "$login_token"
-        if [[ -n $token_expires ]]; then
+        if [[ -n "$token_expires" ]]; then
             echo
             echo -ne "$(linecolor "yellow" "Token Expires: ")"
             echo "$token_expires"

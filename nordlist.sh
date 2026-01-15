@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Tested with NordVPN Version 4.3.1 on Linux Mint 21.3
-# January 11, 2026
+# January 15, 2026
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -827,106 +827,92 @@ function set_vars {
     # "nordvpn status"
     # When disconnected, $status is the only variable from nordstatus.
     # When meshnet is enabled, the transfer stats will not be zeroed on VPN reconnect.
-    # Using <colon><space> as delimiter.
     #
     for line in "${nordstatus[@]}"
     do
-        lc_line="${line,,}"     # lowercase used for matching and individual vars
+        value="${line##*: }"            # using <colon><space> as delimiter
+        lc_value="${value,,}"           # lowercase value
+        lc_line="${line,,}"             # lowercase line used for matching
         #
         case "$lc_line" in
-            *"status"*)
-                status="${lc_line##*: }"    # status is lowercase
-                ;;
-            *"server"*)
-                servername="${line##*: }"   # eg "United States #9992" incl. "Virtual"
-                ;;
-            *"hostname"*)
-                nordhost="${lc_line##*: }"  # eg "us9992.nordvpn.com". lowercase
-                server="${nordhost%%.*}"    # eg "us9992". lowercase
-                ;;
-            *"ip:"*)
-                ipaddr="${line##*: }"
-                ;;
-            *"country"*)
-                country="${line##*: }"
-                ;;
-            *"city"*)
-                city="${line##*: }"
-                ;;
-            #*"technology"*)    technology2="${lc_line##*: }";;     # lowercase
-            #*"protocol"*)      protocol2="${line##*: }"; protocol2="${protocol2^^}";;  # uppercase
-            #*"quantum"*)       postquantum2="${lc_line##*: }";;    # lowercase
-                #
-            *"transfer"*)
-                read -ra words <<< "$line"           # split line into an array
-                transferd="${words[1]} ${words[2]}"  # fields 2,3 = download stat with units
-                transferu="${words[4]} ${words[5]}"  # fields 5,6 = upload stat with units
-                ;;
-            *"uptime"*)
-                uptime="$line"
-                ;;
+            *"status"*)     status="$lc_value";;
+            *"server"*)     servername="$value";;       # eg "United States #9992" incl. "Virtual"
+            *"hostname"*)   nordhost="$lc_value"        # eg "us9992.nordvpn.com"
+                            server="${lc_value%%.*}";;  # eg "us9992"
+            *"ip:"*)        ipaddr="$value";;
+            *"country"*)    country="$value";;
+            *"city"*)       city="$value";;
+            #*"technology"*)    technology2="$lc_value";;
+            #*"protocol"*)      protocol2="${value^^}";;
+            #*"quantum"*)       postquantum2="$lc_value";;
+            *"transfer"*)   read -ra words <<< "$line"              # split line into an array
+                            transferd="${words[1]} ${words[2]}"     # fields 2,3 = download stat with units
+                            transferu="${words[4]} ${words[5]}";;   # fields 5,6 = upload stat with units
+            *"uptime"*)     uptime="$line";;
         esac
     done
     #
-    # "nordvpn settings"  (all elements in nordsettings[@] are lowercase)
+    # "nordvpn settings"
     # $protocol and $obfuscate are only listed when using OpenVPN
     # $postquantum is not listed when using OpenVPN
-    # Using <colon><space> as delimiter.
     #
-    for line in "${nordsettings[@]}"
+    # default to "disabled" in case these are not found
+    obfuscate="disabled"
+    ipversion6="disabled"
+    postquantum="disabled"
+    #
+    for lc_line in "${nordsettings[@]}"     # all elements are lowercase
     do
-        case "$line" in
-            *"technology"*)     technology="${line##*: }";;
-            *"protocol"*)       protocol="${line##*: }"; protocol="${protocol^^}";; # uppercase
-            *"firewall:"*)      firewall="${line##*: }";;
-            *"firewall mark"*)  fwmark="${line##*: }";;
-            *"routing"*)        routing="${line##*: }";;
-            *"consent"*)        userconsent="${line##*: }";;
-            *"kill"*)           killswitch="${line##*: }";;
-            *"threat"*)         tplite="${line##*: }";;
-            *"obfuscate"*)      obfuscate="${line##*: }";;
-            *"notify"*)         notify="${line##*: }";;
-            *"tray"*)           tray="${line##*: }";;
-            *"auto"*)           autoconnect="${line##*: }";;
-            *"ipv6"*)           ipversion6="${line##*: }";;
-            *"meshnet"*)        meshnet="${line##*: }";;
+        lc_value="${lc_line##*: }"          # using <colon><space> as delimiter
+        #
+        case "$lc_line" in
+            *"technology"*)     technology="$lc_value";;
+            *"protocol"*)       protocol="${lc_value^^}";;  # uppercase
+            *"firewall:"*)      firewall="$lc_value";;
+            *"firewall mark"*)  fwmark="$lc_value";;
+            *"routing"*)        routing="$lc_value";;
+            *"consent"*)        userconsent="$lc_value";;
+            *"kill"*)           killswitch="$lc_value";;
+            *"threat"*)         tplite="$lc_value";;
+            *"obfuscate"*)      obfuscate="$lc_value";;
+            *"notify"*)         notify="$lc_value";;
+            *"tray"*)           tray="$lc_value";;
+            *"auto"*)           autoconnect="$lc_value";;
+            *"ipv6"*)           ipversion6="$lc_value";;
+            *"meshnet"*)        meshnet="$lc_value";;
             *"dns"*)
-                customdns="${line##*: }"
+                customdns="$lc_value"
                 # customdns is either "disabled" or lists the DNS IPs
                 if [[ "$customdns" != "disabled" ]]; then
                     customdns="enabled"
-                    dns_servers="${line##*: }"
+                    dns_servers="$lc_value"
                 fi
                 ;;
-            *"discover"*)       landiscovery="${line##*: }";;
-            *"virtual"*)        virtual="${line##*: }";;
-            *"quantum"*)        postquantum="${line##*: }";;
-            *"ignore"*)         arpignore="${line##*: }";;
+            *"discover"*)       landiscovery="$lc_value";;
+            *"virtual"*)        virtual="$lc_value";;
+            *"quantum"*)        postquantum="$lc_value";;
+            *"ignore"*)         arpignore="$lc_value";;
         esac
     done
-    # default to "disabled" if not found
-    obfuscate="${obfuscate:-disabled}"
-    ipversion6="${ipversion6:-disabled}"
-    postquantum="${postquantum:-disabled}"
     #
     # handle allowlist separately
     allowlist=()
     allowlist_var="disabled"
     collect_lines="false"
     #
-    for line in "${nordsettings[@]}"
+    for lc_line in "${nordsettings[@]}"     # all elements are lowercase
     do
-        if [[ "$line" == *"allowlist"* ]]; then
+        if [[ "$lc_line" == *"allowlist"* ]]; then
             # "allowlist" is only listed when the allowlist has entries
             allowlist_var="enabled"
             collect_lines="true"
         fi
         if [[ "$collect_lines" == "true" ]]; then
-            allowlist+=( "$line" )
+            allowlist+=( "$lc_line" )
         fi
         # allowlist is the last item in "nordvpn settings"
         # customize as necessary if the "nordvpn settings" output changes in the future
-        if [[ -z "$line" ]]; then
+        if [[ -z "$lc_line" ]]; then
             break
         fi
     done
@@ -4095,7 +4081,7 @@ function allservers_update {
     echo
     parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$serversfile"
+        curl "https://api.nordvpn.com/v1/servers?limit=0" > "$serversfile"
         echo
         echo -e "Saved as: ${EColor}$serversfile${Color_Off}"
         echo "File Size: $( du -k "$serversfile" | cut -f1 ) KB"
@@ -4166,7 +4152,7 @@ function allservers_menu {
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             touch "$serversfile"
-            curl "https://api.nordvpn.com/v1/servers?limit=9999999" > "$serversfile"
+            curl "https://api.nordvpn.com/v1/servers?limit=0" > "$serversfile"
             echo -e "Saved as: ${EColor}$serversfile${Color_Off}"
         else
             REPLY="$upmenu"
@@ -4179,7 +4165,7 @@ function allservers_menu {
     echo
     PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
-    submallvpn=( "List All Servers" "Server Count" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Obfuscated Servers" "P2P Servers" "Dedicated-IP Servers" "IKEv2/IPSec" "HTTPS Proxy" "HTTPS CyberSec Proxy" "OpenVPN UDP" "OpenVPN TCP" "WireGuard" "NordWhisper" "Virtual Locations" "Search Country" "Search City" "Search Server" "Connect" "Update List" "Exit" )
+    submallvpn=( "List All Servers" "Server Count" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Obfuscated Servers" "P2P Servers" "Dedicated-IP Servers" "IKEv2/IPSec" "HTTPS Proxy" "HTTPS CyberSec Proxy" "OpenVPN UDP" "OpenVPN TCP" "WireGuard" "NordWhisper" "Virtual Locations" "Location ID Numbers" "Search Country" "Search City" "Search Server" "Connect" "Update List" "Exit" )
     select avpn in "${submallvpn[@]}"
     do
         parent_menu
@@ -4246,6 +4232,14 @@ function allservers_menu {
                 jq -r '.[] | select(.specifications[] | .title == "Virtual Location") | "\(.locations[0].country.name), \(.locations[0].country.city.name)"' "$serversfile" | sort -u
                 echo
                 echo "Virtual Locations = $( jq -r '.[] | select(.specifications[] | .title == "Virtual Location") | "\(.locations[0].country.name), \(.locations[0].country.city.name)"' "$serversfile" | sort -u | wc -l )"
+                echo
+                ;;
+            "Location ID Numbers")
+                heading "Country ID Numbers" "txt"
+                jq -r '.[] | .locations[0].country | "\(.id) \(.name)"' "$serversfile" | sort -u -k2
+                echo
+                heading "City ID Numbers" "txt"
+                jq -r '.[] | .locations[0].country.city | "\(.id) \(.name)"' "$serversfile" | sort -u -k2
                 echo
                 ;;
             "Search Country")

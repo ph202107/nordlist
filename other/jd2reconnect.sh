@@ -3,7 +3,7 @@
 # This script works with the NordVPN Linux CLI and the JDownloader2
 # "reconnect" option.  It can also run standalone or with other apps.
 #
-# The script creates a list of the top 20 Recommended Servers based on
+# The script creates a list of the top 60 Recommended Servers based on
 # your current VPN location. When the script is called it checks if your
 # current server is in the list, deletes that entry, and connects to
 # the next server. When no servers remain it connects to another city
@@ -49,9 +49,12 @@
 # Known Issues:
 #  -Connection may fail if you have another device already connected
 #   to the target server using the same technology and protocol.
-#   Can delete the in-use server from the list or use another city.
-#  -The API will sometimes return recommended servers that are not from
-#   the connected city.
+#  -Most cities worldwide have fewer than 60 servers in total, virtual
+#   cities may have only 2. For server counts refer to nordlist.sh in:
+#   Tools - NordVPN API - All VPN Servers - Server Count
+#  -Servers are removed from the list during script reconnect events.
+#   If the VPN is disconnected by other means (manually/etc) the server
+#   will remain in the server list.
 #  -The script does not check for VPN account login status and has no
 #   automatic handling of VPN connection errors.
 #
@@ -79,7 +82,8 @@ notifications="y"
 # Prevents rapid server changes.  Value is in minutes.
 minuptime="10"
 #
-# If the connection to a server fails, remove that server from the server list. "y" or "n"
+# If the connection to a server fails, remove that server from the
+# server list. "y" or "n"
 removefailed="y"
 #
 # Reload the Nordlist Cinnamon applet when the script exits.
@@ -98,7 +102,7 @@ cities=( "New_York" "Los_Angeles" "Chicago" "Dallas" ) # "London" "Amsterdam" "F
 # =====================================================================
 #
 function checkdepends {
-    for cmd in curl jq nordvpn; do
+    for cmd in curl jq awk nordvpn; do
         if ! command -v "$cmd" &> /dev/null; then
             echo "Error: $cmd is not installed. Exit." >&2
             exit 1
@@ -110,7 +114,7 @@ function log {
     level="${2:-INFO}"  # log levels: INFO|RECONNECT|ERROR|WARNING|NOTIFY default:INFO
     timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
     #
-    # Log to terminal (debug) and logfile
+    # Log to terminal and logfile
     echo "$timestamp [$level] $message"
     [[ -n "$logfile" ]] && echo "$timestamp [$level] $message" >> "$logfile"
     #
@@ -120,9 +124,7 @@ function log {
     fi
 }
 function logstart {
-    # check if the log file exists
     if [[ ! -e "$logfile" ]]; then
-        # create the log file
         if ! touch "$logfile"; then
             echo "Error: Failed to create log file at $logfile. Exit." >&2
             exit 1
@@ -151,10 +153,8 @@ function logstart {
     fi
 }
 function checkserverlist {
-    # check if the server list exists
     if [[ ! -e "$jd2list" ]]; then
         log "No server list found."
-        # create the server list
         if ! touch "$jd2list"; then
             log "Failed to create a server list at $jd2list. Exit." "ERROR"
             exit 1
@@ -164,18 +164,49 @@ function checkserverlist {
 }
 function updateserverlist {
     log "Retrieving a server list from NordVPN API..."
+    getcurrentinfo
     #
-    if ! curl "https://api.nordvpn.com/v1/servers/recommendations?limit=20" | jq -r '.[].hostname' > "$jd2list"; then
-        log "Failed to retrieve a server list from API. Exit." "ERROR"
-        exit 1
+    if [[ "$connectedstatus" == "connected" ]]; then
+        # find the api country code to use as an api filter
+        apicountrycode=$(curl -s "https://api.nordvpn.com/v1/servers/countries" | \
+        jq -r --arg country "$apicountry" '.[] | select(.name | ascii_downcase == $country) | .id')
+        #
+        if [[ -z "$apicountrycode" ]]; then
+            log "Could not find API Country ID for $currentcountry." "ERROR"
+            exit 1
+        fi
+        # there does not seem to be a 'city' filter for the api
+        # retrieve all the servers for the country, jq filter by city, sort by load, save hostnames
+        # ~3200 USA servers == ~8MB download.  Reducing 'limit=0' fails on USA queries.
+        if ! curl -s "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$apicountrycode&limit=0" | \
+        jq -r --arg city "$apicity" '.[] | select(.locations[0].country.city.name | ascii_downcase == $city) | "\(.load) \(.hostname)"' | \
+        sort -n | head -n 60 | awk '{print $2}' > "$jd2list"; then
+            #
+            log "Failed to pull servers for $currentcity. Exit." "ERROR"
+            exit 1
+        fi
+    else
+        # VPN disconnected
+        if ! curl -s "https://api.nordvpn.com/v1/servers/recommendations?limit=60" | jq -r '.[].hostname' > "$jd2list"; then
+            log "Failed to retrieve a server list from API. Exit." "ERROR"
+            exit 1
+        fi
     fi
     # check if the server list is empty
     if [[ ! -s "$jd2list" ]]; then
         log "Server list is empty after retrieval. Exit." "ERROR"
         exit 1
     fi
+    #
+    if [[ "$currentcity" == "N/A" || -z "$currentcity" ]]; then
+        logcity="Recommended"
+    else
+        logcity="$currentcity"
+    fi
+    logcount=$(wc -l < "$jd2list")
+    #
     echo "EOF" >> "$jd2list"
-    log "Server list retrieved successfully."
+    log "$logcity server list retrieved. $logcount servers."
     log "List: $jd2list"
 }
 function getcurrentinfo {
@@ -185,47 +216,55 @@ function getcurrentinfo {
         reload_applet
         exit 1
     fi
+    # default to N/A
+    connectedstatus="N/A"
+    currenthost="N/A"
+    shorthost="N/A"
+    currentcountry="N/A"
+    currentcity="N/A"
+    apicountry="N/A"
+    apicity="N/A"
+    transferstats="N/A"
+    norduptime="N/A"
     #
     for line in "${nordvpnstatus[@]}"
     do
-        lc_line="${line,,}"     # lowercase
+        value="${line##*: }"        # using <colon><space> as delimiter
+        us_value="${value// /_}"    # replace spaces with underscores
+        lc_value="${value,,}"       # lowercase value
+        lc_line="${line,,}"         # lowercase line used for matching
+        #
         case "$lc_line" in
-            *"status"*)
-                connectedstatus="${lc_line##*: }"
-                ;;
-            *"hostname"*)
-                currenthost="${lc_line##*: }"
-                shorthost="${currenthost%%.*}"
-                ;;
-            *"city"*)
-                rawcity="${line##*: }"
-                # replace all spaces with underscores
-                currentcity="${rawcity// /_}"
-                ;;
-            *"uptime"*)
-                norduptime="$line"
-                ;;
+            *"status"*)     connectedstatus="$lc_value";;
+            *"hostname"*)   currenthost="$lc_value"
+                            shorthost="${lc_value%%.*}";;
+            *"country"*)    currentcountry="$us_value"
+                            apicountry="$lc_value";;
+            *"city"*)       currentcity="$us_value"
+                            apicity="$lc_value";;
+            *"transfer"*)   transferstats="$line";;
+            *"uptime"*)     norduptime="$line";;
         esac
     done
-    # default to N/A
-    currenthost=${currenthost:-N/A}
-    shorthost=${shorthost:-N/A}
-    currentcity=${currentcity:-N/A}
     #
     servercount=$(( $(wc -l < "$jd2list") - 1 ))
     #
-    # calculate uptime in total minutes
-    weeks=$(echo "$norduptime" | grep -oP '\d+(?= week)' | head -1)
-    days=$(echo "$norduptime" | grep -oP '\d+(?= day)' | head -1)
-    hours=$(echo "$norduptime" | grep -oP '\d+(?= hour)' | head -1)
-    minutes=$(echo "$norduptime" | grep -oP '\d+(?= minute)' | head -1)
-    # default to 0
-    weeks=${weeks:-0}
-    days=${days:-0}
-    hours=${hours:-0}
-    minutes=${minutes:-0}
-    # current uptime in minutes.  Avoids issue with eg. "Uptime: 2 Hours 1 Minute"
-    currentuptime=$(( (weeks * 7 * 24 * 60) + (days * 24 * 60) + (hours * 60) + minutes ))
+    # calculate uptime in minutes
+    currentuptime=0
+    for word in $norduptime     # no quotes. eg. Uptime: 1 day 2 hours 1 minute 36 seconds
+    do
+        # word=${word//[,.]/}   # strip punctuation
+        if [[ $word =~ ^[0-9]+$ ]]; then
+            val=$word
+        else
+            case "${word,,}" in
+                week*)   (( currentuptime += val * 7 * 24 * 60 ));;
+                day*)    (( currentuptime += val * 24 * 60 ));;
+                hour*)   (( currentuptime += val * 60 ));;
+                minute*) (( currentuptime += val ));;
+            esac
+        fi
+    done
     waittime=$(( minuptime - currentuptime ))
 }
 function checkuptime {
@@ -250,38 +289,38 @@ function checkuptime {
         fi
     done
     log "VPN $norduptime"
+    log "$transferstats"
 }
 function changeserver {
     if [[ "$connectedstatus" == "connected" ]]; then
-        log "Current Server: $currentcity $shorthost"
+        log "Current Server: $currentcity $currentcountry $shorthost"
         # remove the current server from the list
-        if grep -q "$currenthost" "$jd2list"; then
-            grep -v "$currenthost" "$jd2list" > "${jd2list}.tmp" && mv "${jd2list}.tmp" "$jd2list"
+        if grep -qi "$currenthost" "$jd2list"; then
+            grep -vi "$currenthost" "$jd2list" > "${jd2list}.tmp" && mv "${jd2list}.tmp" "$jd2list"
             log "Removed $shorthost from the server list."
         else
             log "$shorthost is not in the server list."
         fi
     fi
-    # get the next server from the top of the list
-    nextserverhost=$( head -n 1 "$jd2list" )
-    # remove everything after the first '.'
-    nextserver="${nextserverhost%%.*}"
     #
-    if [[ "$nextserver" == "EOF" ]]; then
+    nextserverhost=$( head -n 1 "$jd2list" )    # get the next server from the top of the list
+    nextserver="${nextserverhost%%.*}"          # remove everything after the first '.'
+    #
+    if [[ "${nextserverhost,,}" == "eof" ]]; then
         # no more servers, rotate to next city
         getnextcity
         log "Server list is empty. Connecting to $nextcity." "NOTIFY"
         if nordvpn connect "$nextcity"; then
             log "Connection successful."
             reload_applet
+            sleep 3
+            updateserverlist
+            return
         else
             log "Connection to $nextcity failed. Exit." "ERROR"
             reload_applet
             exit 1
         fi
-        sleep 3
-        updateserverlist
-        return
     fi
     # connect to the next server
     log "Connect to the next server: $nextserver"
@@ -292,7 +331,7 @@ function changeserver {
         log "Connection to $nextserver failed. Exit." "ERROR"
         if [[ "$removefailed" =~ ^[Yy]$ ]]; then
             grep -v "$nextserverhost" "$jd2list" > "${jd2list}.tmp" && mv "${jd2list}.tmp" "$jd2list"
-            log "Removed $nextserverhost from the server list."
+            log "Removed $nextserver from the server list."
         fi
         reload_applet
         exit 1
