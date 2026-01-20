@@ -5,9 +5,9 @@
 #
 # The script creates a list of the top 60 Recommended Servers based on
 # your current VPN location. When the script is called it checks if your
-# current server is in the list, deletes that entry, and connects to
-# the next server. When no servers remain it connects to another city
-# and retrieves a new list.
+# current server is in the list and deletes that entry (if necessary), then
+# it connects to the next server and deletes that entry from the list. When
+# no servers remain it connects to another city and retrieves a new list.
 #
 # Requires 'curl' and 'jq'
 #   "sudo apt install curl jq"
@@ -52,24 +52,18 @@
 #  -Most cities worldwide have fewer than 60 servers in total, virtual
 #   cities may have only 2. For server counts refer to nordlist.sh in:
 #   Tools - NordVPN API - All VPN Servers - Server Count
-#  -Servers are removed from the list during script reconnect events.
-#   If the VPN is disconnected by other means (manually/etc) the server
-#   will remain in the server list.
 #  -The script does not check for VPN account login status and has no
 #   automatic handling of VPN connection errors.
 #
 # =====================================================================
 #
-# This variable can be used to set the paths below, or set each path
-# individually. This is the directory from which the script is run:
-jd2base="$(dirname "${BASH_SOURCE[0]}")"
+# Specify the minimum VPN uptime required before changing servers.
+# Prevents rapid server changes.  Value is in minutes.
+minuptime="10"
 #
-# Specify the full path and filename for the server list.
-# eg. jd2list="/home/$USER/Downloads/nord_jd2servers.txt"
-jd2list="$jd2base/nord_jd2servers.txt"
-#
-# Specify the full path and filename for the log file.
-logfile="$jd2base/nord_jd2log.txt"
+# Specify alternate cities to use as the server lists are emptied.
+# These will be used in rotation. Use underscores if needed, no spaces.
+cities=( "New_York" "Los_Angeles" "Chicago" "Dallas" ) # "London" "Amsterdam" "Frankfurt" )
 #
 # Automatically open a terminal window and follow the log. "y" or "n"
 # Tested with gnome-terminal, see "function logstart" for more options.
@@ -78,9 +72,17 @@ logmonitor="y"
 # Show desktop notifications for reconnects and errors. "y" or "n"
 notifications="y"
 #
-# Specify the minimum VPN uptime required before changing servers.
-# Prevents rapid server changes.  Value is in minutes.
-minuptime="10"
+# Play a sound when the script exits.
+# Options: "y"= play all, "n"= play none, "s"= only success, "e"= only errors
+alertplay="n"       # y/n/s/e
+alertvolume="50"    # Range 0 to 100
+alertsuccess="/usr/share/sounds/freedesktop/stereo/complete.oga"
+alerterror="/usr/share/sounds/freedesktop/stereo/phone-outgoing-busy.oga"
+#
+# Silence the alerts and the notifications during certain hours.
+quietmode="n"       # "y" or "n"
+quietstart="22"     # 24-hour format
+quietend="08"       # 24-hour format
 #
 # If the connection to a server fails, remove that server from the
 # server list. "y" or "n"
@@ -95,57 +97,107 @@ nordlistapplet="n"
 # This removes duplicate "nordlynx" entries from the applet. "y" or "n"
 nmapplet="n"
 #
-# Specify alternate cities to use as the server lists are emptied.
-# These will be used in rotation.
-cities=( "New_York" "Los_Angeles" "Chicago" "Dallas" ) # "London" "Amsterdam" "Frankfurt" )
+# This variable can be used to set the paths below, or set each path
+# individually. This is the directory from which the script is run:
+jd2base="$(dirname "${BASH_SOURCE[0]}")"
+#
+# Specify the full path and filename for the server list.
+# eg. jd2list="/home/$USER/Downloads/nord_jd2servers.txt"
+jd2list="$jd2base/nord_jd2servers.txt"
+#
+# Specify the full path and filename for the log file.
+logfile="$jd2base/nord_jd2log.txt"
+# Keep the log file trimmed to this many lines (with 2x buffer).
+logtrim="1000"
+# Color the log-levels when running directly in terminal. "y" or "n"
+logcolor="y"
 #
 # =====================================================================
 #
 function checkdepends {
     for cmd in curl jq awk nordvpn; do
         if ! command -v "$cmd" &> /dev/null; then
-            echo "Error: $cmd is not installed. Exit." >&2
-            exit 1
+            exitscript "1" "Error: $cmd is not installed. Exit."
         fi
     done
+    # Ensures the script can talk to your audio and desktop session when called.
+    # Applies to the alert sounds and desktop notifications.
+    # NOTE: If running as 'root' (via crontab/systemd), set your desktop user
+    # ID manually, eg. user_id="1000"
+    user_id="$(id -u)"
+    export XDG_RUNTIME_DIR="/run/user/$user_id"
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$user_id/bus"
 }
 function log {
-    message="$1"        # the message to log
-    level="${2:-INFO}"  # log levels: INFO|RECONNECT|ERROR|WARNING|NOTIFY default:INFO
+    message="$1"
+    level="${2:-INFO}"  # INFO|RECONNECT|ERROR|WARNING|NOTIFY|START
     timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
     #
-    # Log to terminal and logfile
-    echo "$timestamp [$level] $message"
-    [[ -n "$logfile" ]] && echo "$timestamp [$level] $message" >> "$logfile"
+    # ANSI Color Codes (light)
+    local reset="\033[0m"
+    local boldred="\033[1;31m"
+    local darkgrey="\033[90m"
+    local lgreen="\033[0;92m"
+    local lyellow="\033[0;93m"
+    local lpurple="\033[0;95m"
+    local lcyan="\033[0;96m"
     #
-    # Send a desktop notification for specific levels
-    if [[ "$notifications" =~ ^[Yy]$ && "$level" =~ ^(RECONNECT|ERROR|WARNING|NOTIFY)$ ]]; then
-        notify-send "JD2 - $level" "$message"
+    local color=""
+    case "$level" in
+        ERROR)     color="$boldred" ;;
+        WARNING)   color="$lyellow" ;;
+        RECONNECT) color="$lgreen"  ;;
+        NOTIFY)    color="$lcyan"   ;;
+        *)         color="$lpurple" ;;
+    esac
+    #
+    if [[ "${logcolor,,}" == "y" ]]; then
+        if [[ "$level" == "START" ]]; then  # also color the $message
+            echo -e "${darkgrey}${timestamp}${reset} ${color}[${level}] ${message}${reset}"
+        else
+            echo -e "${darkgrey}${timestamp}${reset} ${color}[${level}]${reset} ${message}"
+        fi
+    else
+        echo "${timestamp} [${level}] ${message}"
+    fi
+    # clean text to log file
+    if [[ -n "$logfile" ]]; then
+        echo "$timestamp [$level] $message" >> "$logfile"
+    fi
+    # send desktop notification
+    if [[ "${notifications,,}" == "y" && "$level" =~ ^(RECONNECT|ERROR|WARNING|NOTIFY)$ ]]; then
+        if ! quiettime; then
+            notify-send "JD2 - $level" "$message"
+        fi
     fi
 }
 function logstart {
     if [[ ! -e "$logfile" ]]; then
         if ! touch "$logfile"; then
-            echo "Error: Failed to create log file at $logfile. Exit." >&2
-            exit 1
+            exitscript "1" "Error: Failed to create log file at $logfile. Exit."
         fi
         log "Created: $logfile"
         log "Logging: $0"
     fi
     # separator
-    log "===================================================="
+    log "====================================================" "START"
     #
+    # trim logs when the buffer hits 2x $logtrim
+    if (( $(wc -l < "$logfile") > ("${logtrim:-1000}" * 2) )); then
+        tail -n "${logtrim:-1000}" "$logfile" > "${logfile}.tmp" && mv "${logfile}.tmp" "$logfile"
+        log "Maintenance: Trimmed log back to $logtrim lines." "NOTIFY"
+    fi
     # open a terminal to follow the log
-    if [[ "$logmonitor" =~ ^[Yy]$ ]]; then
+    if [[ "${logmonitor,,}" == "y" ]]; then
         # check if 'tail' process is already running for this logfile
-        if ! pgrep -f "tail -n50 -f $logfile$" > /dev/null; then
+        if ! pgrep -f "tail -n50 -F $logfile$" > /dev/null; then
             # launch the log monitor in a new terminal window
-            gnome-terminal --title="JD2_LOGS" -- bash -c "tail -n50 -f $logfile; exec bash"
+            gnome-terminal --title="JD2_LOGS" -- bash -c "tail -n50 -F $logfile; exec bash"
             #
             # other terminals not tested:
-            # xterm -T "JD2_LOGS" -hold -e "tail -n50 -f $logfile" &
-            # xfce4-terminal --title="JD2_LOGS" --command="tail -n50 -f $logfile" &
-            # konsole --title="JD2_LOGS" -e "tail -n50 -f $logfile" &
+            # xterm -T "JD2_LOGS" -hold -e "tail -n50 -F $logfile" &
+            # xfce4-terminal --title="JD2_LOGS" --command="tail -n50 -F $logfile" &
+            # konsole --title="JD2_LOGS" -e "tail -n50 -F $logfile" &
             #
             log "Opened the log monitor. CTRL-C to quit."
             log "Log: $logfile"
@@ -156,8 +208,7 @@ function checkserverlist {
     if [[ ! -e "$jd2list" ]]; then
         log "No server list found."
         if ! touch "$jd2list"; then
-            log "Failed to create a server list at $jd2list. Exit." "ERROR"
-            exit 1
+            exitscript "1" "Failed to create a server list at $jd2list. Exit."
         fi
         updateserverlist
     fi
@@ -172,36 +223,34 @@ function updateserverlist {
         jq -r --arg country "$apicountry" '.[] | select(.name | ascii_downcase == $country) | .id')
         #
         if [[ -z "$apicountrycode" ]]; then
-            log "Could not find API Country ID for $currentcountry." "ERROR"
-            exit 1
+            exitscript "1" "Could not find API Country ID for $currentcountry."
         fi
         # there does not seem to be a 'city' filter for the api
         # retrieve all the servers for the country, jq filter by city, sort by load, save hostnames
         # ~3200 USA servers == ~8MB download.  Reducing 'limit=0' fails on USA queries.
         if ! curl -s "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$apicountrycode&limit=0" | \
         jq -r --arg city "$apicity" '.[] | select(.locations[0].country.city.name | ascii_downcase == $city) | "\(.load) \(.hostname)"' | \
-        sort -n | head -n 60 | awk '{print $2}' > "$jd2list"; then
+        sort -n | head -n 60 | shuf | awk '{print $2}' > "$jd2list"; then
             #
-            log "Failed to pull servers for $currentcity. Exit." "ERROR"
-            exit 1
+            exitscript "1" "Failed to pull servers for $currentcity. Exit."
         fi
     else
         # VPN disconnected
-        if ! curl -s "https://api.nordvpn.com/v1/servers/recommendations?limit=60" | jq -r '.[].hostname' > "$jd2list"; then
-            log "Failed to retrieve a server list from API. Exit." "ERROR"
-            exit 1
+        if [[ $(nordvpn settings | grep -i "Kill Switch" | awk '{print $NF}') == "enabled" ]]; then
+            log "VPN disconnected with Kill Switch enabled." "WARNING"
+        fi
+        if ! curl -s "https://api.nordvpn.com/v1/servers/recommendations?limit=60" | shuf | jq -r '.[].hostname' > "$jd2list"; then
+            exitscript "1" "Failed to retrieve a server list from API. Exit."
         fi
     fi
     # check if the server list is empty
     if [[ ! -s "$jd2list" ]]; then
-        log "Server list is empty after retrieval. Exit." "ERROR"
-        exit 1
+        exitscript "1" "Server list is empty after retrieval. Exit."
     fi
     #
+    logcity="$currentcity"
     if [[ "$currentcity" == "N/A" || -z "$currentcity" ]]; then
         logcity="Recommended"
-    else
-        logcity="$currentcity"
     fi
     logcount=$(wc -l < "$jd2list")
     #
@@ -212,20 +261,12 @@ function updateserverlist {
 function getcurrentinfo {
     # current VPN status information
     if ! readarray -t nordvpnstatus < <(nordvpn status) || [[ "${#nordvpnstatus[@]}" -eq 0 ]]; then
-        log "Command 'nordvpn status' failure. Exit." "ERROR"
-        reload_applet
-        exit 1
+        exitscript "2" "Command 'nordvpn status' failure. Exit."
     fi
     # default to N/A
-    connectedstatus="N/A"
-    currenthost="N/A"
-    shorthost="N/A"
-    currentcountry="N/A"
-    currentcity="N/A"
-    apicountry="N/A"
-    apicity="N/A"
-    transferstats="N/A"
-    norduptime="N/A"
+    connectedstatus="N/A"   norduptime="N/A"    transferstats="N/A"
+    currentcountry="N/A"    apicountry="N/A"    currenthost="N/A"
+    currentcity="N/A"       apicity="N/A"       shorthost="N/A"
     #
     for line in "${nordvpnstatus[@]}"
     do
@@ -243,19 +284,21 @@ function getcurrentinfo {
             *"city"*)       currentcity="$us_value"
                             apicity="$lc_value";;
             *"transfer"*)   transferstats="$line";;
-            *"uptime"*)     norduptime="$line";;
+            *"uptime"*)     norduptime="$line"
+                            read -ra uptime_array <<< "$norduptime";;
         esac
     done
     #
     servercount=$(( $(wc -l < "$jd2list") - 1 ))
     #
     # calculate uptime in minutes
-    currentuptime=0
-    for word in $norduptime     # no quotes. eg. Uptime: 1 day 2 hours 1 minute 36 seconds
+    currentuptime="0"
+    val="0"
+    for word in "${uptime_array[@]}"    # eg. Uptime: 1 day 2 hours 1 minute 36 seconds
     do
         # word=${word//[,.]/}   # strip punctuation
         if [[ $word =~ ^[0-9]+$ ]]; then
-            val=$word
+            val=$((10#$word))   # force base-10 to also handle leading zeros
         else
             case "${word,,}" in
                 week*)   (( currentuptime += val * 7 * 24 * 60 ));;
@@ -280,8 +323,10 @@ function checkuptime {
     fi
     # loop until the minimum uptime is reached
     while (( currentuptime < minuptime )); do
-        sleep 60
+        sleep 60 & sleep_pid="$!"   # run timer in background so that ctrl-c or kill will be immediate
+        wait "$sleep_pid" || break  # wait for sleep background process.  "wait" is interruptible
         getcurrentinfo
+        # comment-out the next line to supress the heartbeat (logging every minute before reconnect)
         log "VPN Uptime: ${currentuptime}m  Min: ${minuptime}m  Wait: ${waittime}m"
         if (( currentuptime >= minuptime )); then
             log "Good to go."
@@ -291,53 +336,60 @@ function checkuptime {
     log "VPN $norduptime"
     log "$transferstats"
 }
-function changeserver {
-    if [[ "$connectedstatus" == "connected" ]]; then
-        log "Current Server: $currentcity $currentcountry $shorthost"
-        # remove the current server from the list
-        if grep -qi "$currenthost" "$jd2list"; then
-            grep -vi "$currenthost" "$jd2list" > "${jd2list}.tmp" && mv "${jd2list}.tmp" "$jd2list"
-            log "Removed $shorthost from the server list."
-        else
-            log "$shorthost is not in the server list."
-        fi
+function deleteserver {
+    # remove the current server from the list
+    # called before and after a connection
+    getcurrentinfo
+    if [[ "$connectedstatus" != "connected" ]]; then
+        return
     fi
+    log "Current Server: $currentcity $currentcountry $shorthost"
     #
+    if grep -qi "$currenthost" "$jd2list"; then
+        grep -vi "$currenthost" "$jd2list" > "${jd2list}.tmp" && mv "${jd2list}.tmp" "$jd2list"
+        log "Removed $shorthost from the server list."
+    else
+        log "$shorthost is not in the server list."
+    fi
+}
+function changeserver {
+    #
+    deleteserver                                # check and remove the current server from the list
     nextserverhost=$( head -n 1 "$jd2list" )    # get the next server from the top of the list
     nextserver="${nextserverhost%%.*}"          # remove everything after the first '.'
     #
     if [[ "${nextserverhost,,}" == "eof" ]]; then
-        # no more servers, rotate to next city
-        getnextcity
-        log "Server list is empty. Connecting to $nextcity." "NOTIFY"
-        if nordvpn connect "$nextcity"; then
-            log "Connection successful."
-            reload_applet
-            sleep 3
-            updateserverlist
-            return
-        else
-            log "Connection to $nextcity failed. Exit." "ERROR"
-            reload_applet
-            exit 1
-        fi
-    fi
-    # connect to the next server
-    log "Connect to the next server: $nextserver"
-    if nordvpn connect "$nextserver"; then
-        log "Connection successful."
-        reload_applet
+        connectnextcity
     else
-        log "Connection to $nextserver failed. Exit." "ERROR"
-        if [[ "$removefailed" =~ ^[Yy]$ ]]; then
-            grep -v "$nextserverhost" "$jd2list" > "${jd2list}.tmp" && mv "${jd2list}.tmp" "$jd2list"
-            log "Removed $nextserver from the server list."
-        fi
-        reload_applet
-        exit 1
+        connectnextserver
     fi
-    # wait for other system notifications
-    #sleep 3
+}
+function connectnextcity {
+    getnextcity
+    log "Server list is empty. Connecting to $nextcity." "NOTIFY"
+    #
+    if ! nordvpn connect "$nextcity"; then
+        exitscript "2" "Connection to $nextcity failed. Exit."
+    fi
+    log "Connection successful."
+    reloadapplet
+    sleep 3
+    updateserverlist
+    deleteserver
+}
+function connectnextserver {
+    log "Connect to the next server: $nextserver"
+    #
+    if ! nordvpn connect "$nextserver"; then
+        if [[ "${removefailed,,}" == "y" ]]; then
+            grep -v "$nextserverhost" "$jd2list" > "${jd2list}.tmp" && mv "${jd2list}.tmp" "$jd2list"
+            log "Connect fail. Removed $nextserver from the server list."
+        fi
+        exitscript "2" "Connection to $nextserver failed. Exit."
+    fi
+    log "Connection successful."
+    reloadapplet
+    deleteserver
 }
 function getnextcity {
     index="0"   # first city is default.  array index starts at zero
@@ -349,19 +401,121 @@ function getnextcity {
     done
     nextcity="${cities[index]}"
 }
-function reload_applet {
+function reloadapplet {
     # reload Cinnamon Desktop applets
-    if [[ "$nordlistapplet" =~ ^[Yy]$ ]] && [[ -d "/home/$USER/.local/share/cinnamon/applets/nordlist_tray@ph202107" ]]; then
+    if [[ "${nordlistapplet,,}" == "y" ]] && [[ -d "/home/$USER/.local/share/cinnamon/applets/nordlist_tray@ph202107" ]]; then
         # reload 'nordlist_tray@ph202107' - changes the icon color (for connection status) immediately.
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
     fi
-    if [[ "$nmapplet" =~ ^[Yy]$ ]]; then
+    if [[ "${nmapplet,,}" == "y" ]]; then
         # reload 'network@cinnamon.org' - removes extra 'nordlynx' entries.
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'network@cinnamon.org' string:'APPLET'
     fi
 }
+function quiettime {
+    # 0 = yes it's quiet time
+    # 1 = no it's not quiet time
+    #
+    if [[ "${quietmode,,}" != "y" ]]; then
+        return 1
+    fi
+    # force base 10
+    local currenthour=$((10#$(date +%H)))
+    local start=$((10#${quietstart:-0}))
+    local end=$((10#${quietend:-0}))
+    #
+    if (( start > end )); then  # overnight range eg 22 to 08
+        (( currenthour >= start || currenthour < end )) && return 0
+    else  # same-day range eg. 09 to 17
+        (( currenthour >= start && currenthour < end )) && return 0
+    fi
+    return 1
+}
+function makenoise {
+    # $1 = "success" or "error"
+    alert="${1:-error}"
+    #
+    case "${alertplay,,}" in
+        y)  ;;  # continue
+        s)  [[ "$alert" == "error" ]] && return;;
+        e)  [[ "$alert" == "success" ]] && return;;
+        *)  return;;    # (n, empty, typos)
+    esac
+    #
+    alertsound="$alerterror"
+    if [[ "$alert" == "success" ]]; then
+        alertsound="$alertsuccess"
+    fi
+    #
+    if [[ ! -f "$alertsound" ]]; then
+        log "$alertsound not found." "WARNING"
+        return
+    fi
+    #
+    if quiettime; then
+        return
+    fi
+    #
+    # try PulseAudio, PipeWire, ffmpeg, terminal bell
+    if command -v paplay >/dev/null; then
+        pa_vol=$(( 65536 * alertvolume / 100 ))         # PulseAudio volume 0 to 65536
+        timeout 2s paplay --volume="$pa_vol" "$alertsound" >/dev/null 2>&1 &    # background
+        #
+    elif command -v pw-play >/dev/null; then
+        if [[ "$alertvolume" -eq 100 ]]; then
+            pw_vol="1.0"
+        else
+            pw_vol=$(printf "0.%02d" "$alertvolume")    # PipeWire volume 0.0 to 1.0
+        fi
+        timeout 2s pw-play --volume="$pw_vol" "$alertsound" >/dev/null 2>&1 &
+        #
+    elif command -v ffplay >/dev/null; then
+        timeout 2s ffplay -nodisp -autoexit -volume "$alertvolume" "$alertsound" >/dev/null 2>&1 &
+        #
+    else
+        echo -ne "\a"   # terminal bell
+    fi
+}
+function exitscript {
+    exit_code="${1:-0}"
+    exit_message="$2"
+    #
+    # 0 = success (default)
+    # 1 = general error
+    # 2 = connection error, reloadapplet
+    #
+    case "$exit_code" in
+        0)  [[ -n "$exit_message" ]] && log "$exit_message" "RECONNECT"
+            makenoise "success"
+            ;;
+        1)  [[ -n "$exit_message" ]] && log "$exit_message" "ERROR"
+            makenoise "error"
+            ;;
+        2)  [[ -n "$exit_message" ]] && log "$exit_message" "ERROR"
+            reloadapplet
+            makenoise "error"
+            ;;
+        *)  log "${exit_message:-Script exited with unexpected code: $exit_code}" "ERROR"
+            makenoise "error"
+            ;;
+    esac
+    #
+    if quiettime && [[ "${alertplay,,}" != "n" || "${notifications,,}" == "y" ]]; then
+        log "Quiet Mode Active (${quietstart}:00-${quietend}:00)" "NOTIFY"
+    fi
+    # cleanup any leftover .tmp files
+    [[ -f "${jd2list}.tmp" ]] && rm -f "${jd2list}.tmp"
+    [[ -f "${logfile}.tmp" ]] && rm -f "${logfile}.tmp"
+    # if terminated, kill any 'sleep' processes that are children of this script
+    pkill -P $$ -x "sleep" >/dev/null 2>&1
+    #
+    exit "$exit_code"
+}
 #
 # =====================================================================
+#
+# run exitscript if the script is interrupted or terminated, eg. user CTRL-C
+trap 'exitscript 1 "Script terminated by system/user."' SIGINT SIGTERM
 #
 checkdepends
 logstart
@@ -373,7 +527,7 @@ changeserver
 getcurrentinfo
 getnextcity
 #
-log "VPN: $currentcity $shorthost  List: $servercount  Next: $nextcity" "RECONNECT"
+exitscript "0" "VPN: $currentcity $shorthost  List: $servercount  Next: $nextcity"
 #
 # eg. "VPN: New_York us8369  List: 13  Next: Los_Angeles"
 # "VPN: New_York us8369" == The current VPN connection, city and server number.

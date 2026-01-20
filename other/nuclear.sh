@@ -150,6 +150,46 @@ function installnord {
     linebreak "Install $install_version"
     sudo apt install "$install_version" -y
 }
+function startservice {
+    linecolor "green" "Starting the service..."
+    linecolor "cyan" "Trying: sudo systemctl start nordvpnd.service"
+    echo
+    if ! sudo systemctl start nordvpnd.service; then
+        linecolor "red" "Failed to start nordvpnd.service"
+        echo
+        exit 1
+    fi
+    timeout="10"
+    count="0"
+    success="false"
+    echo -n "Waiting for service."
+    while [[ "$count" -lt "$timeout" ]]
+    do
+        if systemctl is-active --quiet nordvpnd; then
+            sleep 1     # pause in case service starts and stops
+            if systemctl is-active --quiet nordvpnd; then
+                success="true"
+                break
+            fi
+        fi
+        echo -n "."
+        sleep 1
+        ((count++))
+    done
+    echo
+    if [[ "$success" = "true" ]]; then
+        linecolor "green" "nordvpnd.service has started."
+    else
+        linecolor "red" "nordvpnd.service failed to start."
+        echo
+        linecolor "cyan" "sudo systemctl status nordvpnd.service"
+        sudo systemctl status nordvpnd.service
+        echo
+        echo -e "View logs with: $(linecolor "cyan" "journalctl -u nordvpnd")"
+        echo
+        exit 1
+    fi
+}
 function loginnord {
     linebreak "Check Group"
     if id -nG "$USER" | grep -qw "nordvpn"; then
@@ -165,44 +205,7 @@ function loginnord {
     if systemctl is-active --quiet nordvpnd; then
         linecolor "green" "nordvpnd.service is active"
     else
-        linecolor "green" "Starting the service..."
-        linecolor "cyan" "Trying: sudo systemctl start nordvpnd.service"
-        echo
-        if ! sudo systemctl start nordvpnd.service; then
-            linecolor "red" "Failed to start nordvpnd.service"
-            echo
-            exit 1
-        fi
-        timeout="10"
-        count="0"
-        success="false"
-        echo -n "Waiting for service."
-        while [[ "$count" -lt "$timeout" ]]
-        do
-            if systemctl is-active --quiet nordvpnd; then
-                sleep 1     # pause in case service starts and stops
-                if systemctl is-active --quiet nordvpnd; then
-                    success="true"
-                    break
-                fi
-            fi
-            echo -n "."
-            sleep 1
-            ((count++))
-        done
-        echo
-        if [[ "$success" = "true" ]]; then
-            linecolor "green" "nordvpnd.service has started."
-        else
-            linecolor "red" "nordvpnd.service failed to start."
-            echo
-            linecolor "cyan" "sudo systemctl status nordvpnd.service"
-            sudo systemctl status nordvpnd.service
-            echo
-            echo -e "View logs with: $(linecolor "cyan" "journalctl -u nordvpnd")"
-            echo
-            exit 1
-        fi
+        startservice
     fi
     #
     linebreak "Disable Analytics"
@@ -343,34 +346,28 @@ current_version="$(nordvpn --version)"
 #
 while true; do
     header
-    case "$REPLY" in
-        [Vv])
-            choose_version
+    case "${REPLY,,}" in
+        v)  choose_version
             ;;
-        [Tt])
-            add_token
+        t)  add_token
             ;;
-        [Aa])
-            if [[ ! "$perform_apt_update" =~ ^[Yy]$ ]]; then
+        a)  if [[ ! "$perform_apt_update" =~ ^[Yy]$ ]]; then
                 perform_apt_update="y"
             else
                 perform_apt_update="n"
             fi
             ;;
-        [Ee])
-            edit_script
+        e)  edit_script
             exit
             ;;
-        [Yy])
-            trashnord
+        y)  trashnord
             installnord
             loginnord
             changelog
             default_settings
             break
             ;;
-        *)
-            printascii "red" "ABORT"
+        *)  printascii "red" "ABORT"
             break
             ;;
     esac
