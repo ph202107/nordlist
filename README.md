@@ -17,3 +17,4 @@ To download:
 - Extract "nordlist.sh"  
 - Open [nordlist.sh](https://github.com/ph202107/nordlist/blob/main/nordlist.sh) with any text editor.  
 - Full installation instructions are at the top of the script.  
+- Alternately, run:   bash nordlist.sh --install  

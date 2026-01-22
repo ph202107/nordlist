@@ -1,7 +1,6 @@
 #!/bin/bash
-#
 # Tested with NordVPN Version 4.3.1 on Linux Mint 21.3
-# January 15, 2026
+VERSION="2026.01.22"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -23,27 +22,42 @@
 # =============
 #
 # 1a) Use 'git' to clone the repo:
-#       git clone https://github.com/ph202107/nordlist.git
+#           git clone https://github.com/ph202107/nordlist.git
 #     Note: All user-generated files are by default saved to the same directory
 #     as nordlist.sh.  eg. "nord_favorites.txt"
 #     To store these files in a separate directory, configure the 'nordlistbase'
 #     option or set the path for each file individually.
 #
-# 1b) To download or update manually, open a terminal and follow these steps to
-#     create a 'nordlist' folder in the home directory and add it to your $PATH.
-#     Change the directory as you prefer.
-#       cd ~
-#       wget -O ~/nordlist-main.zip https://github.com/ph202107/nordlist/archive/refs/heads/main.zip
-#       unzip ~/nordlist-main.zip
-#       mkdir -p ~/nordlist
-#       # Overwrites existing nordlist files but preserves nord_favorites.txt, etc.
-#       cp -r ~/nordlist-main/* ~/nordlist/
-#       rm -rf ~/nordlist-main.zip ~/nordlist-main
-#       chmod +x ~/nordlist/nordlist.sh
+# 1b) Install or Update automatically:
+#       Open a terminal where this script is located and run:
+#               bash nordlist.sh --install
+#       This will download the files, create a 'nordlist' folder in your home
+#       directory and prompt to add that folder to your $PATH via .bashrc. You
+#       will also be prompted to install all the dependencies listed in Step 2,
+#       and the Nordlist Cinnamon Applet in Step 3.
 #
-#       # Optional: Add the nordlist folder to $PATH to run the script from anywhere.
-#       echo 'export PATH="$HOME/nordlist:$PATH"' >> ~/.bashrc
-#       source ~/.bashrc
+#     * If you created a config file or favorites file they will be preserved,
+#     * however hardcoded customization options in nordlist.sh will be overwritten.
+#     * Refer to "function external_source" for instructions on how to create a
+#     * config file and preserve your customizations when updating.
+#
+# 1c) Install or update manually:
+#       Copy/paste these commands. This will overwrite your nordlist.sh and any
+#       hardcoded customizations, see the note above.
+#       Change "directory" as you prefer:
+#
+#       directory="$HOME/nordlist"
+#       wget -q -O "$HOME/nordlist-main.zip" https://github.com/ph202107/nordlist/archive/refs/heads/main.zip
+#       unzip -qo "$HOME/nordlist-main.zip" -d "$HOME"
+#       mkdir -p "$directory"
+#       cp -rf "$HOME/nordlist-main/." "$directory/"
+#       rm -rf "$HOME/nordlist-main.zip" "$HOME/nordlist-main"
+#       chmod +x "$directory/nordlist.sh"
+#
+#       # Optional: add folder to $PATH via .bashrc (only if not already present)
+#       [[ ":$PATH:" != *":$directory:"* ]] && echo "export PATH=\"\$PATH:$directory\"" >> "$HOME/.bashrc"
+#       # Close and reopen your terminal.
+#       which nordlist.sh
 #
 # 2) Install External Programs
 #       sudo apt update
@@ -1412,7 +1426,7 @@ function setting_menu {
     indicators_display
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "Post-Quantum" "ARP-Ignore" "Allowlist" "Account" "Restart" "Reset" "NFTables" "Logs" "Script" "Defaults" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "Post-Quantum" "ARP-Ignore" "Allowlist" "Account" "Restart" "Reset" "NFTables" "Logs" "Script" "Defaults" "Update" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
@@ -1443,6 +1457,7 @@ function setting_menu {
             "Logs")             service_logs;;
             "Script")           script_info;;
             "Defaults")         set_defaults_ask;;
+            "Update")           update_nordlist;;
             "Exit")             main_menu;;
             *)                  invalid_option "${#submsett[@]}" "$parent";;
         esac
@@ -4184,6 +4199,9 @@ function allservers_menu {
                 heading "Servers in each City" "txt"
                 jq -r 'group_by(.locations[0].country.name + " " + .locations[0].country.city.name) | map({country: .[0].locations[0].country.name, city: .[0].locations[0].country.city.name, total: length}) | sort_by(.country, .city) | .[] | "\(.country), \(.city) = \(.total)"' "$serversfile"
                 echo
+                heading "Cities sorted by Server Count" "txt"
+                jq -r 'group_by(.locations[0].country.city.name) | map({city: .[0].locations[0].country.city.name, country: .[0].locations[0].country.name, total: length}) | sort_by(.total) | reverse | .[] | "\(.total) = \(.city), \(.country)"' "$serversfile"
+                echo
                 ;;
             "Double-VPN Servers")
                 allservers_group "Double VPN"
@@ -5352,9 +5370,10 @@ function external_source {
     # Your customizations are saved there, not in nordlist.sh.
     # Unmodified functions can be completely removed from nordlist_config.sh.
     #
-    # When nordlist is updated:
+    # After you have updated nordlist, open nordlist.sh with any text editor.
     # Set the customization option externalsource="y".
-    # Set the customization option for "nordlistbase" if not using the default.
+    # Set the customization option for "nordlistbase" (if not using the default).
+    # Save and close nordlist.sh.
     # No need to recreate nordlist_config.sh or edit nordlist.sh any further.
     #
     # Settings in nordlist_config.sh override those in nordlist.sh.
@@ -5437,11 +5456,60 @@ function app_exists {
         return 1    # failure
     fi
 }
+function start_service {
+    #
+    if ! systemctl is-active --quiet nordvpnd; then
+        echo -e "${WColor}nordvpnd.service is not active${Color_Off}"
+        echo "Starting the service."
+        echo -e "${LColor}sudo systemctl start nordvpnd.service${Color_Off}"
+        if ! sudo systemctl start nordvpnd.service; then
+            echo
+            echo -e "${WColor}Failed to start nordvpnd.service${Color_Off}"
+            echo
+            exit 1
+        fi
+        #
+        local timeout="10"
+        local count="0"
+        local success="false"
+        #
+        echo -n "Waiting for service."
+        while [[ "$count" -lt "$timeout" ]];
+        do
+            if systemctl is-active --quiet nordvpnd ||
+               [[ -S /run/nordvpn/nordvpnd.sock ]]; then
+                sleep 1
+                if systemctl is-active --quiet nordvpnd ||
+                   [[ -S /run/nordvpn/nordvpnd.sock ]]; then
+                    success="true"
+                    break
+                fi
+            fi
+            echo -n "."
+            sleep 1
+            ((count++))
+        done
+        echo
+        #
+        if [[ "$success" == "true" ]]; then
+            echo -e "${EColor}nordvpnd.service started successfully${Color_Off}"
+            echo
+        else
+            echo -e "${WColor}nordvpnd.service failed to start.${Color_Off}"
+            echo
+            echo -e "${LColor}sudo systemctl status nordvpnd.service${Color_Off}"
+            sudo systemctl status nordvpnd.service
+            echo
+            echo -e "View logs with: ${LColor}journalctl -u nordvpnd${Color_Off}"
+            echo
+            exit 1
+        fi
+    fi
+}
 function start {
     # the commands to run when the script first starts
     #
     echo
-    set_colors
     # check if the script is being run in an ssh session
     if [[ -n $SSH_TTY ]]; then
         echo -e "${FColor}(The script is running over SSH)${Color_Off}"
@@ -5476,58 +5544,15 @@ function start {
     app_exists "start"
     if app_exists "nordvpn"; then
         nordvpn --version
-        echo
     else
         echo -e "${WColor}The NordVPN Linux client could not be found.${Color_Off}"
         echo "https://nordvpn.com/download/"; echo
         exit 1
     fi
+    echo "Nordlist Version: $VERSION"
+    echo
     # check service
-    if ! systemctl is-active --quiet nordvpnd; then
-        echo -e "${WColor}nordvpnd.service is not active${Color_Off}"
-        echo "Starting the service."
-        echo -e "${LColor}sudo systemctl start nordvpnd.service${Color_Off}"
-        if ! sudo systemctl start nordvpnd.service; then
-            echo
-            echo -e "${WColor}Failed to start nordvpnd.service${Color_Off}"
-            echo
-            exit 1
-        fi
-        #
-        looptimeout="10"
-        loopcount="0"
-        serviceup="false"
-        #
-        echo
-        echo -n "Waiting for nordvpnd.service."
-        while [[ "$loopcount" -lt "$looptimeout" ]]
-        do
-            if systemctl is-active --quiet nordvpnd; then
-                sleep 1     # pause in case service starts and stops
-                if systemctl is-active --quiet nordvpnd; then
-                    serviceup="true"
-                    break
-                fi
-            fi
-            echo -n "."
-            sleep 1
-            ((loopcount++))
-        done
-        echo
-        #
-        if [[ "$serviceup" = "false" ]]; then
-            echo -e "${WColor}nordvpnd.service failed to start.${Color_Off}"
-            echo
-            echo -e "${LColor}sudo systemctl status nordvpnd.service${Color_Off}"
-            sudo systemctl status nordvpnd.service
-            echo
-            echo -e "View logs with: ${LColor}journalctl -u nordvpnd${Color_Off}"
-            echo
-            exit 1
-        fi
-        echo -e "${EColor}nordvpnd.service started successfully${Color_Off}"
-        echo
-    fi
+    start_service
     # check if you are logged in.  This will cause a delay every time the script starts.
     checklogin="n"
     if [[ "$checklogin" =~ ^[Yy]$ ]]; then
@@ -5542,8 +5567,252 @@ function start {
     main_menu "start"
     #
 }
+function update_nordlist {
+    local directory="$HOME/nordlist"
+    local nordlist_path=""
+    local OLD_VER=      # the version currently in ~/nordlist (if any).  the running script may not be there.
+    local NEW_VER       # the version in ~/nordlist AFTER install/upgrade
+    #
+    if [[ -f "$directory/nordlist.sh" ]]; then
+        OLD_VER=$(grep -m1 "VERSION=" "$directory/nordlist.sh" | cut -d'"' -f2)
+        # file exists but "VERSION=" not found
+        if [[ -z "$OLD_VER" ]]; then
+            OLD_VER="Legacy (No versioning)"
+        fi
+    else
+        OLD_VER="Not Installed"
+    fi
+    #
+    heading "Update or Install Nordlist" "txt"
+    if [[ $EUID -eq 0 ]]; then
+        echo -e "${WColor}WARNING:${Color_Off} You are running this script as root (sudo)."
+        echo "This will install Nordlist to the root directory instead of your home folder."
+        read -n 1 -r -p "Are you sure you want to continue? (y/n) "; echo
+        if [[ ${REPLY,,} != "y" ]]; then return 0; fi
+        echo
+    fi
+    #
+    echo "Download the latest Nordlist files from GitHub and extract them to:"
+    echo -e "  ${FColor}${directory}${Color_Off}"
+    echo
+    echo -e "Current version in ${directory} is  ${LColor}${OLD_VER}${Color_Off}"
+    echo
+    echo "If you created a config file or favorites file they will be preserved,"
+    echo -e "however ${WColor}hardcoded customizations in nordlist.sh will be overwritten.${Color_Off}"
+    echo
+    echo -e "Refer to ${LColor}'function external_source'${Color_Off} for instructions on how to create a"
+    echo "config file and preserve your customizations before updating."
+    echo
+    read -n 1 -r -p "Update/Install Nordlist to $directory ? (y/n) "; echo
+    echo
+    if [[ ${REPLY,,} != "y" ]]; then
+        return 0
+    fi
+    for cmd in wget unzip; do
+        if ! command -v "$cmd" &> /dev/null; then
+             echo -e "${WColor}Error:${Color_Off} '$cmd' is not installed."
+             echo "Please install it, eg: sudo apt install $cmd"
+             echo
+             return 1
+        fi
+    done
+    #
+    echo "Updating nordlist..."
+    if ! wget -q -O "$HOME/nordlist-main.zip" "https://github.com/ph202107/nordlist/archive/refs/heads/main.zip"; then
+        echo -e "${WColor}Error:${Color_Off} Download failed. Check your internet connection."
+        echo
+        return 1
+    fi
+    if ! unzip -qo "$HOME/nordlist-main.zip" -d "$HOME"; then
+        echo -e "${WColor}Error:${Color_Off} Extraction failed. The file might be corrupted."
+        rm -f "$HOME/nordlist-main.zip"
+        echo
+        return 1
+    fi
+    mkdir -p "$directory"
+    cp -rf "$HOME/nordlist-main/." "$directory/"
+    rm -rf "$HOME/nordlist-main.zip" "$HOME/nordlist-main"
+    chmod +x "$directory/nordlist.sh"
+    #
+    echo -e "${EColor}Nordlist updated successfully!${Color_Off}"
+    echo
+    #
+    NEW_VER=$(grep -m1 "VERSION=" "$directory/nordlist.sh" | cut -d'"' -f2)
+    #
+    echo "Checking \$PATH..."
+    if grep -q "export PATH=.*\"$directory\"" "$HOME/.bashrc" 2>/dev/null ||
+       [[ "$PATH" =~ (^|:)"$directory"(:|$) ]]; then
+        echo -e "${EColor}$directory is already in \$PATH.${Color_Off}"
+        nordlist_path="exists"
+    else
+        if [[ ! -f "$HOME/.bashrc" ]]; then
+            echo "$HOME/.bashrc not found."
+            nordlist_path="none"
+        else
+            echo -e "${FColor}Add $directory to your \$PATH in .bashrc?${Color_Off}"
+            read -n 1 -r -p "This allows you to run 'nordlist.sh' from anywhere. (y/n) "; echo
+            if [[ ${REPLY,,} == "y" ]]; then
+                echo "export PATH=\"\$PATH:$directory\"" >> "$HOME/.bashrc"
+                echo -e "${EColor}Added $directory to .bashrc.${Color_Off}"
+                nordlist_path="added"
+            else
+                echo -e "${DColor}Skipped.${Color_Off} You can run the script using its full path."
+                nordlist_path="none"
+            fi
+        fi
+    fi
+    echo
+    update_depends
+    update_applet
+    echo
+    echo -e "${TIColor}=====================================================${Color_Off}"
+    echo -e "${EColor}Completed.${Color_Off}"
+    echo "Previous Version: ${OLD_VER:-Unknown}"
+    echo "Current Version:  ${NEW_VER:-Unknown}"
+    echo "Directory:        $directory"
+    echo
+    echo "Open nordlist.sh with any text editor to configure"
+    echo "customization options."
+    echo
+    echo "If you have a nordlist_config.sh, remember to set"
+    echo -e "${FColor}externalsource=\"y\"${Color_Off} in your new nordlist.sh"
+    echo
+    echo "To run the script without using the Nordlist Applet:"
+    if [[ "$nordlist_path" == "exists" ]]; then
+        echo "You can just type 'nordlist.sh' from anywhere."
+    elif [[ "$nordlist_path" == "added" ]]; then
+        echo "Please close this terminal and open a new one."
+        echo "Then, you can just type 'nordlist.sh' from anywhere."
+    elif [[ "$nordlist_path" == "none" || -z "$nordlist_path" ]]; then
+        echo "Run: $directory/nordlist.sh"
+    fi
+    echo -e "${TIColor}=====================================================${Color_Off}"
+    echo
+    echo
+    openlink "$0" "ask"
+    echo
+    exit 0
+}
+function update_depends {
+    if ! command -v apt &> /dev/null; then
+        echo -e "${WColor}Note:${Color_Off} 'apt' package manager not found."
+        echo "If you are not on a Debian-based system (like Mint or Ubuntu),"
+        echo "please install these dependencies manually using your package manager:"
+        echo "figlet lolcat curl jq expect wireguard speedtest-cli iperf3 highlight"
+        echo
+        echo "These applications are used for various script features. You can"
+        echo "skip this step and the script will still run without ASCII or API"
+        echo "functions, etc. and you can install them individually if preferred."
+        echo "(Skip this step if you already have them installed.)"
+        echo
+        return 0
+    fi
+    echo -e "${FColor}Install all dependencies with this command:${Color_Off}"
+    echo "sudo apt update && sudo apt install -y figlet lolcat curl jq expect"
+    echo "wireguard wireguard-tools speedtest-cli iperf3 highlight"
+    echo
+    echo "These applications are used for various script features. You can"
+    echo "skip this step and the script will still run without ASCII or API"
+    echo "functions, etc. and you can install them individually if preferred."
+    echo "(Skip this step if you already have them installed.)"
+    echo
+    read -n 1 -r -p "Install these applications? (y/n) "; echo
+    echo
+    if [[ ${REPLY,,} != "y" ]]; then
+        return 0
+    fi
+    echo "Installing all dependencies..."
+    echo
+    sudo apt update && sudo apt install -y figlet lolcat curl jq expect \
+    wireguard wireguard-tools speedtest-cli iperf3 highlight
+    echo
+}
+function update_applet {
+    local applet_uuid="nordlist_tray@ph202107"
+    local source_dir="$HOME/nordlist/applet/$applet_uuid"
+    local target_dir="$HOME/.local/share/cinnamon/applets/$applet_uuid"
+    #
+    if [[ ! "$XDG_CURRENT_DESKTOP" == *"Cinnamon"* ]]; then
+        return 0
+    fi
+    echo -e "${FColor}Install/Update the Nordlist Applet for Cinnamon Desktop.${Color_Off}"
+    echo "The Nordlist Applet displays the current VPN connection status in the"
+    echo "panel (blue icon = connected, red icon = disconnected) and when clicked"
+    echo "it launches nordlist.sh in a new terminal window."
+    echo
+    read -n 1 -r -p "Install/Update the Nordlist Applet? (y/n) "; echo
+    if [[ ${REPLY,,} != "y" ]]; then
+        return 0
+    fi
+    #
+    if [[ ! -d "$source_dir" ]]; then
+        echo -e "${WColor}Error:${Color_Off} Applet source not found at $source_dir"
+        return 1
+    fi
+    mkdir -p "$target_dir"
+    cp -rf "$source_dir/." "$target_dir/"
+    echo -e "${EColor}Applet files installed to $target_dir${Color_Off}"
+    # Panel Registration. Check if already enabled. If not, add it using ID 100.
+    local current_enabled
+    current_enabled=$(gsettings get org.cinnamon enabled-applets)
+    if [[ "$current_enabled" != *"$applet_uuid"* ]]; then
+        echo "Adding applet to the Cinnamon panel..."
+        local new_enabled="${current_enabled%]*}, 'panel1:right:0:$applet_uuid:100']"
+        gsettings set org.cinnamon enabled-applets "$new_enabled"
+    fi
+    echo
+    #
+    read -n 1 -r -p "Restart Cinnamon now? (y/n) "; echo
+    if [[ ${REPLY,,} == "y" ]]; then
+        busctl --user call org.Cinnamon /org/Cinnamon org.Cinnamon RestartCinnamon b true
+    else
+        echo -e "Please restart Cinnamon manually (Ctrl-Alt-Esc or Alt+F2 > 'r' > Enter)"
+    fi
+    echo
+    echo -e "${FColor}APPLET CONFIGURATION REQUIRED:${Color_Off}"
+    echo "1. Right-click the Nordlist icon in your panel."
+    echo "2. Select 'Configure'."
+    echo "3. Update the 'Absolute path' to: $HOME/nordlist/nordlist.sh"
+    echo "4. Then, you will be able to run the script by clicking the icon."
+    echo
+    read -n 1 -s -r -p "Press any key to continue... "; echo
+    echo
+}
 #
-start
+# =====================================================================
+# =====================================================================
+#
+set_colors
+#
+case "$1" in
+    --help|-help|-h|help)
+        heading "Nordlist Help" "txt"
+        echo -e "Usage: ${LColor}nordlist.sh [OPTION]${Color_Off}"
+        echo
+        echo "  --help      Print this help."
+        echo "  --version   Print the Nordlist Version."
+        echo "  --update    Update/Install the latest version."
+        echo "  --install   Update/Install the latest version."
+        echo "  (blank)     Start the main interface."
+        echo
+        exit 0
+        ;;
+    --version|-version|-v)
+        echo
+        echo "Nordlist Version: $VERSION"
+        echo
+        exit 0
+        ;;
+    --update|-update|-u)
+        update_nordlist
+        ;;
+    --install|-install|-i)
+        update_nordlist
+        ;;
+    *)
+        start
+        ;;
+esac
 #
 # =====================================================================
 # =====================================================================

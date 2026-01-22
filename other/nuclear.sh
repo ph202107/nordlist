@@ -29,8 +29,11 @@ token_expires=""    # token expiry date (optional)
 # Default option to run the "sudo apt update" command.  "y" or "n"
 perform_apt_update="y"
 #
+# Location of the nordvpn changelog on your system.
 nord_changelog="/usr/share/doc/nordvpn/changelog.Debian.gz"
 #
+# Where to download the .deb file if adding the repo.
+download_path="$HOME/Downloads"
 #
 function default_settings {
     linebreak "Apply Default Settings"
@@ -80,25 +83,30 @@ function printascii {
 function trashnord {
     linebreak "Password"
     sudo echo "OK"
+    check_group # if 'add user' then exit
     linebreak "Quit Nord & Stop Services"
-    nordvpn set killswitch disabled
-    nordvpn disconnect
+    if command -v nordvpn &> /dev/null; then
+        timeout 3s nordvpn set killswitch disabled
+        timeout 3s nordvpn disconnect
+        linecolor "cyan" "nordvpn logout --persist-token"
+        timeout 10s nordvpn logout --persist-token
+    fi
     reload_applet
-    linecolor "cyan" "nordvpn logout --persist-token"
-    nordvpn logout --persist-token
     sudo systemctl stop nordvpnd.service
     sudo killall norduserd 2>/dev/null
+    sleep 1
     linebreak "Purge nordvpn"
-    sudo apt autoremove --purge nordvpn -y
+    sudo apt purge nordvpn -y
+    sudo apt autoremove -y
     linebreak "Remove Folders"
     # =================================================================
-    sudo rm -rf -v "/var/lib/nordvpn"
-    sudo rm -rf -v "/var/run/nordvpn"
-    rm -rf -v "/home/$USER/.config/nordvpn"
-    rm -rf -v "/home/$USER/.cache/nordvpn"
+    [[ -d "/var/lib/nordvpn" ]] && sudo rm -rf -v "/var/lib/nordvpn"
+    [[ -d "/var/run/nordvpn" ]] && sudo rm -rf -v "/var/run/nordvpn"
+    [[ -d "$HOME/.config/nordvpn" ]] && rm -rf -v "$HOME/.config/nordvpn"
+    [[ -d "$HOME/.cache/nordvpn" ]] && rm -rf -v "$HOME/.cache/nordvpn"
     # =================================================================
 }
-function installnord {
+function check_repo {
     linebreak "Add Repo"
     repo1="/etc/apt/sources.list.d/nordvpn.list"        # added by nord deb file
     repo2="/etc/apt/sources.list.d/nordvpn-app.list"    # added by nord install.sh script
@@ -115,42 +123,56 @@ function installnord {
     fi
     if [[ -e "$repo1" || -e "$repo2" ]]; then
         linecolor "green" "NordVPN repository found."
-    else
-        linecolor "green" "Adding the NordVPN repository."
-        echo
-        download_path="/home/$USER/Downloads"
-        #
-        if ! cd "$download_path"; then
-            linecolor "red" "$download_path not found"
-            exit 1
-        fi
-        if ! wget -v -nc https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn-release/nordvpn-release_1.0.0_all.deb; then
-            linecolor "red" "Failed to download the package."
-            exit 1
-        fi
-        echo
-        if ! sudo apt install "${download_path}/nordvpn-release_1.0.0_all.deb" -y; then
-            linecolor "red" "Failed to install the package."
-            exit 1
-        fi
-        echo
-        if [[ ! "$perform_apt_update" =~ ^[Yy]$ ]]; then
-            # apt update after adding repository
-            linecolor "green" "Enabling Apt Update."
-            perform_apt_update="y"
-            echo
-        fi
+        return
     fi
+    #
+    linecolor "green" "Adding the NordVPN repository."
+    echo
+    if [[ ! -d "$download_path" ]]; then
+        linecolor "red" "$download_path not found"
+        exit 1
+    fi
+    debrepo="https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn-release"
+    debfile="nordvpn-release_1.0.0_all.deb"
+    debremote="${debrepo}/${debfile}"
+    deblocal="${download_path}/${debfile}"
+    #
+    if ! wget -q --show-progress -O "${deblocal}" "${debremote}"; then
+        linecolor "red" "Failed to download the package."
+        exit 1
+    fi
+    if [[ ! -s "${deblocal}" ]]; then
+        linecolor "red" "${deblocal} is missing or empty."
+        exit 1
+    fi
+    if ! sudo apt install "${deblocal}" -y; then
+        linecolor "red" "Failed to install the package."
+        exit 1
+    fi
+    if [[ "${perform_apt_update,,}" != "y" ]]; then
+        linecolor "green" "Enabling apt update after adding repo."
+        perform_apt_update="y"
+        echo
+    fi
+}
+function installnord {
+    check_repo
     linebreak "Apt Update"
-    if [[ "$perform_apt_update" =~ ^[Yy]$ ]]; then
-        sudo apt update
+    if [[ "${perform_apt_update,,}" == "y" ]]; then
+        if ! sudo apt update; then
+            linecolor "red" "Apt update failed."
+            exit 1
+        fi
     else
         linecolor "red" "(Skipped)"
     fi
     linebreak "Install $install_version"
-    sudo apt install "$install_version" -y
+    if ! sudo apt install "$install_version" -y; then
+        linecolor "red" "Installation failed."
+        exit 1
+    fi
 }
-function startservice {
+function start_service {
     linecolor "green" "Starting the service..."
     linecolor "cyan" "Trying: sudo systemctl start nordvpnd.service"
     echo
@@ -159,15 +181,19 @@ function startservice {
         echo
         exit 1
     fi
-    timeout="10"
-    count="0"
-    success="false"
+    #
+    local timeout="10"
+    local count="0"
+    local success="false"
+    #
     echo -n "Waiting for service."
     while [[ "$count" -lt "$timeout" ]]
     do
-        if systemctl is-active --quiet nordvpnd; then
-            sleep 1     # pause in case service starts and stops
-            if systemctl is-active --quiet nordvpnd; then
+        if systemctl is-active --quiet nordvpnd ||
+           [[ -S /run/nordvpn/nordvpnd.sock ]]; then
+            sleep 1
+            if systemctl is-active --quiet nordvpnd ||
+               [[ -S /run/nordvpn/nordvpnd.sock ]]; then
                 success="true"
                 break
             fi
@@ -177,8 +203,10 @@ function startservice {
         ((count++))
     done
     echo
-    if [[ "$success" = "true" ]]; then
+    #
+    if [[ "$success" == "true" ]]; then
         linecolor "green" "nordvpnd.service has started."
+        sleep 2
     else
         linecolor "red" "nordvpnd.service failed to start."
         echo
@@ -190,22 +218,36 @@ function startservice {
         exit 1
     fi
 }
-function loginnord {
+function check_group {
     linebreak "Check Group"
-    if id -nG "$USER" | grep -qw "nordvpn"; then
-        linecolor "green" "$USER belongs to the 'nordvpn' group"
-    else
-        # for first-time installation (might also require reboot)
-        linecolor "red" "$USER does not belong to the 'nordvpn' group"
-        linecolor "cyan" "Trying: sudo usermod -aG nordvpn $USER"
-        sudo usermod -aG nordvpn "$USER"
-        linecolor "yellow" "(May need to logout or reboot)"
+    if ! getent group nordvpn >/dev/null; then
+        linecolor "purple" "'nordvpn' group doesn't exist."
+        return
     fi
+    if id -nG "$USER" | grep -qw "nordvpn"; then
+        linecolor "green" "$USER belongs to the 'nordvpn' group."
+        return
+    fi
+    linecolor "red" "$USER does not belong to the 'nordvpn' group."
+    linecolor "cyan" "Trying: sudo usermod -aG nordvpn $USER"
+    if sudo usermod -aG nordvpn "$USER"; then
+        echo
+        linecolor "purple" "$USER added to nordvpn group. Logout or Reboot to apply."
+        linecolor "purple" "Run this script again after logging back in."
+        echo
+        exit 0
+    else
+        linecolor "red" "Failed to add user to group."
+        exit 1
+    fi
+}
+function loginnord {
+    check_group
     linebreak "Check Service"
     if systemctl is-active --quiet nordvpnd; then
         linecolor "green" "nordvpnd.service is active"
     else
-        startservice
+        start_service
     fi
     #
     linebreak "Disable Analytics"
@@ -226,7 +268,7 @@ function loginnord {
         echo
         read -r -p "Callback URL: "; echo
         echo
-        if [[ -n $REPLY ]]; then
+        if [[ -n "$REPLY" ]]; then
             linecolor "cyan" "nordvpn login --callback '$REPLY'"
             nordvpn login --callback "$REPLY"
             echo
@@ -237,16 +279,20 @@ function loginnord {
 }
 function changelog {
     linebreak "Changelog"
-    linecolor "green" "$nord_changelog"
-    echo
-    zcat "$nord_changelog" | head -n 15
+    if [[ -f "$nord_changelog" ]]; then
+        linecolor "green" "$nord_changelog"
+        echo
+        zcat -f "$nord_changelog" 2>/dev/null | head -n 15
+    else
+        linecolor "red" "$nord_changelog not found."
+    fi
     echo
     linecolor "green" "https://nordvpn.com/blog/nordvpn-linux-release-notes/"
     linecolor "green" "https://repo.nordvpn.com/deb/nordvpn/debian/pool/main/n/nordvpn/"
 }
 function reload_applet {
     # reload the Nordlist Applet to change the icon color immediately
-    if [[ -d "/home/$USER/.local/share/cinnamon/applets/nordlist_tray@ph202107" ]]; then
+    if [[ -d "$HOME/.local/share/cinnamon/applets/nordlist_tray@ph202107" ]]; then
         dbus-send --session --dest=org.Cinnamon.LookingGlass --type=method_call /org/Cinnamon/LookingGlass org.Cinnamon.LookingGlass.ReloadExtension string:'nordlist_tray@ph202107' string:'APPLET'
     fi
 }
@@ -312,7 +358,7 @@ function header {
     fi
     echo
     echo -ne "$(linecolor "purple" "Apt Update:") "
-    if [[ "$perform_apt_update" =~ ^[Yy]$ ]]; then
+    if [[ "${perform_apt_update,,}" == "y" ]]; then
         echo -e "\u2705"    # unicode checkmark
     else
         echo -e "\u274c"    # unicode X
@@ -342,32 +388,38 @@ else
     figlet_exists="false"
 fi
 #
-current_version="$(nordvpn --version)"
+current_version=$( nordvpn --version 2>/dev/null || echo "Not Installed" )
 #
 while true; do
     header
     case "${REPLY,,}" in
-        v)  choose_version
+        v)
+            choose_version
             ;;
-        t)  add_token
+        t)
+            add_token
             ;;
-        a)  if [[ ! "$perform_apt_update" =~ ^[Yy]$ ]]; then
+        a)
+            if [[ "${perform_apt_update,,}" != "y" ]]; then
                 perform_apt_update="y"
             else
                 perform_apt_update="n"
             fi
             ;;
-        e)  edit_script
+        e)
+            edit_script
             exit
             ;;
-        y)  trashnord
+        y)
+            trashnord
             installnord
             loginnord
             changelog
             default_settings
             break
             ;;
-        *)  printascii "red" "ABORT"
+        *)
+            printascii "red" "ABORT"
             break
             ;;
     esac

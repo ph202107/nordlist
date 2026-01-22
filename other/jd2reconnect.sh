@@ -3,11 +3,10 @@
 # This script works with the NordVPN Linux CLI and the JDownloader2
 # "reconnect" option.  It can also run standalone or with other apps.
 #
-# The script creates a list of the top 60 Recommended Servers based on
-# your current VPN location. When the script is called it checks if your
-# current server is in the list and deletes that entry (if necessary), then
-# it connects to the next server and deletes that entry from the list. When
-# no servers remain it connects to another city and retrieves a new list.
+# The script generates a list of recommended VPN servers based on your
+# current VPN location. Each time the script is called it connects to the
+# next server in the list and removes it from the list. When no servers
+# remain it connects to another city and retrieves a new list.
 #
 # Requires 'curl' and 'jq'
 #   "sudo apt install curl jq"
@@ -57,13 +56,17 @@
 #
 # =====================================================================
 #
-# Specify the minimum VPN uptime required before changing servers.
+# Set the minimum VPN uptime required before changing servers.
 # Prevents rapid server changes.  Value is in minutes.
 minuptime="10"
 #
+# Set the maximum number of servers to be added to the server list.
+maxservers="60"
+#
 # Specify alternate cities to use as the server lists are emptied.
 # These will be used in rotation. Use underscores if needed, no spaces.
-cities=( "New_York" "Los_Angeles" "Chicago" "Dallas" ) # "London" "Amsterdam" "Frankfurt" )
+# cities=( "London" "Frankfurt" "Amsterdam" "Paris" "Stockholm" )
+cities=( "New_York" "Los_Angeles" "Chicago" "Miami" "Seattle" )
 #
 # Automatically open a terminal window and follow the log. "y" or "n"
 # Tested with gnome-terminal, see "function logstart" for more options.
@@ -121,7 +124,7 @@ function checkdepends {
         fi
     done
     # Ensures the script can talk to your audio and desktop session when called.
-    # Applies to the alert sounds and desktop notifications.
+    # Applies to the alerts, notifications, applets, log monitor.
     # NOTE: If running as 'root' (via crontab/systemd), set your desktop user
     # ID manually, eg. user_id="1000"
     user_id="$(id -u)"
@@ -230,16 +233,16 @@ function updateserverlist {
         # ~3200 USA servers == ~8MB download.  Reducing 'limit=0' fails on USA queries.
         if ! curl -s "https://api.nordvpn.com/v1/servers/recommendations?filters\[country_id\]=$apicountrycode&limit=0" | \
         jq -r --arg city "$apicity" '.[] | select(.locations[0].country.city.name | ascii_downcase == $city) | "\(.load) \(.hostname)"' | \
-        sort -n | head -n 60 | shuf | awk '{print $2}' > "$jd2list"; then
+        sort -n | head -n "${maxservers:-60}" | awk '{print $2}' | shuf > "$jd2list"; then
             #
             exitscript "1" "Failed to pull servers for $currentcity. Exit."
         fi
     else
         # VPN disconnected
         if [[ $(nordvpn settings | grep -i "Kill Switch" | awk '{print $NF}') == "enabled" ]]; then
-            log "VPN disconnected with Kill Switch enabled." "WARNING"
+            log "VPN is disconnected with Kill Switch enabled." "WARNING"
         fi
-        if ! curl -s "https://api.nordvpn.com/v1/servers/recommendations?limit=60" | shuf | jq -r '.[].hostname' > "$jd2list"; then
+        if ! curl -s "https://api.nordvpn.com/v1/servers/recommendations?limit=${maxservers:-60}" | jq -r '.[].hostname' | shuf > "$jd2list"; then
             exitscript "1" "Failed to retrieve a server list from API. Exit."
         fi
     fi
@@ -255,7 +258,7 @@ function updateserverlist {
     logcount=$(wc -l < "$jd2list")
     #
     echo "EOF" >> "$jd2list"
-    log "$logcity server list retrieved. $logcount servers."
+    log "$logcity server list retrieved with $logcount servers."
     log "List: $jd2list"
 }
 function getcurrentinfo {
