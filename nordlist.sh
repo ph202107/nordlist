@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tested with NordVPN Version 4.3.1 on Linux Mint 21.3
-VERSION="2026.01.22"
+VERSION="2026.01.23"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -5580,7 +5580,7 @@ function update_nordlist {
             OLD_VER="Legacy (No versioning)"
         fi
     else
-        OLD_VER="Not Installed"
+        OLD_VER="(Not Installed)"
     fi
     #
     heading "Update or Install Nordlist" "txt"
@@ -5592,10 +5592,10 @@ function update_nordlist {
         echo
     fi
     #
+    echo -e "Current version in ${directory} is ${LColor}${OLD_VER}${Color_Off}"
+    echo
     echo "Download the latest Nordlist files from GitHub and extract them to:"
     echo -e "  ${FColor}${directory}${Color_Off}"
-    echo
-    echo -e "Current version in ${directory} is  ${LColor}${OLD_VER}${Color_Off}"
     echo
     echo "If you created a config file or favorites file they will be preserved,"
     echo -e "however ${WColor}hardcoded customizations in nordlist.sh will be overwritten.${Color_Off}"
@@ -5689,7 +5689,7 @@ function update_nordlist {
     echo -e "${TIColor}=====================================================${Color_Off}"
     echo
     echo
-    openlink "$0" "ask"
+    openlink "$directory/nordlist.sh" "ask"
     echo
     exit 0
 }
@@ -5703,6 +5703,7 @@ function update_depends {
         echo "These applications are used for various script features. You can"
         echo "skip this step and the script will still run without ASCII or API"
         echo "functions, etc. and you can install them individually if preferred."
+        echo
         echo "(Skip this step if you already have them installed.)"
         echo
         return 0
@@ -5714,6 +5715,7 @@ function update_depends {
     echo "These applications are used for various script features. You can"
     echo "skip this step and the script will still run without ASCII or API"
     echo "functions, etc. and you can install them individually if preferred."
+    echo
     echo "(Skip this step if you already have them installed.)"
     echo
     read -n 1 -r -p "Install these applications? (y/n) "; echo
