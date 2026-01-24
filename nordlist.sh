@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tested with NordVPN Version 4.3.1 on Linux Mint 21.3
-VERSION="2026.01.23"
+VERSION="2026.01.24"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -1457,7 +1457,7 @@ function setting_menu {
             "Logs")             service_logs;;
             "Script")           script_info;;
             "Defaults")         set_defaults_ask;;
-            "Update")           update_nordlist;;
+            "Update")           update_nordlist; setting_menu;;
             "Exit")             main_menu;;
             *)                  invalid_option "${#submsett[@]}" "$parent";;
         esac
@@ -5569,6 +5569,7 @@ function start {
 }
 function update_nordlist {
     local directory="$HOME/nordlist"
+    directory="${directory%/}" # strips trailing slash
     local nordlist_path=""
     local OLD_VER=      # the version currently in ~/nordlist (if any).  the running script may not be there.
     local NEW_VER       # the version in ~/nordlist AFTER install/upgrade
@@ -5602,6 +5603,7 @@ function update_nordlist {
     echo
     echo -e "Refer to ${LColor}'function external_source'${Color_Off} for instructions on how to create a"
     echo "config file and preserve your customizations before updating."
+    echo
     echo
     read -n 1 -r -p "Update/Install Nordlist to $directory ? (y/n) "; echo
     echo
@@ -5640,8 +5642,7 @@ function update_nordlist {
     NEW_VER=$(grep -m1 "VERSION=" "$directory/nordlist.sh" | cut -d'"' -f2)
     #
     echo "Checking \$PATH..."
-    if grep -q "export PATH=.*\"$directory\"" "$HOME/.bashrc" 2>/dev/null ||
-       [[ "$PATH" =~ (^|:)"$directory"(:|$) ]]; then
+    if [[ ":$PATH:" == *":$directory:"* ]] || grep -qF "$directory" "$HOME/.bashrc"; then
         echo -e "${EColor}$directory is already in \$PATH.${Color_Off}"
         nordlist_path="exists"
     else
