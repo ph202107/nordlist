@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tested with NordVPN Version 4.3.1 on Linux Mint 21.3
-VERSION="2026.01.24"
+VERSION="2026.01.28"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -39,7 +39,7 @@ VERSION="2026.01.24"
 #     * If you created a config file or favorites file they will be preserved,
 #     * however hardcoded customization options in nordlist.sh will be overwritten.
 #     * Refer to "function external_source" for instructions on how to create a
-#     * config file and preserve your customizations when updating.
+#     * config file and preserve your customizations before updating.
 #
 # 1c) Install or update manually:
 #       Copy/paste these commands. This will overwrite your nordlist.sh and any
@@ -54,10 +54,10 @@ VERSION="2026.01.24"
 #       rm -rf "$HOME/nordlist-main.zip" "$HOME/nordlist-main"
 #       chmod +x "$directory/nordlist.sh"
 #
-#       # Optional: add folder to $PATH via .bashrc (only if not already present)
-#       [[ ":$PATH:" != *":$directory:"* ]] && echo "export PATH=\"\$PATH:$directory\"" >> "$HOME/.bashrc"
-#       # Close and reopen your terminal.
-#       which nordlist.sh
+#       Optional: Add folder to $PATH via .bashrc (only if not already present)
+#       Copy and paste the line below into your terminal:
+#       d="$HOME/nordlist"; d="${d%/}"; [[ ":$PATH:" != *":$d:"* ]] && ! grep -qF "$d" "$HOME/.bashrc" && echo "export PATH=\"\$PATH:$d\"" >> "$HOME/.bashrc" && echo "Done." || echo "Exists."
+#       To verify after restarting terminal, run: which nordlist.sh
 #
 # 2) Install External Programs
 #       sudo apt update
@@ -5569,10 +5569,11 @@ function start {
 }
 function update_nordlist {
     local directory="$HOME/nordlist"
-    directory="${directory%/}" # strips trailing slash
+    directory="${directory%/}"  # strips trailing slash
     local nordlist_path=""
+    local iuprompt="Update"     # Install or Update
     local OLD_VER=      # the version currently in ~/nordlist (if any).  the running script may not be there.
-    local NEW_VER       # the version in ~/nordlist AFTER install/upgrade
+    local NEW_VER       # the version in ~/nordlist AFTER install/update
     #
     if [[ -f "$directory/nordlist.sh" ]]; then
         OLD_VER=$(grep -m1 "VERSION=" "$directory/nordlist.sh" | cut -d'"' -f2)
@@ -5582,9 +5583,10 @@ function update_nordlist {
         fi
     else
         OLD_VER="(Not Installed)"
+        iuprompt="Install"
     fi
     #
-    heading "Update or Install Nordlist" "txt"
+    heading "$iuprompt Nordlist" "txt"
     if [[ $EUID -eq 0 ]]; then
         echo -e "${WColor}WARNING:${Color_Off} You are running this script as root (sudo)."
         echo "This will install Nordlist to the root directory instead of your home folder."
@@ -5594,18 +5596,23 @@ function update_nordlist {
     fi
     #
     echo -e "Current version in ${directory} is ${LColor}${OLD_VER}${Color_Off}"
+    if [[ "$iuprompt" == "Update" ]]; then
+        update_commitmsg
+    fi
     echo
     echo "Download the latest Nordlist files from GitHub and extract them to:"
     echo -e "  ${FColor}${directory}${Color_Off}"
     echo
-    echo "If you created a config file or favorites file they will be preserved,"
-    echo -e "however ${WColor}hardcoded customizations in nordlist.sh will be overwritten.${Color_Off}"
+    if [[ "$iuprompt" == "Update" ]]; then
+        echo "If you created a config file or favorites file they will be preserved,"
+        echo -e "however ${WColor}hardcoded customizations in nordlist.sh will be overwritten.${Color_Off}"
+        echo
+        echo -e "Refer to ${LColor}'function external_source'${Color_Off} for instructions on how to create a"
+        echo "config file and preserve your customizations before updating."
+        echo
+    fi
     echo
-    echo -e "Refer to ${LColor}'function external_source'${Color_Off} for instructions on how to create a"
-    echo "config file and preserve your customizations before updating."
-    echo
-    echo
-    read -n 1 -r -p "Update/Install Nordlist to $directory ? (y/n) "; echo
+    read -n 1 -r -p "$iuprompt Nordlist? (y/n) "; echo
     echo
     if [[ ${REPLY,,} != "y" ]]; then
         return 0
@@ -5619,7 +5626,7 @@ function update_nordlist {
         fi
     done
     #
-    echo "Updating nordlist..."
+    echo "$iuprompt nordlist..."
     if ! wget -q -O "$HOME/nordlist-main.zip" "https://github.com/ph202107/nordlist/archive/refs/heads/main.zip"; then
         echo -e "${WColor}Error:${Color_Off} Download failed. Check your internet connection."
         echo
@@ -5636,7 +5643,7 @@ function update_nordlist {
     rm -rf "$HOME/nordlist-main.zip" "$HOME/nordlist-main"
     chmod +x "$directory/nordlist.sh"
     #
-    echo -e "${EColor}Nordlist updated successfully!${Color_Off}"
+    echo -e "${EColor}Nordlist ${iuprompt,,} complete!${Color_Off}"
     echo
     #
     NEW_VER=$(grep -m1 "VERSION=" "$directory/nordlist.sh" | cut -d'"' -f2)
@@ -5675,9 +5682,11 @@ function update_nordlist {
     echo "Open nordlist.sh with any text editor to configure"
     echo "customization options."
     echo
-    echo "If you have a nordlist_config.sh, remember to set"
-    echo -e "${FColor}externalsource=\"y\"${Color_Off} in your new nordlist.sh"
-    echo
+    if [[ "$iuprompt" == "Update" ]]; then
+        echo "If you have a nordlist_config.sh, remember to set"
+        echo -e "${FColor}externalsource=\"y\"${Color_Off} in your new nordlist.sh"
+        echo
+    fi
     echo "To run the script without using the Nordlist Applet:"
     if [[ "$nordlist_path" == "exists" ]]; then
         echo "You can just type 'nordlist.sh' from anywhere."
@@ -5689,10 +5698,34 @@ function update_nordlist {
     fi
     echo -e "${TIColor}=====================================================${Color_Off}"
     echo
-    echo
     openlink "$directory/nordlist.sh" "ask"
     echo
     exit 0
+}
+function update_commitmsg {
+    echo -e "Check commits at: ${EColor}https://github.com/ph202107/nordlist${Color_Off}"
+    for cmd in curl jq; do
+        if ! command -v "$cmd" &> /dev/null; then
+             return 0
+        fi
+    done
+    local response
+    response=$(curl -s --connect-timeout 5 "https://api.github.com/repos/ph202107/nordlist/commits?per_page=1")
+    if [[ -z "$response" ]] || [[ "$response" == *"message"* && "$response" == *"Not Found"* ]]; then
+        return 1
+    fi
+    local raw_date
+    local message
+    raw_date=$(echo "$response" | jq -r '.[0].commit.committer.date // empty' 2>/dev/null)
+    message=$(echo "$response" | jq -r '.[0].commit.message // empty' 2>/dev/null)
+    if [[ -z "$raw_date" ]]; then
+        return 1
+    fi
+    echo -e "${EColor}=========================${Color_Off}"
+    echo -e "Latest Commit: ${LColor}$(date -d "$raw_date" '+%Y-%m-%d')${Color_Off}"
+    echo -e "${EColor}=========================${Color_Off}"
+    echo "$message"
+    echo -e "${EColor}=========================${Color_Off}"
 }
 function update_depends {
     if ! command -v apt &> /dev/null; then
@@ -5738,12 +5771,12 @@ function update_applet {
     if [[ ! "$XDG_CURRENT_DESKTOP" == *"Cinnamon"* ]]; then
         return 0
     fi
-    echo -e "${FColor}Install/Update the Nordlist Applet for Cinnamon Desktop.${Color_Off}"
+    echo -e "${FColor}$iuprompt the Nordlist Applet for Cinnamon Desktop.${Color_Off}"
     echo "The Nordlist Applet displays the current VPN connection status in the"
     echo "panel (blue icon = connected, red icon = disconnected) and when clicked"
     echo "it launches nordlist.sh in a new terminal window."
     echo
-    read -n 1 -r -p "Install/Update the Nordlist Applet? (y/n) "; echo
+    read -n 1 -r -p "$iuprompt the Nordlist Applet? (y/n) "; echo
     if [[ ${REPLY,,} != "y" ]]; then
         return 0
     fi

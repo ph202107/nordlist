@@ -226,7 +226,7 @@ function updateserverlist {
         jq -r --arg country "$apicountry" '.[] | select(.name | ascii_downcase == $country) | .id')
         #
         if [[ -z "$apicountrycode" ]]; then
-            exitscript "1" "Could not find API Country ID for $currentcountry."
+            exitscript "1" "Could not find API Country ID for $currentcountry. Exit."
         fi
         # there does not seem to be a 'city' filter for the api
         # retrieve all the servers for the country, jq filter by city, sort by load, save hostnames
