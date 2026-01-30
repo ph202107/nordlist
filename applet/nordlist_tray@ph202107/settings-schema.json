@@ -12,5 +12,17 @@
         "type": "entry",
         "default": "/home/username/nordlist/nordlist.sh",
         "description": "Absolute path to nordlist.sh"
+    },
+    "full-status-hover": {
+        "type": "checkbox",
+        "default": false,
+        "description": "Show full 'nordvpn status' on hover",
+        "tooltip": "If disabled, show only the connection status and city."
+    },
+    "show-city-on-panel": {
+        "type": "checkbox",
+        "default": false,
+        "description": "Show city name on panel",
+        "tooltip": "Displays the connected city next to the icon."
     }
 }

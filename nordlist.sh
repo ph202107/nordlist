@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tested with NordVPN Version 4.3.1 on Linux Mint 21.3
-VERSION="2026.01.28"
+VERSION="2026.01.30"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -5549,6 +5549,7 @@ function start {
         echo "https://nordvpn.com/download/"; echo
         exit 1
     fi
+    echo
     echo "Nordlist Version: $VERSION"
     echo
     # check service
