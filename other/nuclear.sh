@@ -9,14 +9,13 @@
 #
 available_versions=(    # these versions will be displayed on the selection menu
     "nordvpn"           # install the latest version available
-    "nordvpn=4.1.0"     # 11 Sep 2025 Improved OpenVPN security, DNS NordWhisper fix, upgrades
-    "nordvpn=4.1.1"     # 12 Sep 2025 Hotfix for .rpm installs
     "nordvpn=4.2.0"     # 14 Oct 2025 Meshnet retained. Upgraded libraries. Fixes for analytics, mangle table.
     "nordvpn=4.2.1"     # 29 Oct 2025 Fix for missing libxml2 during installation.
     "nordvpn=4.2.2"     # 11 Nov 2025 Fix for excessive logging.
     "nordvpn=4.2.3"     # 21 Nov 2025 Raised the maximum HTTP response limit.
     "nordvpn=4.3.0"     # 16 Dec 2025 Bug fixes, GUI and tray improvements.
     "nordvpn=4.3.1"     # 17 Dec 2025 Fix 4.3.0 service start. https://github.com/NordSecurity/nordvpn-linux/issues/1276
+    "nordvpn=4.4.0"     # 05 Feb 2026 Minor tweaks and fixes.
 )
 # Default choice for the version to install (first in the list).
 install_version="${available_versions[0]}"
