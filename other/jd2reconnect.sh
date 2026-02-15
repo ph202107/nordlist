@@ -8,6 +8,9 @@
 # next server in the list and removes it from the list. When no servers
 # remain it connects to another city and retrieves a new list.
 #
+# For command line options run:
+#   jd2reconnect.sh --help
+#
 # Requires 'curl' and 'jq'
 #   "sudo apt install curl jq"
 # Make sure the script is executable
@@ -37,7 +40,8 @@
 # notification. If you need to stop the process for whatever reason,
 # open a terminal and run 'kill <PID>', then restart JD2.
 #
-# To begin with a fresh server list simply delete the existing one.
+# To begin with a fresh server list simply delete the existing one or run:
+#   jd2reconnect.sh --new
 # A new list will be created based on your current VPN location.
 #
 # The script will populate the list with recommended servers from the
@@ -256,8 +260,13 @@ function updateserverlist {
         logcity="Recommended"
     fi
     logcount=$(wc -l < "$jd2list")
+    {
+        echo "EOF"
+        echo
+        echo "$logcity - $logcount servers were added to new list."
+        echo "Created: $(date)"
+    } >> "$jd2list"
     #
-    echo "EOF" >> "$jd2list"
     log "$logcity server list retrieved with $logcount servers."
     log "List: $jd2list"
 }
@@ -292,7 +301,8 @@ function getcurrentinfo {
         esac
     done
     #
-    servercount=$(( $(wc -l < "$jd2list") - 1 ))
+    eof_line=$( grep -inm 1 "EOF" "$jd2list" | cut -d: -f1 )
+    servercount=$(( ${eof_line:-0} - 1 ))
     #
     # calculate uptime in minutes
     currentuptime="0"
@@ -361,7 +371,7 @@ function changeserver {
     nextserverhost=$( head -n 1 "$jd2list" )    # get the next server from the top of the list
     nextserver="${nextserverhost%%.*}"          # remove everything after the first '.'
     #
-    if [[ "${nextserverhost,,}" == "eof" ]]; then
+    if [[ "${nextserverhost,,}" == "eof" || -z "$nextserverhost" ]]; then
         connectnextcity
     else
         connectnextserver
@@ -514,6 +524,55 @@ function exitscript {
     #
     exit "$exit_code"
 }
+function parseargs {
+    case "$1" in
+        --help|-help|-h|help)
+            log "(arg $1) Print help."
+            echo
+            echo -e "Usage: $(basename "$0") [OPTION]"
+            echo
+            echo "  --help          Print this help and exit."
+            echo "  --list          Print the current server list and exit."
+            echo "  --new [NUM]     Retrieve a new server list and reconnect."
+            echo "                  (NUM is an optional maxserver limit, eg --new 20)"
+            echo "  (blank)         Normal run and reconnect."
+            echo
+            exit 0
+            ;;
+        --list|-list|-l)
+            if [[ -f "$jd2list" ]]; then
+                log "(arg $1) Print the current server list."
+                getcurrentinfo
+                cat "$jd2list"
+                echo "$servercount servers remain."
+            else
+                echo "No server list found at $jd2list"
+            fi
+            echo
+            exit 0
+            ;;
+        --new|-new|-n)
+            if [[ -f "$jd2list" ]]; then
+                log "(arg $1) Deleting the current server list." "NOTIFY"
+                rm -f -v "$jd2list"
+            fi
+            if [[ -n "$2" ]]; then
+                if [[ "$2" =~ ^[0-9]+$ ]]; then
+                    log "Set limit: maxservers=$2"
+                    maxservers="$2"
+                else
+                    log "Invalid limit '$2'. Using default ($maxservers)."
+                fi
+            fi
+            ;;
+        -*) # any other flag starting with hyphen
+            log "(arg $1) Unknown option: $1"
+            echo "Use '$(basename "$0") --help' for usage."
+            echo
+            exit 1
+            ;;
+    esac
+}
 #
 # =====================================================================
 #
@@ -522,8 +581,9 @@ trap 'exitscript 1 "Script terminated by system/user."' SIGINT SIGTERM
 #
 checkdepends
 logstart
-checkserverlist
+parseargs "$1" "$2"
 #
+checkserverlist
 getcurrentinfo
 checkuptime
 changeserver

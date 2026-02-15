@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tested with NordVPN Version 4.4.0 on Linux Mint 21.3
-VERSION="2026.02.05"
+# Tested with NordVPN Version 4.4.0 on Linux Mint 22.3
+VERSION="2026.02.15"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -4500,12 +4500,12 @@ function wireguard_ks {
     # Allowlist LAN ip4 and ip6.  /u/sellibitze on reddit
     #   https://old.reddit.com/r/WireGuard/comments/ekdi8w/wireguard_kill_switch_blocks_connection_to_nas/fda0ikp/
     #
-    echo
-    read -n 1 -r -p "Add a Linux iptables Kill Switch? (untested) (y/n) "; echo
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-    #
-cat << "EOF" >> "$wgfull"
+    # Send prompt to stderr (&2) so they don't end up in the redirected file block
+    echo >&2
+    read -n 1 -r -p "Add a Linux iptables Kill Switch? (untested) (y/n) " REPLY_KS < /dev/tty >&2
+    echo >&2
+    if [[ $REPLY_KS =~ ^[Yy]$ ]]; then
+cat << "EOF"
 PostUp = iptables -I OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT
 PostUp = iptables -I OUTPUT -d 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16 -j ACCEPT
 PostUp = ip6tables -I OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL ! -d fc00::/7 -j REJECT
@@ -4513,12 +4513,9 @@ PreDown = iptables -D OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m ad
 PreDown = iptables -D OUTPUT -d 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16 -j ACCEPT
 PreDown = ip6tables -D OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL ! -d fc00::/7 -j REJECT
 EOF
-    #
     fi
 }
 function wireguard_gen {
-    # Based on Tomba's NordLynx2WireGuard script
-    # https://github.com/TomBayne/tombas-script-repo
     heading "WireGuard"
     parent="Tools"
     echo "Generate a WireGuard config file from your currently active"
@@ -4528,12 +4525,12 @@ function wireguard_gen {
     echo "Note: Keep your Private Key secure."
     echo
     set_vars
-    # limit config file name to 15 characters excluding extension.  truncate city name if necessary.
-    max_wgcity=$(( 15 - ${#server} - 1 ))   # calculate max length for city name.  minus 1 for underscore
-    wgcity=$(echo "$city" | tr -d ' ' | cut -c 1-$max_wgcity)
-    #
-    wgconfig="${wgcity}_${server}.conf"     # Filename
-    wgfull="${wgdir}/${wgconfig}"           # Full path and filename
+    # limit config file name to 15 characters excluding extension
+    clean_city="${city// /}" # remove spaces
+    max_len=$(( 15 - ${#server} - 1 ))
+    wgcity="${clean_city:0:max_len}"
+    wgconfig="${wgcity}_${server}.conf"
+    wgfull="${wgdir}/${wgconfig}"
     #
     if ! app_exists "wg"; then
         echo -e "${WColor}WireGuard-Tools could not be found.${Color_Off}"
@@ -4578,33 +4575,34 @@ function wireguard_gen {
     fi
     echo
     #
-    address=$(ip route get 8.8.8.8 | cut -f7 -d' ' | tr -d '\n')
-    #listenport=$(sudo wg showconf nordlynx | grep 'ListenPort = .*')
-    privatekey=$(sudo wg showconf nordlynx | grep 'PrivateKey = .*')
-    publickey=$(sudo wg showconf nordlynx | grep 'PublicKey = .*')
-    endpoint=$(sudo wg showconf nordlynx | grep 'Endpoint = .*')
-    #
-    # shellcheck disable=SC2129 # individual redirects
+    wg_info=$(sudo wg showconf nordlynx)
+    # grep -m 1 (stop at first match)
+    privatekey=$(grep -m 1 'PrivateKey' <<< "$wg_info")
+    publickey=$(grep -m 1 'PublicKey' <<< "$wg_info")
+    endpoint=$(grep -m 1 'Endpoint' <<< "$wg_info")
+    address=$(ip route get 8.8.8.8 | grep -oP 'src \K\S+')
+    address="${address:-10.5.0.2}" # default
     {
-        echo "# $server.nordvpn.com $ipaddr" > "$wgfull"
-        echo "# $city $country" >> "$wgfull"
-        echo >> "$wgfull"
-        echo "[Interface]" >> "$wgfull"
-        echo "Address = ${address}/32" >> "$wgfull"
-        echo "${privatekey}" >> "$wgfull"
+        echo "# $server.nordvpn.com $ipaddr"
+        echo "# $city $country"
+        echo
+        echo "[Interface]"
+        echo "Address = ${address}/32"
+        echo "${privatekey}"
+        echo "DNS = 103.86.96.100, 103.86.99.100"
+        # Threat Protection Lite DNS
+        # echo "DNS = 103.86.96.96, 103.86.99.99"
         #
-        echo "DNS = 103.86.96.100, 103.86.99.100" >> "$wgfull"  # Regular DNS
-        # echo "DNS = 103.86.96.96, 103.86.99.99" >> "$wgfull"  # Threat Protection Lite DNS
+        # Prompt to add Linux iptables Kill Switch
+        wireguard_ks
         #
-        wireguard_ks    # Prompt to add Linux iptables Kill Switch
-        #
-        echo >> "$wgfull"
-        echo "[Peer]" >> "$wgfull"
-        echo "${endpoint}" >> "$wgfull"
-        echo "${publickey}" >> "$wgfull"
-        echo "AllowedIPs = 0.0.0.0/0, ::/0" >> "$wgfull"
-        echo "PersistentKeepalive = 25" >> "$wgfull"
-    }
+        echo
+        echo "[Peer]"
+        echo "${endpoint}"
+        echo "${publickey}"
+        echo "AllowedIPs = 0.0.0.0/0, ::/0"
+        echo "PersistentKeepalive = 25"
+    } > "$wgfull"
     #
     echo
     echo -e "${EColor}Completed \u2705${Color_Off}" # unicode checkmark

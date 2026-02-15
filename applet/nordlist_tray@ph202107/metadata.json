@@ -3,7 +3,7 @@
     "name": "Nordlist Applet",
     "description": "Displays VPN status and runs Nordlist bash script.",
     "icon": "network-vpn",
-    "version": "2.1",
+    "version": "2.2",
     "author": "ph202107",
     "url": "https://github.com/ph202107/nordlist",
     "max-instances": 1

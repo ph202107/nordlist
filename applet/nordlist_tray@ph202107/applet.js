@@ -14,25 +14,31 @@ class NordListApplet extends Applet.TextIconApplet {
         this.metadata = metadata;
         this._timeout = null;
 
+        // Enable hover tracking for the menu
         this.actor.track_hover = true;
         this.actor.reactive = true;
         this.actor.connect('enter-event', () => this.on_hover_enter());
         this.actor.connect('leave-event', () => this.on_hover_leave());
 
+        // Initialize Settings
         this.settings = new Settings.AppletSettings(this, this.metadata.uuid, instanceId);
         this.settings.bindProperty(Settings.BindingDirection.IN, "refresh-interval", "refreshInterval", this._onSettingsChanged.bind(this));
         this.settings.bindProperty(Settings.BindingDirection.IN, "full-status-hover", "fullStatusHover", this._onSettingsChanged.bind(this));
         this.settings.bindProperty(Settings.BindingDirection.IN, "script-path", "scriptPath", this._onSettingsChanged.bind(this));
         this.settings.bindProperty(Settings.BindingDirection.IN, "show-city-on-panel", "showCityOnPanel", this._onSettingsChanged.bind(this));
 
+        // Initialize Popup Menu
         this.menuManager = new PopupMenu.PopupMenuManager(this);
         this.hoverMenu = new Applet.AppletPopupMenu(this, orientation);
         this.menuManager.addMenu(this.hoverMenu);
 
+        // Status Label in the Menu
         this.statusLabel = new PopupMenu.PopupMenuItem("", { reactive: false });
         this.statusLabel.label.set_style('text-align: left; font-family: monospace;');
         this.hoverMenu.addMenuItem(this.statusLabel);
 
+        // Set initial state
+        this.set_applet_label("");
         this.update_vpn_status();
         this._updateLoop();
     }
@@ -73,7 +79,6 @@ class NordListApplet extends Applet.TextIconApplet {
         }[status];
     }
 
-    // Traditional Async Callback method (No await/async keywords)
     update_vpn_status() {
         try {
             let proc = new Gio.Subprocess({
@@ -98,14 +103,32 @@ class NordListApplet extends Applet.TextIconApplet {
     }
 
     process_nord_output(output) {
-        let displayString = "";
-        let cityName = "";
-
+        let isConnected = output.includes('Status: Connected');
         let cityMatch = output.match(/^City: (.*)$/m);
-        if (cityMatch && cityMatch[1]) {
-            cityName = cityMatch[1].trim();
+        let cityName = cityMatch ? cityMatch[1].trim() : "";
+
+        // --- SELF-HEALING: WAKE-FROM-SUSPEND HANDLER ---
+        // Detects if VPN is connected but metadata (City) is still loading
+        if (isConnected && cityName === "") {
+            this.set_applet_icon_path(this.get_icon_path('connected'));
+
+            if (this.showCityOnPanel) {
+                this.set_applet_label("...");
+            }
+
+            this.statusLabel.label.set_text("NordVPN\nStatus: Connected\nRetrieving location data...");
+
+            // One-time retry in 2 seconds
+            Mainloop.timeout_add_seconds(2, () => {
+                this.update_vpn_status();
+                return false;
+            });
+
+            return;
         }
 
+        // --- UI UPDATES ---
+        let displayString = "";
         if (this.fullStatusHover) {
             displayString = "NordVPN\n" + output;
         } else {
@@ -117,8 +140,6 @@ class NordListApplet extends Applet.TextIconApplet {
         }
 
         this.statusLabel.label.set_text(displayString);
-
-        let isConnected = output.includes('Status: Connected');
         this.set_applet_icon_path(this.get_icon_path(isConnected ? 'connected' : 'disconnected'));
 
         if (this.showCityOnPanel && isConnected && cityName !== "") {
@@ -129,6 +150,7 @@ class NordListApplet extends Applet.TextIconApplet {
     }
 
     handle_error(e) {
+        global.logError("NordVPN Applet Error: " + e.message);
         if (this.statusLabel) this.statusLabel.label.set_text("Error fetching status");
         this.set_applet_label("");
         this.set_applet_icon_path(this.get_icon_path('error'));
