@@ -1,24 +1,25 @@
 #!/bin/bash
 #
-# Basic script to upgrade, reinstall, or downgrade the NordVPN CLI.
-#
-# Only tested on Linux Mint.
+# Basic script to upgrade, reinstall, or downgrade the NordVPN Linux application.
 # This script deletes directories, review carefully before use.
+# Only tested on Linux Mint.
 #
-# List available versions with: "apt list -a nordvpn"
+available_versions=(    # These versions will be displayed on the selection menu.
+    "nordvpn"           # Install the latest version available.
+    "4.2.0"             # 14 Oct 2025 Meshnet retained. Upgraded libraries. Fixes for analytics, mangle table.
+    "4.2.1"             # 29 Oct 2025 Fix for missing libxml2 during installation.
+    "4.2.2"             # 11 Nov 2025 Fix for excessive logging.
+    "4.2.3"             # 21 Nov 2025 Raised the maximum HTTP response limit.
+    "4.3.0"             # 16 Dec 2025 Bug fixes, GUI and tray improvements.
+    "4.3.1"             # 17 Dec 2025 Fix 4.3.0 service start. https://github.com/NordSecurity/nordvpn-linux/issues/1276
+    "4.4.0"             # 05 Feb 2026 Minor tweaks and fixes.
+)                       # List available versions with: "apt list -a nordvpn"
 #
-available_versions=(    # these versions will be displayed on the selection menu
-    "nordvpn"           # install the latest version available
-    "nordvpn=4.2.0"     # 14 Oct 2025 Meshnet retained. Upgraded libraries. Fixes for analytics, mangle table.
-    "nordvpn=4.2.1"     # 29 Oct 2025 Fix for missing libxml2 during installation.
-    "nordvpn=4.2.2"     # 11 Nov 2025 Fix for excessive logging.
-    "nordvpn=4.2.3"     # 21 Nov 2025 Raised the maximum HTTP response limit.
-    "nordvpn=4.3.0"     # 16 Dec 2025 Bug fixes, GUI and tray improvements.
-    "nordvpn=4.3.1"     # 17 Dec 2025 Fix 4.3.0 service start. https://github.com/NordSecurity/nordvpn-linux/issues/1276
-    "nordvpn=4.4.0"     # 05 Feb 2026 Minor tweaks and fixes.
-)
 # Default choice for the version to install (first in the list).
-install_version="${available_versions[0]}"
+app_version="${available_versions[0]}"
+#
+# Default option to install the nordvpn-gui package.  "y" or "n"
+install_gui="n"
 #
 # Login using a token, leave blank to log in using a web browser, or specify a token later.
 # To create a token visit https://my.nordaccount.com/ - NordVPN - Advanced settings - Access token
@@ -56,8 +57,8 @@ function linecolor {
     case $1 in
         "green")    echo -e "\033[0;92m${2}\033[0m";;    # light green
         "yellow")   echo -e "\033[0;93m${2}\033[0m";;    # light yellow
-        "cyan")     echo -e "\033[0;96m${2}\033[0m";;    # light cyan
         "purple")   echo -e "\033[0;95m${2}\033[0m";;    # light purple
+        "cyan")     echo -e "\033[0;96m${2}\033[0m";;    # light cyan
         "red")      echo -e "\033[1;31m${2}\033[0m";;    # bold red
     esac
 }
@@ -94,8 +95,8 @@ function trashnord {
     sudo systemctl stop nordvpnd.service
     sudo killall norduserd 2>/dev/null
     sleep 1
-    linebreak "Purge nordvpn"
-    sudo apt purge nordvpn -y
+    linebreak "Purge nordvpn-gui and nordvpn"
+    sudo apt purge nordvpn-gui nordvpn -y
     sudo apt autoremove -y
     linebreak "Remove Folders"
     # =================================================================
@@ -165,10 +166,21 @@ function installnord {
     else
         linecolor "red" "(Skipped)"
     fi
-    linebreak "Install $install_version"
-    if ! sudo apt install "$install_version" -y; then
-        linecolor "red" "Installation failed."
-        exit 1
+    if [[ "${install_gui,,}" == "y" ]]; then
+        # when downgrading must install and specify a version for both packages, otherwise
+        # nordvpn-gui will pull the latest version of the cli causing a version mismatch
+        linebreak "Install $package_cli and $package_gui"
+        if ! sudo apt install "$package_cli" "$package_gui" -y; then
+            linecolor "red" "Installation failed."
+            exit 1
+        fi
+    else
+        # CLI only
+        linebreak "Install $package_cli"
+        if ! sudo apt install "$package_cli" -y; then
+            linecolor "red" "Installation failed."
+            exit 1
+        fi
     fi
 }
 function start_service {
@@ -305,6 +317,8 @@ function edit_script {
 }
 function choose_version {
     printascii "green" "VERSION"
+    echo "Choose 'nordvpn' to install the latest version available."
+    echo
     echo -e "$(linecolor "red" "Note:") 4.3.0 nordvpnd.service may not start after clean install."
     echo "(bug) https://github.com/NordSecurity/nordvpn-linux/issues/1276"
     echo
@@ -312,7 +326,7 @@ function choose_version {
     select choice in "${available_versions[@]}"
     do
         if (( 1 <= REPLY )) && (( REPLY <= ${#available_versions[@]} )); then
-            install_version="$choice"
+            app_version="$choice"
             break
         else
             linecolor "red" "Invalid Option"
@@ -338,10 +352,21 @@ function header {
     echo "$current_version"
     echo
     echo -ne "$(linecolor "green" "Version to Install: ")"
-    if [[ "${install_version,,}" == "nordvpn" ]]; then
-        echo "$install_version (latest available)"
+    if [[ "${app_version,,}" == "nordvpn" ]]; then
+        echo "${app_version} (latest available)"
+        package_cli="nordvpn"
+        package_gui="nordvpn-gui"
     else
-        echo "$install_version"
+        echo "${app_version}"
+        package_cli="nordvpn=${app_version}"
+        package_gui="nordvpn-gui=${app_version}"
+    fi
+    echo
+    echo -ne "$(linecolor "green" "Install the GUI:") "
+    if [[ "${install_gui,,}" == "y" ]]; then
+        echo -e "\u2705"    # unicode checkmark
+    else
+        echo -e "\u274c"    # unicode X
     fi
     echo
     echo -ne "$(linecolor "yellow" "Login Token: ")"
@@ -356,19 +381,20 @@ function header {
         echo "No token. Log in with web browser."
     fi
     echo
-    echo -ne "$(linecolor "purple" "Apt Update:") "
+    echo -ne "$(linecolor "purple" "Perform Apt Update:") "
     if [[ "${perform_apt_update,,}" == "y" ]]; then
-        echo -e "\u2705"    # unicode checkmark
+        echo -e "\u2705"
     else
-        echo -e "\u274c"    # unicode X
+        echo -e "\u274c"
     fi
     echo
     echo -e "Type $(linecolor "green" "V") to choose another version."
+    echo -e "Type $(linecolor "green" "G") to install the nordvpn-gui package."
     echo -e "Type $(linecolor "yellow" "T") to add/remove a token."
     echo -e "Type $(linecolor "purple" "A") to enable/disable 'apt update'."
     echo -e "Type $(linecolor "cyan" "E") to edit the script."
     echo
-    read -n 1 -r -p "Go nuclear? (y/n/V/T/A/E) "; echo
+    read -n 1 -r -p "Go nuclear? (y/n/V/G/T/A/E) "; echo
     echo
 }
 #
@@ -394,6 +420,13 @@ while true; do
     case "${REPLY,,}" in
         v)
             choose_version
+            ;;
+        g)
+            if [[ "${install_gui,,}" != "y" ]]; then
+                install_gui="y"
+            else
+                install_gui="n"
+            fi
             ;;
         t)
             add_token
