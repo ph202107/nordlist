@@ -534,6 +534,7 @@ function parseargs {
             echo "  --help          Print this help and exit."
             echo "  --list          Print the current server list and exit."
             echo "  --new [NUM]     Retrieve a new server list and reconnect."
+            echo "                  The new servers are based on your current location."
             echo "                  (NUM is an optional maxserver limit, eg --new 20)"
             echo "  (blank)         Normal run and reconnect."
             echo

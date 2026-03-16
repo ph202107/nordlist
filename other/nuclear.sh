@@ -1,25 +1,19 @@
 #!/bin/bash
 #
-# Basic script to upgrade, reinstall, or downgrade the NordVPN Linux application.
+# Basic script to upgrade, reinstall, or downgrade the NordVPN CLI and GUI.
 # This script deletes directories, review carefully before use.
 # Only tested on Linux Mint.
 #
 available_versions=(    # These versions will be displayed on the selection menu.
     "nordvpn"           # Install the latest version available.
-    "4.2.0"             # 14 Oct 2025 Meshnet retained. Upgraded libraries. Fixes for analytics, mangle table.
-    "4.2.1"             # 29 Oct 2025 Fix for missing libxml2 during installation.
-    "4.2.2"             # 11 Nov 2025 Fix for excessive logging.
-    "4.2.3"             # 21 Nov 2025 Raised the maximum HTTP response limit.
     "4.3.0"             # 16 Dec 2025 Bug fixes, GUI and tray improvements.
     "4.3.1"             # 17 Dec 2025 Fix 4.3.0 service start. https://github.com/NordSecurity/nordvpn-linux/issues/1276
     "4.4.0"             # 05 Feb 2026 Minor tweaks and fixes.
+    "4.5.0"             # 16 Mar 2026 Nordwhisper ECH, OpenSSL fix, NetworkManager, DNS, auto-connect.
 )                       # List available versions with: "apt list -a nordvpn"
 #
 # Default choice for the version to install (first in the list).
 app_version="${available_versions[0]}"
-#
-# Default option to install the nordvpn-gui package.  "y" or "n"
-install_gui="n"
 #
 # Login using a token, leave blank to log in using a web browser, or specify a token later.
 # To create a token visit https://my.nordaccount.com/ - NordVPN - Advanced settings - Access token
@@ -65,7 +59,7 @@ function linecolor {
 function linebreak {
     # break up wall of text
     echo
-    linecolor "yellow" "==========================="
+    linecolor "yellow" "================================================="
     linecolor "yellow" "$1"
     echo
 }
@@ -91,20 +85,20 @@ function trashnord {
         linecolor "cyan" "nordvpn logout --persist-token"
         timeout 10s nordvpn logout --persist-token
     fi
-    reload_applet
-    sudo systemctl stop nordvpnd.service
-    sudo killall norduserd 2>/dev/null
+    sudo timeout 5s systemctl stop nordvpnd.service 2>/dev/null
+    sudo killall -9 nordvpn-gui nordvpn nordvpnd norduserd 2>/dev/null
     sleep 1
+    reload_applet
     linebreak "Purge nordvpn-gui and nordvpn"
     sudo apt purge nordvpn-gui nordvpn -y
     sudo apt autoremove -y
     linebreak "Remove Folders"
-    # =================================================================
+    # ====================================================================
     [[ -d "/var/lib/nordvpn" ]] && sudo rm -rf -v "/var/lib/nordvpn"
     [[ -d "/var/run/nordvpn" ]] && sudo rm -rf -v "/var/run/nordvpn"
     [[ -d "$HOME/.config/nordvpn" ]] && rm -rf -v "$HOME/.config/nordvpn"
     [[ -d "$HOME/.cache/nordvpn" ]] && rm -rf -v "$HOME/.cache/nordvpn"
-    # =================================================================
+    # ====================================================================
 }
 function check_repo {
     linebreak "Add Repo"
@@ -277,11 +271,11 @@ function loginnord {
         echo "Provide the Callback URL if necessary or"
         echo "just hit Enter after login is complete."
         echo
-        read -r -p "Callback URL: "; echo
+        read -r -p "Callback URL: " callback_url; echo
         echo
-        if [[ -n "$REPLY" ]]; then
-            linecolor "cyan" "nordvpn login --callback '$REPLY'"
-            nordvpn login --callback "$REPLY"
+        if [[ -n "$callback_url" ]]; then
+            linecolor "cyan" "nordvpn login --callback '$callback_url'"
+            nordvpn login --callback "$callback_url"
             echo
         fi
     fi
@@ -346,29 +340,39 @@ function add_token {
         linecolor "red" "(No Token)"
     fi
 }
+function check_status {
+    cli_yes="$(linecolor "green" "CLI:")\u2705"     # unicode checkmark
+    cli_no="$(linecolor "green" "CLI:")\u274c"      # unicode X
+    gui_yes="$(linecolor "green" "GUI:")\u2705"
+    gui_no="$(linecolor "green" "GUI:")\u274c"
+    #
+    command -v nordvpn &> /dev/null && cli_status="$cli_yes" || cli_status="$cli_no"
+    command -v nordvpn-gui &> /dev/null && gui_status="$gui_yes" || gui_status="$gui_no"
+    current_version=$( nordvpn --version 2>/dev/null || echo "Not Installed" )
+    #
+    command -v figlet &> /dev/null && figlet_exists="true" || figlet_exists="false"
+    [[ "$gui_status" == "$gui_yes" ]] && install_gui="y" || install_gui="n"
+}
 function header {
     printascii "red" "NUCLEAR"
     echo -ne "$(linecolor "green" "Currently Installed: ")"
-    echo "$current_version"
+    echo -e "$current_version  $cli_status  $gui_status"
     echo
+    #
     echo -ne "$(linecolor "green" "Version to Install: ")"
     if [[ "${app_version,,}" == "nordvpn" ]]; then
-        echo "${app_version} (latest available)"
+        echo -n "${app_version} (latest available)"
         package_cli="nordvpn"
         package_gui="nordvpn-gui"
     else
-        echo "${app_version}"
+        echo -n "${app_version}"
         package_cli="nordvpn=${app_version}"
         package_gui="nordvpn-gui=${app_version}"
     fi
+    echo -ne "  $cli_yes  "
+    [[ "${install_gui,,}" == "y" ]] && echo -e "$gui_yes" || echo -e "$gui_no"
     echo
-    echo -ne "$(linecolor "green" "Install the GUI:") "
-    if [[ "${install_gui,,}" == "y" ]]; then
-        echo -e "\u2705"    # unicode checkmark
-    else
-        echo -e "\u274c"    # unicode X
-    fi
-    echo
+    #
     echo -ne "$(linecolor "yellow" "Login Token: ")"
     if [[ -n "$login_token" ]]; then
         echo "$login_token"
@@ -382,14 +386,10 @@ function header {
     fi
     echo
     echo -ne "$(linecolor "purple" "Perform Apt Update:") "
-    if [[ "${perform_apt_update,,}" == "y" ]]; then
-        echo -e "\u2705"
-    else
-        echo -e "\u274c"
-    fi
+    [[ "${perform_apt_update,,}" == "y" ]] && echo -e "\u2705" || echo -e "\u274c"
     echo
     echo -e "Type $(linecolor "green" "V") to choose another version."
-    echo -e "Type $(linecolor "green" "G") to install the nordvpn-gui package."
+    echo -e "Type $(linecolor "green" "G") to enable/disable GUI install."
     echo -e "Type $(linecolor "yellow" "T") to add/remove a token."
     echo -e "Type $(linecolor "purple" "A") to enable/disable 'apt update'."
     echo -e "Type $(linecolor "cyan" "E") to edit the script."
@@ -398,7 +398,7 @@ function header {
     echo
 }
 #
-# =====================================================================
+# ========================================================================
 #
 if [[ "$EUID" -eq 0 ]]; then
     linecolor "red" "Script should be run by the interactive user, not root."
@@ -407,13 +407,10 @@ if [[ "$EUID" -eq 0 ]]; then
     exit 1
 fi
 #
-if command -v figlet &> /dev/null; then
-    figlet_exists="true"
-else
-    figlet_exists="false"
-fi
+titlebartext="NUCLEAR"
+echo -ne "\033]2;${titlebartext}\007"
 #
-current_version=$( nordvpn --version 2>/dev/null || echo "Not Installed" )
+check_status
 #
 while true; do
     header
@@ -422,21 +419,13 @@ while true; do
             choose_version
             ;;
         g)
-            if [[ "${install_gui,,}" != "y" ]]; then
-                install_gui="y"
-            else
-                install_gui="n"
-            fi
+            [[ "${install_gui,,}" != "y" ]] && install_gui="y" || install_gui="n"
             ;;
         t)
             add_token
             ;;
         a)
-            if [[ "${perform_apt_update,,}" != "y" ]]; then
-                perform_apt_update="y"
-            else
-                perform_apt_update="n"
-            fi
+            [[ "${perform_apt_update,,}" != "y" ]] && perform_apt_update="y" || perform_apt_update="n"
             ;;
         e)
             edit_script
@@ -450,9 +439,12 @@ while true; do
             default_settings
             break
             ;;
-        *)
+        n)
             printascii "red" "ABORT"
             break
+            ;;
+        *)
+            linecolor "red" "Invalid Option: $REPLY"
             ;;
     esac
 done
@@ -461,13 +453,14 @@ linebreak "nordvpn settings"
 nordvpn settings
 linebreak "nordvpn status"
 nordvpn status
-linebreak "\n$(linecolor "green" "Completed \u2705")"
-nordvpn --version
+linebreak "\n$(linecolor "green" "\U0001F3C1 Completed \U0001F3C1")"   # checkered flags
+[[ "${REPLY,,}" != "n" ]] && check_status
+echo -e "$current_version  $cli_status  $gui_status"
 linebreak
 reload_applet
 #
-# Alternate install method:
-#   sh <(curl -sSf https://downloads.nordcdn.com/apps/linux/install.sh)
-# NordVPN GUI install;
+# NordVPN CLI install:
+#   sh <(wget -qO - https://downloads.nordcdn.com/apps/linux/install.sh)
+# NordVPN CLI + GUI install:
 #   sh <(wget -qO - https://downloads.nordcdn.com/apps/linux/install.sh) -p nordvpn-gui
 #

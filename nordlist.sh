@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tested with NordVPN Version 4.4.0 on Linux Mint 22.3
-VERSION="2026.02.15"
+# Tested with NordVPN Version 4.5.0 on Linux Mint 22.3
+VERSION="2026.03.16"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -849,6 +849,7 @@ function set_vars {
         lc_line="${line,,}"             # lowercase line used for matching
         #
         case "$lc_line" in
+            *"version"*|*"update"*|*"!"*) continue;;    # skip update messages
             *"status"*)     status="$lc_value";;
             *"server"*)     servername="$value";;       # eg "United States #9992" incl. "Virtual"
             *"hostname"*)   nordhost="$lc_value"        # eg "us9992.nordvpn.com"
@@ -880,6 +881,7 @@ function set_vars {
         lc_value="${lc_line##*: }"          # using <colon><space> as delimiter
         #
         case "$lc_line" in
+            *"version"*|*"update"*|*"!"*) continue;;        # skip update messages
             *"technology"*)     technology="$lc_value";;
             *"protocol"*)       protocol="${lc_value^^}";;  # uppercase
             *"firewall:"*)      firewall="$lc_value";;
@@ -2744,6 +2746,7 @@ function create_list_country {
     #
     readarray -t countrylist < <(
         nordvpn countries |
+        grep -vE "version|update" |
         awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' |
         sort
     )
@@ -2820,6 +2823,7 @@ function create_list_city {
     #
     readarray -t citylist < <(
         nordvpn cities "$xcountry" |
+        grep -vE "version|update" |
         awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' |
         sort
     )
@@ -2852,6 +2856,7 @@ function create_list_group {
     # Group availablility changes with settings, eg. obfuscate
     readarray -t grouplist < <(
         nordvpn groups |
+        grep -vE "version|update" |
         awk '{for(i=1;i<=NF;i++){printf "%s\n", $i}}' |
         sort
     )
