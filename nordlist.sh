@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tested with NordVPN Version 4.5.0 on Linux Mint 22.3
-VERSION="2026.03.16"
+VERSION="2026.04.20"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -5576,8 +5576,8 @@ function update_nordlist {
     directory="${directory%/}"  # strips trailing slash
     local nordlist_path=""
     local iuprompt="Update"     # Install or Update
-    local OLD_VER=      # the version currently in ~/nordlist (if any).  the running script may not be there.
-    local NEW_VER       # the version in ~/nordlist AFTER install/update
+    local OLD_VER=""            # the version currently in ~/nordlist (if any).  the running script may not be there.
+    local NEW_VER=""            # the version in ~/nordlist AFTER install/update
     #
     if [[ -f "$directory/nordlist.sh" ]]; then
         OLD_VER=$(grep -m1 "VERSION=" "$directory/nordlist.sh" | cut -d'"' -f2)

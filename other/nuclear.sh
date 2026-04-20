@@ -6,10 +6,9 @@
 #
 available_versions=(    # These versions will be displayed on the selection menu.
     "nordvpn"           # Install the latest version available.
-    "4.3.0"             # 16 Dec 2025 Bug fixes, GUI and tray improvements.
-    "4.3.1"             # 17 Dec 2025 Fix 4.3.0 service start. https://github.com/NordSecurity/nordvpn-linux/issues/1276
     "4.4.0"             # 05 Feb 2026 Minor tweaks and fixes.
-    "4.5.0"             # 16 Mar 2026 Nordwhisper ECH, OpenSSL fix, NetworkManager, DNS, auto-connect.
+    "4.5.0"             # 16 Mar 2026 Nordwhisper ECH, OpenSSL fix, NetworkManager, DNS
+    "4.6.0"             # 20 Apr 2026 Fix DNS, logout, token, GUI changes, pause feature
 )                       # List available versions with: "apt list -a nordvpn"
 #
 # Default choice for the version to install (first in the list).
