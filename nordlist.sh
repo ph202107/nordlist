@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tested with NordVPN Version 5.0.0 on Linux Mint 22.3
-VERSION="2027.05.27"
+VERSION="2026.05.27"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
