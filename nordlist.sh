@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tested with NordVPN Version 4.5.0 on Linux Mint 22.3
-VERSION="2026.04.20"
+# Tested with NordVPN Version 5.0.0 on Linux Mint 22.3
+VERSION="2027.05.27"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -181,7 +181,7 @@ meshnetdir="/home/$USER/Downloads"
 wgdir="/home/$USER/Downloads"
 #
 # Specify the absolute path and filename to store a .json of all the
-# NordVPN servers (about 30MB). Avoids API server timeouts.  Create the
+# NordVPN servers (about 35MB). Avoids API server timeouts.  Create the
 # list at:  Tools - NordVPN API - All VPN Servers
 serversfile="$nordlistbase/nord_allservers.json"
 #
@@ -4097,7 +4097,7 @@ function allservers_update {
     # backup the current json
     backup_file "$serversfile"
     #
-    read -n 1 -r -p "Download an updated .json? (~30MB) (y/n) "; echo
+    read -n 1 -r -p "Download an updated .json? (~35MB) (y/n) "; echo
     echo
     parent_menu
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -4168,7 +4168,7 @@ function allservers_menu {
     else
         echo -e "${WColor}$serversfile does not exist.${Color_Off}"
         echo
-        read -n 1 -r -p "Download the .json? (~30MB) (y/n) "; echo
+        read -n 1 -r -p "Download the .json? (~35MB) (y/n) "; echo
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             touch "$serversfile"
@@ -5231,7 +5231,7 @@ function server_load {
         # find the "id" of the current server from the local .json
         serverid=$( jq --arg host "$nordhost" '.[] | select(.hostname == $host) | .id' "$serversfile" )
         if [[ -n "$serverid" ]]; then
-            # query the api by the server id. this method downloads about 3KB instead of 30MB
+            # query the api by the server id. this method downloads about 3KB instead of 35MB
             sload=$( timeout 6 curl --silent "https://api.nordvpn.com/v1/servers?limit=1&filters\[servers.id\]=$serverid" | jq '.[].load' )
         else
             # servers may be added or removed

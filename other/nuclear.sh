@@ -4,15 +4,17 @@
 # This script deletes directories, review carefully before use.
 # Only tested on Linux Mint.
 #
-available_versions=(    # These versions will be displayed on the selection menu.
-    "nordvpn"           # Install the latest version available.
-    "4.4.0"             # 05 Feb 2026 Minor tweaks and fixes.
-    "4.5.0"             # 16 Mar 2026 Nordwhisper ECH, OpenSSL fix, NetworkManager, DNS
-    "4.6.0"             # 20 Apr 2026 Fix DNS, logout, token, GUI changes, pause feature
-)                       # List available versions with: "apt list -a nordvpn"
+available_versions=(
+    # These versions will be displayed on the selection menu.
+    #=============================================================================|
+    "nordvpn - Install the latest version available."
+    "4.5.0 - 16 Mar 2026 Nordwhisper ECH, OpenSSL fix, NetworkManager, DNS."
+    "4.6.0 - 20 Apr 2026 Fix DNS, logout, token, GUI changes, pause feature."
+    "5.0.0 - 27 May 2026 Iptables to nftables, regional groups, GUI, allowlist."
+)
 #
-# Default choice for the version to install (first in the list).
-app_version="${available_versions[0]}"
+# Default choice for the version to install, eg. "nordvpn" or "4.6.0"
+app_version="nordvpn"
 #
 # Login using a token, leave blank to log in using a web browser, or specify a token later.
 # To create a token visit https://my.nordaccount.com/ - NordVPN - Advanced settings - Access token
@@ -310,16 +312,11 @@ function edit_script {
 }
 function choose_version {
     printascii "green" "VERSION"
-    echo "Choose 'nordvpn' to install the latest version available."
-    echo
-    echo -e "$(linecolor "red" "Note:") 4.3.0 nordvpnd.service may not start after clean install."
-    echo "(bug) https://github.com/NordSecurity/nordvpn-linux/issues/1276"
-    echo
-    PS3=$'\n''Choose a Version: '
+    PS3=$'\n'"Choose a Version (1-${#available_versions[@]}): "
     select choice in "${available_versions[@]}"
     do
         if (( 1 <= REPLY )) && (( REPLY <= ${#available_versions[@]} )); then
-            app_version="$choice"
+            app_version="${choice%% *}" # remove everything after the first space
             break
         else
             linecolor "red" "Invalid Option"
