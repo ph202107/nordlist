@@ -66,8 +66,8 @@ function list_socks5 {
         "san-francisco.us.socks.nordhold.net"
         "stockholm.se.socks.nordhold.net"
         #
-        # Server list retrieved via NordVPN Public API on 10 Jan 2026
-        # Subject to change
+        # Server list retrieved via NordVPN Public API on 15 Jun 2026
+        # Subject to change.  Socks 5 Servers = 68
         "socks-nl1.nordvpn.com (Amsterdam)"
         "socks-nl2.nordvpn.com (Amsterdam)"
         "socks-nl3.nordvpn.com (Amsterdam)"

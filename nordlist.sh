@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tested with NordVPN Version 5.0.0 on Linux Mint 22.3
-VERSION="2026.05.27"
+# Tested with NordVPN Version 5.1.0 on Linux Mint 22.3
+VERSION="2026.06.15"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -148,6 +148,10 @@ torwhere=""
 # Specify your Dedicated_IP location. (Optional)
 # If you have a Dedicated IP you can specify your server, eg. "ca1692"
 dipwhere=""
+#
+# Specify your Dedicated_Server location. (Optional)
+# If you have a Dedicated Server you can specify your server, eg. "us8273"
+dsrvwhere=""
 #
 # Specify your Auto-Connect location. (Optional)
 # When obfuscate is enabled, the location must support obfuscation.
@@ -969,7 +973,11 @@ function set_vars_fav {
     fi
     # Dedicated
     if [[ "$server" == "${dipwhere,,}" ]]; then
-        fav="${FVColor}(Dedicated)${Color_Off}"
+        fav="${FVColor}(D-IP)${Color_Off}"
+        return
+    fi
+    if [[ "$server" == "${dsrvwhere,,}" ]]; then
+        fav="${FVColor}(D-SRVR)${Color_Off}"
         return
     fi
     # Favorite
@@ -3030,6 +3038,10 @@ function group_location {
             echo "A Dedicated-IP subscription is required."
             echo "Enter your assigned server.  eg 'ca1692'"
             ;;
+        "Dedicated_Server")
+            echo "A Dedicated-Server subscription is required."
+            echo "Enter your assigned server.  eg 'us8273'"
+            ;;
     esac
     echo
     echo "Leave blank to have the app choose automatically."
@@ -3077,6 +3089,12 @@ function group_connect {
             echo "belongs only to you.  Purchasing a subscription is required."
             location="$dipwhere"
             ;;
+        "Dedicated_Server")
+            heading "Dedicated-Server"
+            echo "Connect to your dedicated server to use a personal IP address and"
+            echo "port forwarding.  Purchasing a subscription is required."
+            location="$dsrvwhere"
+            ;;
     esac
     echo
     indicators_display "short"
@@ -3107,6 +3125,12 @@ function group_connect {
         "P2P")
             # available with all technologies and PQ
             echo "Choose a Technology and Protocol."
+            echo "Set NordLynx Post-Quantum (choice)."
+            echo "Set Obfuscate to disabled."
+            ;;
+        "Dedicated_Server")
+            # requires NordLynx.  PQ unknown.  TODO
+            echo "Set Technology to NordLynx UDP."
             echo "Set NordLynx Post-Quantum (choice)."
             echo "Set Obfuscate to disabled."
             ;;
@@ -3150,6 +3174,11 @@ function group_connect {
                 # available with all technologies and PQ
                 techpro_menu "back"
                 setting_disable "obfuscate"
+                ;;
+            "Dedicated_Server")
+                # nordlynx is required
+                techpro_set "NordLynx" "UDP"
+                setting_change "post-quantum" "back"    # TODO
                 ;;
         esac
         setting_change "killswitch" "back"
@@ -3201,19 +3230,20 @@ function group_menu {
     parent="Main"
     echo
     PS3=$'\n''Choose a Group: '
-    submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Dedicated-IP" "Exit")
+    submgroups=("All_Groups" "Obfuscated" "Double-VPN" "Onion+VPN" "P2P" "Dedicated-IP" "Dedicated-Server" "Exit")
     select grp in "${submgroups[@]}"
     do
         parent_menu
         case $grp in
-            "All_Groups")   group_all_menu;;
-            "Obfuscated")   group_connect "Obfuscated_Servers";;
-            "Double-VPN")   group_connect "Double_VPN";;
-            "Onion+VPN")    group_connect "Onion_Over_VPN";;
-            "P2P")          group_connect "P2P";;
-            "Dedicated-IP") group_connect "Dedicated_IP";;
-            "Exit")         main_menu;;
-            *)              invalid_option "${#submgroups[@]}" "$parent";;
+            "All_Groups")       group_all_menu;;
+            "Obfuscated")       group_connect "Obfuscated_Servers";;
+            "Double-VPN")       group_connect "Double_VPN";;
+            "Onion+VPN")        group_connect "Onion_Over_VPN";;
+            "P2P")              group_connect "P2P";;
+            "Dedicated-IP")     group_connect "Dedicated_IP";;
+            "Dedicated-Server") group_connect "Dedicated_Server";;
+            "Exit")             main_menu;;
+            *)                  invalid_option "${#submgroups[@]}" "$parent";;
         esac
     done
 }
@@ -4185,7 +4215,7 @@ function allservers_menu {
     echo
     PS3=$'\n''Choose an option: '
     COLUMNS="$menuwidth"
-    submallvpn=( "List All Servers" "Server Count" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Obfuscated Servers" "P2P Servers" "Dedicated-IP Servers" "IKEv2/IPSec" "HTTPS Proxy" "HTTPS CyberSec Proxy" "OpenVPN UDP" "OpenVPN TCP" "WireGuard" "NordWhisper" "Virtual Locations" "Location ID Numbers" "Search Country" "Search City" "Search Server" "Connect" "Update List" "Exit" )
+    submallvpn=( "List All Servers" "Server Count" "Double-VPN Servers" "Onion Servers" "SOCKS Servers" "Obfuscated Servers" "P2P Servers" "Dedicated-IP" "IKEv2/IPSec" "HTTPS Proxy" "HTTPS CyberSec Proxy" "OpenVPN UDP" "OpenVPN TCP" "WireGuard" "NordWhisper" "Virtual Locations" "Location ID Numbers" "Search Country" "Search City" "Search Server" "Connect" "Update List" "Exit" )
     select avpn in "${submallvpn[@]}"
     do
         parent_menu
@@ -4226,8 +4256,13 @@ function allservers_menu {
             "P2P Servers")
                 allservers_group "P2P"
                 ;;
-            "Dedicated-IP Servers")
+            "Dedicated-IP")
                 allservers_group "Dedicated IP"
+                ;;
+            "Dedicated-Server")
+                allservers_group "Dedicated Server"
+                # no group found   TODO
+                # $ jq '[.. | .title? // empty] | unique | .[]' nord_allservers.json
                 ;;
             "IKEv2/IPSec")
                 allservers_technology "IKEv2/IPSec"
