@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tested with NordVPN Version 5.1.0 on Linux Mint 22.3
-VERSION="2026.06.15"
+# Tested with NordVPN Version 5.2.0 on Linux Mint 22.3
+VERSION="2026.07.01"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -3060,39 +3060,44 @@ function group_connect {
     case "$1" in
         "Obfuscated_Servers")
             heading "Obfuscated"
-            echo "Obfuscated servers are specialized VPN servers that hide the fact"
-            echo "that you’re using a VPN to reroute your traffic. They allow users"
-            echo "to connect to a VPN even in heavily restrictive environments."
+            echo "Obfuscated servers are specialized to hide VPN usage and allow"
+            echo "users to connect to VPN in heavily restrictive environments."
+            echo "https://nordvpn.com/features/obfuscated-servers/"
             location="$obwhere"
             ;;
         "Double_VPN")
             heading "Double-VPN"
             echo "Double VPN is a privacy solution that sends your internet traffic"
             echo "through two VPN servers, encrypting it twice."
+            echo "https://nordvpn.com/features/double-vpn/"
             location="$dblwhere"
             ;;
         "Onion_Over_VPN")
             heading "Onion+VPN"
             echo "Onion over VPN is a privacy solution that sends your internet traffic"
             echo "through a VPN server and then through the Onion network."
+            echo "https://nordvpn.com/features/onion-over-vpn/"
             location="$torwhere"
             ;;
         "P2P")
             heading "Peer to Peer"
             echo "Peer to Peer - sharing information and resources directly without"
             echo "relying on a dedicated central server."
+            echo "https://support.nordvpn.com/hc/en-us/articles/45840292778897"
             location="$p2pwhere"
             ;;
         "Dedicated_IP")
             heading "Dedicated-IP"
             echo "Connect to your assigned server to use a personal IP address that"
             echo "belongs only to you.  Purchasing a subscription is required."
+            echo "https://nordvpn.com/features/dedicated-ip/"
             location="$dipwhere"
             ;;
         "Dedicated_Server")
             heading "Dedicated-Server"
             echo "Connect to your dedicated server to use a personal IP address and"
             echo "port forwarding.  Purchasing a subscription is required."
+            echo "https://nordvpn.com/features/dedicated-server/"
             location="$dsrvwhere"
             ;;
     esac

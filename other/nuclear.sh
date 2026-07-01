@@ -8,12 +8,12 @@ available_versions=(
     # These versions will be displayed on the selection menu.
     #=============================================================================|
     "nordvpn - Install the latest version available."
-    "4.6.0 - 20 Apr 2026 Fix DNS, logout, token, GUI changes, pause feature."
     "5.0.0 - 27 May 2026 Iptables to nftables, regional groups, GUI, allowlist."
     "5.1.0 - 15 Jun 2026 Bug fixes. Dedicated Servers available for purchase."
+    "5.2.0 - 01 Jul 2026 Switch server when down. Pause feature. Meshnet fix."
 )
 #
-# Default choice for the version to install, eg. "nordvpn" or "4.6.0"
+# Default choice for the version to install, eg. "nordvpn" or "5.1.0"
 app_version="nordvpn"
 #
 # Login using a token, leave blank to log in using a web browser, or specify a token later.
