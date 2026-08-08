@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tested with NordVPN Version 5.2.0 on Linux Mint 22.3
-VERSION="2026.07.01"
+# Tested with NordVPN Version 5.3.0 on Linux Mint 22.3
+VERSION="2026.08.08"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -108,6 +108,7 @@ VERSION="2026.07.01"
 #   - function wireguard_gen
 #   - function nftables_menu "nft list", "iptables"
 #   - function customdns_menu "Flush DNS Cache"
+#   - function service_log_level
 #
 # =====================================================================
 # Customization
@@ -220,7 +221,11 @@ rate_prompt="y"
 # (disconnect and automatically reconnect).  "y" or "n"
 pause_prompt="y"
 #
-# Specify the default number of minutes to pause the VPN.
+# Choose the nordlist or nordvpn pause style.
+# eg pause_type="nordlist" or pause_type="nordvpn"
+pause_type="nordlist"
+#
+# Specify the default number of minutes to pause the VPN (nordlist variation).
 default_pause="5"
 #
 # Show the logo (ASCII and stats) when the script exits.  "y" or "n"
@@ -293,7 +298,7 @@ fast_menu="n"
 #
 # Automatically change these settings without prompting:  Firewall,
 # Routing, User-Consent, KillSwitch, TPLite, Notify, Tray, AutoConnect,
-# LAN-Discovery, Virtual-Location, Post-Quantum, ARP-Ignore
+# LAN-Discovery, Virtual-Location, ECH, Post-Quantum, ARP-Ignore
 fast_setting="n"
 #
 # When choosing a country from the 'Countries' menu, immediately
@@ -385,6 +390,9 @@ function set_defaults {
     #
     #setting_enable "post-quantum" "$state" # requires NordLynx, disables meshnet
     setting_disable "post-quantum" "$state"
+    #
+    #setting_enable "ech" "$state"          # requires NordWhisper
+    #setting_disable "ech" "$state"
     #
     setting_enable "routing" "$state"       # typically this setting should be enabled
     #setting_disable "routing" "$state"
@@ -718,7 +726,7 @@ function indicators_display {
         indall=( "$techpro" "$fw" "$ks" "$ob" "$mn" "$pq" )
     else
         # shellcheck disable=SC2154  # assigned in function set_vars_indicators with declare
-        indall=( "$techpro" "$fw" "$rt" "$uc" "$ks" "$tp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$pq" "$ai" "$al" )
+        indall=( "$techpro" "$fw" "$rt" "$uc" "$ks" "$tp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$ec" "$pq" "$ai" "$al" )
         if [[ -n "$fst" ]]; then indall+=( "$fst" ); fi
         if [[ -n "$sshi" ]]; then indall+=( "$sshi" ); fi
     fi
@@ -829,9 +837,9 @@ function set_vars {
     # Set variables with the values found in "nordvpn settings" and "nordvpn status".
     #
     allvars=(
-        status servername nordhost server ipaddr country city transferd transferu uptime
+        status pausetime servername nordhost server ipaddr country city transferd transferu uptime
         technology protocol firewall fwmark routing userconsent killswitch tplite obfuscate notify
-        tray autoconnect ipversion6 meshnet customdns dns_servers landiscovery virtual postquantum
+        tray autoconnect ipversion6 meshnet customdns dns_servers landiscovery virtual wtech postquantum
         arpignore
     )
     # Reset all vars to ensure stale data is never used.
@@ -855,6 +863,7 @@ function set_vars {
         case "$lc_line" in
             *"version"*|*"update"*|*"!"*) continue;;    # skip update messages
             *"status"*)     status="$lc_value";;
+            *"left"*)       pausetime="$lc_value";;
             *"server"*)     servername="$value";;       # eg "United States #9992" incl. "Virtual"
             *"hostname"*)   nordhost="$lc_value"        # eg "us9992.nordvpn.com"
                             server="${lc_value%%.*}";;  # eg "us9992"
@@ -874,10 +883,12 @@ function set_vars {
     # "nordvpn settings"
     # $protocol and $obfuscate are only listed when using OpenVPN
     # $postquantum is not listed when using OpenVPN
+    # $wtech (Web Tunnel Encrypted Client Hello) only listed with NordWhisper
     #
     # default to "disabled" in case these are not found
     obfuscate="disabled"
     ipversion6="disabled"
+    wtech="disabled"
     postquantum="disabled"
     #
     for lc_line in "${nordsettings[@]}"     # all elements are lowercase
@@ -910,6 +921,7 @@ function set_vars {
                 ;;
             *"discover"*)       landiscovery="$lc_value";;
             *"virtual"*)        virtual="$lc_value";;
+            *"ech"*)            wtech="$lc_value";;
             *"quantum"*)        postquantum="$lc_value";;
             *"ignore"*)         arpignore="$lc_value";;
         esac
@@ -951,6 +963,10 @@ function set_vars_status {
         statusc="${CNColor}$status${Color_Off}"
         statuscl="${CNColor}${status^}${Color_Off}:"
         transferc="${DLColor}\u25bc $transferd ${ULColor} \u25b2 $transferu ${Color_Off}"
+    elif [[ "$status" == "paused" ]]; then
+        statusc="${FColor}$status: $pausetime Remaining${Color_Off}"
+        statuscl="${FColor}${status^}: $pausetime Remaining${Color_Off}"
+        transferc=""
     else
         statusc="${DNColor}$status${Color_Off}"
         statuscl="${DNColor}${status^}${Color_Off}"
@@ -1064,6 +1080,7 @@ function set_vars_indicators {
         ["dns"]="$customdns"
         ["ld"]="$landiscovery"
         ["vl"]="$virtual"
+        ["ec"]="$wtech"
         ["pq"]="$postquantum"
         ["ai"]="$arpignore"
         ["al"]="$allowlist_var"
@@ -1084,6 +1101,7 @@ function set_vars_indicators {
         case "$indkey" in
             "ob")   obfuscatec="${TMPColor}$indstatus${Color_Off}";;
             "mn")   meshnetc="${TMPColor}$indstatus${Color_Off}";;
+            "ec")   wtechc="${TMPColor}$indstatus${Color_Off}";;
             "pq")   postquantumc="${TMPColor}$indstatus${Color_Off}";;
         esac
         #
@@ -1211,6 +1229,7 @@ function techpro_menu {
                 ;;
             "NordWhisper-WT")
                 techpro_set "NordWhisper" "WT"
+                setting_change "ech" "back"
                 break
                 ;;
             "Exit")
@@ -1254,6 +1273,7 @@ function setting_getvars {
         "dns")                  chgname="Custom-DNS"; chgvar="$customdns"; chgind="$dns"; chgloc="$default_dns";;
         "lan-discovery")        chgname="LAN-Discovery"; chgvar="$landiscovery"; chgind="$ld";;
         "virtual-location")     chgname="Virtual-Location"; chgvar="$virtual"; chgind="$vl";;
+        "ech")                  chgname="Encryped Client Hello"; chgvar="$wtech"; chgind="$ec";;
         "post-quantum")         chgname="Post-Quantum VPN"; chgvar="$postquantum"; chgind="$pq";;
         "arp-ignore")           chgname="ARP-Ignore"; chgvar="$arpignore"; chgind="$ai";;
         *)                      echo; echo -e "${WColor}'$1' not defined${Color_Off}"; echo; return;;
@@ -1436,7 +1456,7 @@ function setting_menu {
     indicators_display
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "Post-Quantum" "ARP-Ignore" "Allowlist" "Account" "Restart" "Reset" "NFTables" "Logs" "Script" "Defaults" "Update" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "ECH" "Post-Quantum" "ARP-Ignore" "Allowlist" "Account" "Restart" "Reset" "NFTables" "Logs" "Diagnostics" "Script" "Defaults" "Update" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
@@ -1457,6 +1477,7 @@ function setting_menu {
             "Custom-DNS")       customdns_menu;;
             "LAN-Discovery")    landiscovery_setting;;
             "Virtual-Loc")      virtual_setting;;
+            "ECH")              ech_setting;;
             "Post-Quantum")     postquantum_setting;;
             "ARP-Ignore")       arpignore_setting;;
             "Allowlist")        allowlist_setting;;
@@ -1464,7 +1485,8 @@ function setting_menu {
             "Restart")          restart_service;;
             "Reset")            reset_app;;
             "NFTables")         nftables_menu;;
-            "Logs")             service_logs;;
+            "Logs")             service_log;;
+            "Diagnostics")      diagnostics;;
             "Script")           script_info;;
             "Defaults")         set_defaults_ask;;
             "Update")           update_nordlist; setting_menu;;
@@ -1829,6 +1851,38 @@ function virtual_setting {
         echo
     fi
     setting_change "virtual-location"
+}
+function ech_setting {
+    heading "ECH"
+    echo
+    echo "Encryped Client Hello is only available for NordWhisper Technology."
+    echo
+    echo "ECH encrypts the server name during the TLS handshake, making"
+    echo "your connection more private.  Enabled by default."
+    echo
+    if [[ "$technology" != "nordwhisper" ]]; then
+        indicators_display "short"
+        echo
+        echo -e "${WColor}Note:${Color_Off} First change the Technology to NordWhisper."
+        echo
+        echo
+        read -n 1 -s -r -p "Press any key to continue... "; echo
+        setting_menu
+    fi
+    if [[ "$status" == "connected" ]]; then
+        echo -e "$ec Encryped Client Hello is $wtechc."
+        echo
+        echo -e "${WColor}To change this setting you must disconnect from VPN.${Color_Off}"
+        echo
+        read -n 1 -r -p "Proceed? (y/n) "; echo
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            disconnect_vpn "force"
+        else
+            setting_menu
+        fi
+    fi
+    setting_change "ech"
 }
 function postquantum_setting {
     # disconnect VPN when changing setting.  https://github.com/NordSecurity/nordvpn-linux/issues/637
@@ -2248,9 +2302,54 @@ function reset_app {
     fi
     main_menu
 }
-function service_logs {
-    heading "Service Logs"
+function service_log_level {
     parent="Settings"
+    loglevelfile="/run/nordvpn/loglevel"
+    #
+    echo "The nordvpn daemon log level can be adjusted without restarting."
+    echo "Valid options are: debug/info/warn/error/fatal/off. Default is debug."
+    echo "Refer to: https://github.com/NordSecurity/nordvpn-linux/#log-level"
+    echo "Command requires sudo."
+    echo
+    if [[ -f "$loglevelfile" ]]; then
+        read -r nordloglevel < "$loglevelfile"
+    else
+        nordloglevel="debug"
+    fi
+    echo -e "Current level: ${EColor}$nordloglevel${Color_Off}"
+    echo
+    read -n 1 -r -p "Change the log level? (y/n) "; echo
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        return
+    fi
+    PS3=$'\n''Choose a Level: '
+    submlog=("debug" "info" "warn" "error" "fatal" "off")
+    select logl in "${submlog[@]}"
+    do
+        parent_menu
+        if [[ -n "$logl" ]]; then
+            echo
+            echo -e "Command: ${LColor}echo '$logl' | sudo tee '$loglevelfile'${Color_Off}"
+            echo
+            echo "$logl" | sudo tee "$loglevelfile" > /dev/null
+            echo
+            read -r nordloglevel < "$loglevelfile"
+            echo -e "Log level updated to: ${EColor}$nordloglevel${Color_Off}"
+            break
+        else
+            echo -e "${WColor}Invalid Option${Color_Off}"
+        fi
+    done
+    echo
+    echo
+}
+function service_log {
+    heading "Service Log"
+    parent="Settings"
+    echo
+    service_log_level
+    echo -e "${LColor}=== Print/Save the Service Logs ===${Color_Off}"
     echo
     if [[ -f "$nordlogfile" ]]; then
         echo -e "${EColor}$(basename "$nordlogfile")${Color_Off} already exists."
@@ -2285,6 +2384,26 @@ function service_logs {
     if [[ -f "$nordlogfile" ]]; then
         openlink "$nordlogfile" "ask"
     else
+        read -n 1 -s -r -p "Press any key to continue... "; echo
+    fi
+    setting_menu
+}
+function diagnostics {
+    heading "Diagnostics"
+    parent="Settings"
+    echo
+    echo "Collects diagnostic logs and system information for troubleshooting."
+    echo "Send the generated file to NordVPN support when requested."
+    echo
+    echo -e "Runs the command: ${LColor}nordvpn diagnostics${Color_Off}"
+    echo
+    read -n 1 -r -p "Proceed? (y/n) "; echo
+    echo
+    parent_menu
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        nordvpn diagnostics
+        echo
+        echo
         read -n 1 -s -r -p "Press any key to continue... "; echo
     fi
     setting_menu
@@ -5125,14 +5244,18 @@ function main_disconnect {
     heading "Disconnect"
     echo
     if [[ "$status" == "connected" && "$meshrouting" == "false" ]]; then
-        if [[ "$rate_prompt" =~ ^[Yy]$ ]]; then
+        if [[ "${rate_prompt,,}" == "y" ]]; then
             rate_server
             echo
         fi
-        if [[ "$pause_prompt" =~ ^[Yy]$ ]]; then
+        if [[ "${pause_prompt,,}" == "y" ]]; then
             read -n 1 -r -p "Pause the VPN? (y/n) "; echo
-            if [[ "$REPLY" =~ ^[Yy]$ ]]; then
-                pause_vpn
+            if [[ "${REPLY,,}" == "y" ]]; then
+                if [[ "${pause_type,,}" == "nordvpn" ]]; then
+                    pause_vpn_nord
+                else
+                    pause_vpn
+                fi
             fi
         fi
     fi
@@ -5179,6 +5302,30 @@ function rate_server {
         esac
         echo
     done
+}
+function pause_vpn_nord {
+    heading "Disconnect, Pause, and Reconnect" "txt"
+    PS3=$'\n''Choose a Duration: '
+    submpause=("5m" "15m" "30m" "1hr" "24hr")
+    select ptime in "${submpause[@]}"
+    do
+        if [[ -n "$ptime" ]]; then
+            echo
+            echo -e "Command: ${LColor}nordvpn pause $ptime${Color_Off}"
+            echo
+            nordvpn pause "$ptime"
+            echo
+            break
+        else
+            echo -e "${WColor}Invalid Option${Color_Off}"
+        fi
+    done
+    if [[ "$killswitch" == "enabled" && "$exitks_prompt" != "y" ]]; then
+        echo -e "${WColor}** Reminder **${Color_Off}"
+        setting_change "killswitch" "back"
+    fi
+    echo -e "${WColor}Note:${Color_Off} Refresh the Main Menu ($upmenu) to view the pause time remaining."
+    echo
 }
 function pause_vpn {
     # disconnect the VPN, pause for a chosen number of minutes, then reconnect to any location

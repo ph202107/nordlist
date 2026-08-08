@@ -8,9 +8,9 @@ available_versions=(
     # These versions will be displayed on the selection menu.
     #=============================================================================|
     "nordvpn - Install the latest version available."
-    "5.0.0 - 27 May 2026 Iptables to nftables, regional groups, GUI, allowlist."
     "5.1.0 - 15 Jun 2026 Bug fixes. Dedicated Servers available for purchase."
-    "5.2.0 - 01 Jul 2026 Switch server when down. Pause feature. Meshnet fix."
+    "5.2.0 - 01 Jul 2026 Switch server when down. GUI Pause feature. Meshnet fix."
+    "5.3.0 - 05 Aug 2026 Diagnostics, CLI Pause, ECH, mDNS, glibc 2.35."
 )
 #
 # Default choice for the version to install, eg. "nordvpn" or "5.1.0"
@@ -44,6 +44,7 @@ function default_settings {
     #nordvpn set post-quantum enabled
     #nordvpn connect --group P2P United_States
     #nordvpn set killswitch enabled
+    #echo 'error' | sudo tee '/run/nordvpn/loglevel'
     #
 }
 function linecolor {
