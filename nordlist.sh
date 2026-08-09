@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tested with NordVPN Version 5.3.0 on Linux Mint 22.3
-VERSION="2026.08.08"
+VERSION="2026.08.09"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -964,7 +964,7 @@ function set_vars_status {
         statuscl="${CNColor}${status^}${Color_Off}:"
         transferc="${DLColor}\u25bc $transferd ${ULColor} \u25b2 $transferu ${Color_Off}"
     elif [[ "$status" == "paused" ]]; then
-        statusc="${FColor}$status: $pausetime Remaining${Color_Off}"
+        statusc="${FColor}${status^}: $pausetime Remaining${Color_Off}"
         statuscl="${FColor}${status^}: $pausetime Remaining${Color_Off}"
         transferc=""
     else
@@ -2461,23 +2461,24 @@ function set_defaults_ask {
     read -n 1 -r -p "Proceed? (y/n) "; echo
     echo
     parent_menu
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        set_defaults
-        heading "Set Defaults: ${H2Color}Allowlist${H1Color}" "txt"
-        read -n 1 -r -p "Go to the Allowlist setting? (y/n) "; echo
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            allowlist_setting "back"
-        fi
-        heading "Set Defaults: ${H2Color}Custom-DNS${H1Color}" "txt"
-        read -n 1 -r -p "Go to the Custom-DNS setting? (y/n) "; echo
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            set_vars
-            customdns_menu
-        fi
-        main_menu
+    if [[ "${REPLY,,}" != "y" ]]; then
+        setting_menu
     fi
+    set_defaults
+    heading "Set Defaults: ${H2Color}Allowlist${H1Color}" "txt"
+    read -n 1 -r -p "Go to the Allowlist setting? (y/n) "; echo
+    echo
+    if [[ "${REPLY,,}" == "y" ]]; then
+        allowlist_setting "back"
+    fi
+    heading "Set Defaults: ${H2Color}Custom-DNS${H1Color}" "txt"
+    read -n 1 -r -p "Go to the Custom-DNS setting? (y/n) "; echo
+    echo
+    if [[ "${REPLY,,}" == "y" ]]; then
+        set_vars
+        customdns_menu
+    fi
+    main_menu
 }
 #
 # =====================================================================
@@ -5306,7 +5307,7 @@ function rate_server {
 function pause_vpn_nord {
     heading "Disconnect, Pause, and Reconnect" "txt"
     PS3=$'\n''Choose a Duration: '
-    submpause=("5m" "15m" "30m" "1hr" "24hr")
+    submpause=("5m" "15m" "30m" "1h" "24h")
     select ptime in "${submpause[@]}"
     do
         if [[ -n "$ptime" ]]; then
@@ -5320,7 +5321,7 @@ function pause_vpn_nord {
             echo -e "${WColor}Invalid Option${Color_Off}"
         fi
     done
-    if [[ "$killswitch" == "enabled" && "$exitks_prompt" != "y" ]]; then
+    if [[ "$killswitch" == "enabled" && "${exitks_prompt,,}" != "y" ]]; then
         echo -e "${WColor}** Reminder **${Color_Off}"
         setting_change "killswitch" "back"
     fi

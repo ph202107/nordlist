@@ -44,7 +44,7 @@ function default_settings {
     #nordvpn set post-quantum enabled
     #nordvpn connect --group P2P United_States
     #nordvpn set killswitch enabled
-    #echo 'error' | sudo tee '/run/nordvpn/loglevel'
+    #echo "error" | sudo tee "/run/nordvpn/loglevel"
     #
 }
 function linecolor {

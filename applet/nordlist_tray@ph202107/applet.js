@@ -13,6 +13,7 @@ class NordListApplet extends Applet.TextIconApplet {
 
         this.metadata = metadata;
         this._timeout = null;
+        this._login1SignalId = 0;
 
         // Enable hover tracking for the menu
         this.actor.track_hover = true;
@@ -37,10 +38,38 @@ class NordListApplet extends Applet.TextIconApplet {
         this.statusLabel.label.set_style('text-align: left; font-family: monospace;');
         this.hoverMenu.addMenuItem(this.statusLabel);
 
+        // Listen for system sleep/wake events
+        this._setupSleepListener();
+
         // Set initial state
         this.set_applet_label("");
         this.update_vpn_status();
         this._updateLoop();
+    }
+
+    _setupSleepListener() {
+        try {
+            this._dbusProxy = Gio.DBusProxy.new_for_bus_sync(
+                Gio.BusType.SYSTEM,
+                Gio.DBusProxyFlags.NONE,
+                null,
+                'org.freedesktop.login1',
+                '/org/freedesktop/login1',
+                'org.freedesktop.login1.Manager',
+                null
+            );
+
+            this._login1SignalId = this._dbusProxy.connect('g-signal', (proxy, sender, signal, params) => {
+                if (signal === 'PrepareForSleep') {
+                    let [isSuspending] = params.recursiveUnpack();
+                    if (!isSuspending) {
+                        this.update_vpn_status();
+                    }
+                }
+            });
+        } catch (e) {
+            global.logError("NordVPN Applet DBus Sleep Listener Error: " + e.message);
+        }
     }
 
     on_hover_enter() {
@@ -74,6 +103,7 @@ class NordListApplet extends Applet.TextIconApplet {
         if (GLib.file_test(iconPath, GLib.FileTest.EXISTS)) return iconPath;
         return {
             connected: 'network-vpn-symbolic',
+            paused: 'dialog-warning-symbolic',
             disconnected: 'network-vpn-disconnected-symbolic',
             error: 'dialog-error-symbolic'
         }[status];
@@ -104,11 +134,15 @@ class NordListApplet extends Applet.TextIconApplet {
 
     process_nord_output(output) {
         let isConnected = output.includes('Status: Connected');
+        let isPaused = output.includes('Status: Paused');
+
         let cityMatch = output.match(/^City: (.*)$/m);
         let cityName = cityMatch ? cityMatch[1].trim() : "";
 
+        let pauseMatch = output.match(/^Pause time left: (.*)$/m);
+        let pauseTimeLeft = pauseMatch ? pauseMatch[1].trim() : "";
+
         // --- SELF-HEALING: WAKE-FROM-SUSPEND HANDLER ---
-        // Detects if VPN is connected but metadata (City) is still loading
         if (isConnected && cityName === "") {
             this.set_applet_icon_path(this.get_icon_path('connected'));
 
@@ -118,10 +152,11 @@ class NordListApplet extends Applet.TextIconApplet {
 
             this.statusLabel.label.set_text("NordVPN\nStatus: Connected\nRetrieving location data...");
 
-            // One-time retry in 2 seconds
-            Mainloop.timeout_add_seconds(2, () => {
-                this.update_vpn_status();
-                return false;
+            [2, 5, 10].forEach(delay => {
+                Mainloop.timeout_add_seconds(delay, () => {
+                    this.update_vpn_status();
+                    return false;
+                });
             });
 
             return;
@@ -135,16 +170,32 @@ class NordListApplet extends Applet.TextIconApplet {
             let statusMatch = output.match(/^Status:.*$/m);
             displayString = "NordVPN";
             if (statusMatch) displayString += "\n" + statusMatch[0];
+            if (isPaused && pauseMatch) displayString += "\n" + pauseMatch[0];
             if (cityMatch) displayString += "\n" + cityMatch[0];
-            if (!statusMatch && !cityMatch) displayString += "\n" + output;
+            if (!statusMatch && !cityMatch && !pauseMatch) displayString += "\n" + output;
         }
 
         this.statusLabel.label.set_text(displayString);
-        this.set_applet_icon_path(this.get_icon_path(isConnected ? 'connected' : 'disconnected'));
 
-        if (this.showCityOnPanel && isConnected && cityName !== "") {
-            this.set_applet_label(cityName);
+        // Determine icon and panel label state
+        if (isConnected) {
+            this.set_applet_icon_path(this.get_icon_path('connected'));
+            if (this.showCityOnPanel && cityName !== "") {
+                this.set_applet_label(cityName);
+            } else {
+                this.set_applet_label("");
+            }
+        } else if (isPaused) {
+            this.set_applet_icon_path(this.get_icon_path('paused'));
+
+            // If showCityOnPanel is enabled, show the pause countdown on the panel (e.g. "47:34")
+            if (this.showCityOnPanel && pauseTimeLeft !== "") {
+                this.set_applet_label(pauseTimeLeft);
+            } else {
+                this.set_applet_label("");
+            }
         } else {
+            this.set_applet_icon_path(this.get_icon_path('disconnected'));
             this.set_applet_label("");
         }
     }
@@ -165,6 +216,9 @@ class NordListApplet extends Applet.TextIconApplet {
 
     on_applet_removed_from_panel() {
         if (this._timeout) Mainloop.source_remove(this._timeout);
+        if (this._dbusProxy && this._login1SignalId) {
+            this._dbusProxy.disconnect(this._login1SignalId);
+        }
         this.settings.finalize();
     }
 }
