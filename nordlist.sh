@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tested with NordVPN Version 5.3.0 on Linux Mint 22.3
-VERSION="2026.08.09"
+VERSION="2026.08.21"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -205,6 +205,12 @@ showfavname="n"
 nordlogfile="$nordlistbase/nord_logs.txt"
 # Also display this number of lines from the tail of the log.
 loglines="100"
+#
+# Check and set the nordvpnd logging level on script startup.
+# If a change is required the script will prompt for a sudo password.
+# Refer to: https://github.com/NordSecurity/nordvpn-linux/#log-level
+# Valid options are: debug/info/warn/error/fatal/off. Default is debug.
+nordloglevel="debug"
 #
 # Change the terminal window titlebar text while the script is running.
 # Leave this blank to keep the titlebar unchanged.
@@ -2303,50 +2309,41 @@ function reset_app {
     main_menu
 }
 function service_log_level {
-    parent="Settings"
     loglevelfile="/run/nordvpn/loglevel"
     #
-    echo "The nordvpn daemon log level can be adjusted without restarting."
-    echo "Valid options are: debug/info/warn/error/fatal/off. Default is debug."
-    echo "Refer to: https://github.com/NordSecurity/nordvpn-linux/#log-level"
-    echo "Command requires sudo."
-    echo
     if [[ -f "$loglevelfile" ]]; then
-        read -r nordloglevel < "$loglevelfile"
+        read -r logactual < "$loglevelfile"
     else
-        nordloglevel="debug"
+        logactual="debug"
     fi
-    echo -e "Current level: ${EColor}$nordloglevel${Color_Off}"
-    echo
-    read -n 1 -r -p "Change the log level? (y/n) "; echo
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    if [[ "${logactual,,}" == "${nordloglevel,,}" ]]; then
+        echo -e "Current nordvpnd log level: ${EIColor}$logactual${Color_Off}"
+        echo
         return
     fi
-    PS3=$'\n''Choose a Level: '
-    submlog=("debug" "info" "warn" "error" "fatal" "off")
-    select logl in "${submlog[@]}"
-    do
-        parent_menu
-        if [[ -n "$logl" ]]; then
-            echo
-            echo -e "Command: ${LColor}echo '$logl' | sudo tee '$loglevelfile'${Color_Off}"
-            echo
-            echo "$logl" | sudo tee "$loglevelfile" > /dev/null
-            echo
-            read -r nordloglevel < "$loglevelfile"
-            echo -e "Log level updated to: ${EColor}$nordloglevel${Color_Off}"
-            break
-        else
-            echo -e "${WColor}Invalid Option${Color_Off}"
-        fi
-    done
+    echo -e "Current nordvpnd log level: ${WColor}$logactual${Color_Off}"
+    echo -e "Desired level: ${EIColor}$nordloglevel${Color_Off}"
+    echo "Change the desired level with customization option 'nordloglevel'."
     echo
+    echo -e "Send command: ${LColor}echo '$nordloglevel' | sudo tee '$loglevelfile'${Color_Off}"
+    echo
+    if ! echo "$nordloglevel" | sudo tee "$loglevelfile" > /dev/null; then
+        echo -e "${DColor}(Skipped)${Color_Off}"
+        echo
+        return
+    fi
+    echo
+    read -r logactual < "$loglevelfile"
+    echo -e "Current nordvpnd log level: ${EIColor}$logactual${Color_Off}"
     echo
 }
 function service_log {
     heading "Service Log"
     parent="Settings"
+    echo
+    echo "Change the desired log level with customization option 'nordloglevel'."
+    echo "Valid options are: debug/info/warn/error/fatal/off. Default is debug."
+    echo "Refer to: https://github.com/NordSecurity/nordvpn-linux/#log-level"
     echo
     service_log_level
     echo -e "${LColor}=== Print/Save the Service Logs ===${Color_Off}"
@@ -5251,6 +5248,7 @@ function main_disconnect {
         fi
         if [[ "${pause_prompt,,}" == "y" ]]; then
             read -n 1 -r -p "Pause the VPN? (y/n) "; echo
+            echo
             if [[ "${REPLY,,}" == "y" ]]; then
                 if [[ "${pause_type,,}" == "nordvpn" ]]; then
                     pause_vpn_nord
@@ -5755,6 +5753,9 @@ function start {
     if [[ -f "$favoritesfile" ]]; then
         readarray -t favoritelist < "$favoritesfile"
     fi
+    #
+    # check/change the nordvpnd log level
+    service_log_level
     #
     main_menu "start"
     #
