@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tested with NordVPN Version 5.3.0 on Linux Mint 22.3
-VERSION="2026.08.21"
+# Tested with NordVPN Version 5.4.0 on Linux Mint 22.3
+VERSION="2026.09.07"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -303,7 +303,7 @@ upmenu="0"
 fast_menu="n"
 #
 # Automatically change these settings without prompting:  Firewall,
-# Routing, User-Consent, KillSwitch, TPLite, Notify, Tray, AutoConnect,
+# Routing, User-Consent, KillSwitch, Protect, Notify, Tray, AutoConnect,
 # LAN-Discovery, Virtual-Location, ECH, Post-Quantum, ARP-Ignore
 fast_setting="n"
 #
@@ -406,10 +406,10 @@ function set_defaults {
     setting_enable "analytics" "$state"     # 'User-Consent' setting
     #setting_disable "analytics" "$state"
     #
-    #setting_enable "threatprotectionlite" "$state" # disables Custom-DNS
-    setting_disable "threatprotectionlite" "$state"
+    #setting_enable "protection" "$state"   # disables Custom-DNS
+    setting_disable "protection" "$state"
     #
-    #setting_enable "obfuscate" "$state"    # requires OpenVPN
+    #setting_enable "obfuscate" "$state"    # requires OpenVPN, not compatible with DCO
     setting_disable "obfuscate" "$state"
     #
     #setting_enable "notify" "$state"
@@ -436,7 +436,7 @@ function set_defaults {
     #setting_enable "autoconnect" "$state"  # applies the "$acwhere" location when changing from disabled to enabled
     setting_disable "autoconnect" "$state"
     #
-    #setting_enable "dns"                   # applies the "$default_dns" specified above. disables threatprotectionlite
+    #setting_enable "dns"                   # applies the "$default_dns" specified above. disables Real-Time Protection
     setting_disable "dns" "$state"
     #
     #allowlist_commands                     # run the allowlist configuration commands
@@ -732,7 +732,7 @@ function indicators_display {
         indall=( "$techpro" "$fw" "$ks" "$ob" "$mn" "$pq" )
     else
         # shellcheck disable=SC2154  # assigned in function set_vars_indicators with declare
-        indall=( "$techpro" "$fw" "$rt" "$uc" "$ks" "$tp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$ec" "$pq" "$ai" "$al" )
+        indall=( "$techpro" "$fw" "$rt" "$uc" "$ks" "$rp" "$ob" "$no" "$tr" "$ac" "$ip6" "$mn" "$dns" "$ld" "$vl" "$ec" "$pq" "$ai" "$al" )
         if [[ -n "$fst" ]]; then indall+=( "$fst" ); fi
         if [[ -n "$sshi" ]]; then indall+=( "$sshi" ); fi
     fi
@@ -844,7 +844,7 @@ function set_vars {
     #
     allvars=(
         status pausetime servername nordhost server ipaddr country city transferd transferu uptime
-        technology protocol firewall fwmark routing userconsent killswitch tplite obfuscate notify
+        technology protocol firewall fwmark routing userconsent killswitch protect obfuscate notify
         tray autoconnect ipversion6 meshnet customdns dns_servers landiscovery virtual wtech postquantum
         arpignore
     )
@@ -910,7 +910,7 @@ function set_vars {
             *"routing"*)        routing="$lc_value";;
             *"consent"*)        userconsent="$lc_value";;
             *"kill"*)           killswitch="$lc_value";;
-            *"threat"*)         tplite="$lc_value";;
+            *"protect"*)        protect="$lc_value";;
             *"obfuscate"*)      obfuscate="$lc_value";;
             *"notify"*)         notify="$lc_value";;
             *"tray"*)           tray="$lc_value";;
@@ -1048,6 +1048,17 @@ function set_vars_techpro {
         "openvpn")
             technologyd="OpenVPN"
             protocold="$protocol"
+            # OpenVPN Data Channel Offload (DCO) NordVPN 5.4.0+
+            # https://github.com/NordSecurity/nordvpn-linux#openvpn-data-channel-offload-dco
+            if [[ "$status" == "connected" ]]; then
+                if [[ "$(ip -d link show nordtun 2>/dev/null)" == *"ovpn-dco"* ]]; then
+                    dcostatus="${EIColor}DCO${Color_Off}"
+                else
+                    dcostatus="${DIColor}DCO${Color_Off}"
+                fi
+                techpro="${TIColor}${technologyd}\u00B7${protocold}\u00B7${dcostatus}"
+                return
+            fi
             ;;
         "nordlynx")
             # NordLynx protocol is always "UDP"
@@ -1076,7 +1087,7 @@ function set_vars_indicators {
         ["rt"]="$routing"
         ["uc"]="$userconsent"
         ["ks"]="$killswitch"
-        ["tp"]="$tplite"
+        ["rp"]="$protect"
         ["ob"]="$obfuscate"
         ["no"]="$notify"
         ["tr"]="$tray"
@@ -1269,7 +1280,7 @@ function setting_getvars {
         "routing")              chgname="Routing"; chgvar="$routing"; chgind="$rt";;
         "analytics")            chgname="User-Consent"; chgvar="$userconsent"; chgind="$uc";;
         "killswitch")           chgname="the Kill Switch"; chgvar="$killswitch"; chgind="$ks";;
-        "threatprotectionlite") chgname="Threat Protection Lite"; chgvar="$tplite"; chgind="$tp";;
+        "protection")           chgname="Real-Time Protection"; chgvar="$protect"; chgind="$rp";;
         "obfuscate")            chgname="Obfuscate"; chgvar="$obfuscate"; chgind="$ob";;
         "notify")               chgname="Notify"; chgvar="$notify"; chgind="$no";;
         "tray")                 chgname="the Tray"; chgvar="$tray"; chgind="$tr";;
@@ -1357,7 +1368,7 @@ function setting_enable {
             setting_enable "firewall"
             setting_getvars "$1"
             ;;
-        "threatprotectionlite")
+        "protection")
             setting_disable "dns"
             setting_getvars "$1"
             ;;
@@ -1375,7 +1386,7 @@ function setting_enable {
             echo
             ;;
         "dns")
-            setting_disable "threatprotectionlite"
+            setting_disable "protection"
             setting_getvars "$1"
             #
             if [[ -n "$2" ]]; then
@@ -1462,7 +1473,7 @@ function setting_menu {
     indicators_display
     echo
     PS3=$'\n''Choose a Setting: '
-    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "TPLite" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "ECH" "Post-Quantum" "ARP-Ignore" "Allowlist" "Account" "Restart" "Reset" "NFTables" "Logs" "Diagnostics" "Script" "Defaults" "Update" "Exit")
+    submsett=("Technology" "Protocol" "Firewall" "Routing" "User-Consent" "KillSwitch" "Protect" "Obfuscate" "Notify" "Tray" "AutoConnect" "IPv6" "Meshnet" "Custom-DNS" "LAN-Discovery" "Virtual-Loc" "ECH" "Post-Quantum" "ARP-Ignore" "Allowlist" "Account" "Restart" "Reset" "NFTables" "Logs" "Diagnostics" "Script" "Defaults" "Update" "Exit")
     select sett in "${submsett[@]}"
     do
         parent_menu
@@ -1473,7 +1484,7 @@ function setting_menu {
             "Routing")          routing_setting;;
             "User-Consent")     userconsent_setting;;
             "KillSwitch")       killswitch_setting;;
-            "TPLite")           tplite_setting;;
+            "Protect")          protect_setting;;
             "Obfuscate")        obfuscate_setting;;
             "Notify")           notify_setting;;
             "Tray")             tray_setting;;
@@ -1564,26 +1575,28 @@ function killswitch_setting {
     fi
     setting_change "killswitch"
 }
-function tplite_setting {
-    heading "TPLite"
-    echo "Threat Protection Lite is a feature protecting you from ads, unsafe"
-    echo "connections, and malicious sites. Previously known as CyberSec."
-    echo "Uses the Nord Threat Protection Lite DNS 103.86.96.96 103.86.99.99"
+function protect_setting {
+    heading "Real-Time Protection"
+    echo "Real-Time Protection is a feature protecting you from ads, unsafe"
+    echo "connections, and malicious sites."
+    echo "Uses the Nord Real-Time Protection DNS 103.86.96.96 103.86.99.99"
     echo
     if [[ "$customdns" == "enabled" ]]; then
-        echo -e "$dns - ${WColor}Note:${Color_Off} Enabling TPLite disables Custom-DNS."
+        echo -e "$dns - ${WColor}Note:${Color_Off} Enabling protection disables Custom-DNS."
         echo -e "Current DNS: ${DNSColor}$dns_servers${Color_Off}"
         echo
     fi
-    setting_change "threatprotectionlite"
+    setting_change "protection"
 }
 function obfuscate_setting {
-    # requires OpenVPN
+    # requires OpenVPN, not compatible with DCO
     # must disconnect/reconnect to change setting
     heading "Obfuscate"
     parent="Settings"
     echo "Obfuscated servers can bypass restrictions such as network firewalls."
     echo "They are recommended for countries with restricted access. "
+    echo
+    echo "Not compatible with OpenVPN Data Channel Offload (DCO)."
     echo
     echo "Only certain NordVPN locations support obfuscation.  Recommend connecting"
     echo "to the 'Obfuscated' group or through 'Countries' when Obfuscate is enabled."
@@ -1687,8 +1700,8 @@ function customdns_menu {
     echo "to prevent DNS leaks. (103.86.96.100 and 103.86.99.100)"
     echo "You can specify your own Custom-DNS servers instead."
     echo
-    if [[ "$tplite" == "enabled" ]]; then
-        echo -e "$tp - ${WColor}Note:${Color_Off} Enabling Custom-DNS disables TPLite."
+    if [[ "$protect" == "enabled" ]]; then
+        echo -e "$rp - ${WColor}Note:${Color_Off} Enabling Custom-DNS disables Real-Time Protection."
         echo
     fi
     if [[ "$customdns" == "enabled" ]]; then
@@ -1703,7 +1716,7 @@ function customdns_menu {
     # eg Name<space>DNS1<space>DNS2
     submcdns=(
         "Nord 103.86.96.100 103.86.99.100"
-        "Nord-TPLite 103.86.96.96 103.86.99.99"
+        "Nord-Protect 103.86.96.96 103.86.99.99"
         "OpenDNS 208.67.220.220 208.67.222.222"
         "CB-Security 185.228.168.9 185.228.169.9"
         "AdGuard 94.140.14.14 94.140.15.15"
@@ -1724,7 +1737,7 @@ function customdns_menu {
             "Nord 103.86.96.100 103.86.99.100")
                 setting_enable "dns" "103.86.96.100 103.86.99.100"
                 ;;
-            "Nord-TPLite 103.86.96.96 103.86.99.99")
+            "Nord-Protect 103.86.96.96 103.86.99.99")
                 setting_enable "dns" "103.86.96.96 103.86.99.99"
                 ;;
             "OpenDNS 208.67.220.220 208.67.222.222")
@@ -2317,7 +2330,7 @@ function service_log_level {
         logactual="debug"
     fi
     if [[ "${logactual,,}" == "${nordloglevel,,}" ]]; then
-        echo -e "Current nordvpnd log level: ${EIColor}$logactual${Color_Off}"
+        echo -e "Current nordvpnd log level: ${TIColor}$logactual${Color_Off}"
         echo
         return
     fi
@@ -2334,7 +2347,7 @@ function service_log_level {
     fi
     echo
     read -r logactual < "$loglevelfile"
-    echo -e "Current nordvpnd log level: ${EIColor}$logactual${Color_Off}"
+    echo -e "Current nordvpnd log level: ${TIColor}$logactual${Color_Off}"
     echo
 }
 function service_log {
@@ -4752,7 +4765,7 @@ function wireguard_gen {
         echo "Address = ${address}/32"
         echo "${privatekey}"
         echo "DNS = 103.86.96.100, 103.86.99.100"
-        # Threat Protection Lite DNS
+        # Real-Time Protection DNS
         # echo "DNS = 103.86.96.96, 103.86.99.99"
         #
         # Prompt to add Linux iptables Kill Switch
@@ -6129,3 +6142,15 @@ esac
 #   Blocked by default:  https://nordvpn.com/blog/nordvpn-implements-ipv6-leak-protection
 #   May 2022 - IPv6 capable servers:  us9591 us9592 uk1875 uk1876
 #
+# OpenVPN data channel offload (DCO)  nordvpn v5.4.0+
+# https://github.com/NordSecurity/nordvpn-linux#openvpn-data-channel-offload-dco
+# https://community.openvpn.net/openvpn/wiki/DataChannelOffload
+# DCO is skipped if the module isn't installed, or obfuscation is on.
+# With Secure Boot enabled the module won't load until you enroll its signing key.
+# Debian, Ubuntu:
+#   sudo apt install openvpn-dco-dkms
+#   modinfo ovpn_dco_v2
+#   sudo modprobe ovpn_dco_v2
+#   lsmod | grep ovpn
+#   dkms status ovpn-dco
+# After 'nordvpn connect': 'ip -d link show nordtun' should list `ovpn-dco`.
