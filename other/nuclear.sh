@@ -43,7 +43,6 @@ function default_settings {
     nordvpn set lan-discovery enabled
     nordvpn set tray disabled
     nordvpn set notify disabled
-    nordvpn set virtual-location disabled
     #nordvpn set post-quantum enabled
     #nordvpn connect United_States
     #nordvpn set killswitch enabled

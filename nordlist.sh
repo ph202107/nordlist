@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tested with NordVPN Version 6.0.1 on Linux Mint 22.3
-VERSION="2026.10.21"
+VERSION="2026.10.22"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -1179,7 +1179,7 @@ function techpro_menu {
         echo "TCP is more reliable but usually slower than UDP."
         echo "WebTunnel (WT) mimics HTTPS web traffic to evade network censorship."
         echo
-        disconnect_warning
+        disconnect_warning "Choosing a setting will disconnect the VPN"
     fi
     indicators_display "short"
     echo
@@ -2730,8 +2730,8 @@ function create_list_virtual {
     declare -gA virtual_cities
     #
     while read -r country city; do
-        virtual_countries["$country"]=1
-        virtual_cities["$city"]=1
+        virtual_countries["${country}"]=1   # all lowercase
+        virtual_cities["${city}"]=1         # all lowercase
     done < "$virtualfile"
 }
 function create_list_country {
@@ -2762,7 +2762,7 @@ function create_list_country {
     # create the modcountrylist array
     for mcountry in "${countrylist[@]}"; do
         # Check if the country is in the virtual set
-        if [[ -n "${virtual_countries[${mcountry}]}" ]]; then
+        if [[ -n "${virtual_countries[${mcountry,,}]}" ]]; then
             # Add an asterisk to the country name
             mcountry="${mcountry}*"
             virtualnote="true"
@@ -2841,7 +2841,7 @@ function create_list_city {
     # Create the modcitylist array
     for mcity in "${citylist[@]}"; do
         # Check if the city is in the virtual set
-        if [[ -n "${virtual_cities[${mcity}]}" ]]; then
+        if [[ -n "${virtual_cities[${mcity,,}]}" ]]; then
             # Add an asterisk to the city name
             mcity="${mcity}*"
             virtualnote="true"
@@ -3973,7 +3973,7 @@ function city_count {
     for xcountry in "${countrylist[@]}"
     do
         is_virtual_country=""
-        if [[ -n "${virtual_countries[${xcountry}]}" ]]; then
+        if [[ -n "${virtual_countries[${xcountry,,}]}" ]]; then
             is_virtual_country="*"
         fi
         echo "$xcountry$is_virtual_country"
@@ -3985,7 +3985,7 @@ function city_count {
         #
         for xcity in "${citylist[@]}"; do
             is_virtual_city=""
-            if [[ -n "${virtual_cities[${xcity}]}" ]]; then
+            if [[ -n "${virtual_cities[${xcity,,}]}" ]]; then
                 is_virtual_city="*"
             fi
             echo "    $xcity$is_virtual_city"
@@ -4125,10 +4125,21 @@ function allservers_update {
         echo
     fi
     #
+    echo -e "${TIColor}=====================================================${Color_Off}"
     echo -e "${LColor}Update Virtual Locations${Color_Off}"
     echo
     backup_file "$virtualfile"
-    jq -r '.[] | select(.specifications[] | .title == "Virtual Location") | "\(.locations[0].country.name | gsub(" "; "_")) \(.locations[0].country.city.name | gsub(" "; "_"))"' "$serversfile" | sort -u > "$virtualfile"
+    #
+    # create the file, add underscores and convert the entire contents to lowercase. strip apostrophes
+    jq -r '.[] | select(.specifications[] | .title == "Virtual Location") | "\(.locations[0].country.name | gsub(" "; "_")) \(.locations[0].country.city.name | gsub(" "; "_"))"' "$serversfile" | sort -u | tr '[:upper:]' '[:lower:]' | tr -d "'" > "$virtualfile"
+    #
+    # avoids spelling conflicts between api and cli.  eg:
+    # Isle_of_Man / Isle_Of_Man
+    # Trinidad_and_Tobago Port_of_Spain / Trinidad_And_Tobago Port_Of_Spain
+    # Antigua_and_Barbuda / Antigua_And_Barbuda
+    # Bosnia_and_Herzegovina / Bosnia_And_Herzegovina
+    # Lao_People's_Democratic_Republic / Lao_Peoples_Democratic_Republic
+    #
     echo
     echo -e "${EColor}Completed \u2705${Color_Off}" # unicode checkmark
     echo
@@ -5117,9 +5128,10 @@ function random_worldwide {
 # =====================================================================
 #
 function disconnect_warning {
+    # $1 = message
     set_vars
     if [[ "$status" == "connected" ]]; then
-        echo -e "${WColor}** Changing this setting will disconnect the VPN **${Color_Off}"
+        echo -e "${WColor}** ${1} **${Color_Off}"
         echo
     fi
 }
