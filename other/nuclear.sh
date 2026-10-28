@@ -14,9 +14,10 @@ available_versions=(
     "5.4.0 - 07 Sep 2026 OpenVPN-DCO, TPLite-RTP, AC fix, internal improvements."
     "5.4.1 - 12 Oct 2026 Improved DNS reliability with systemd-resolved."
     "6.0.1 - 21 Oct 2026 Major update, numerous changes."
+    "6.0.2 - 28 Oct 2026 Custom-DNS DNSSEC. Libtelio cert handling."
 )
 #
-# Default choice for the version to install, eg. "nordvpn" or "5.3.0"
+# Default choice for the version to install, eg. "nordvpn" or "6.0.1"
 app_version="nordvpn"
 #
 # Login using a token, leave blank to log in using a web browser, or specify a token later.
@@ -78,6 +79,17 @@ function printascii {
         echo
     fi
 }
+function logoutnord {
+    # v3.16.0+ flag: '--persist-token'
+    # v6.0.1+ flag: '--revoke-token' default: false
+    if nordvpn logout --help | grep -qi "persist-token"; then
+        linecolor "cyan" "nordvpn logout --persist-token"
+        timeout 10s nordvpn logout --persist-token
+    else
+        linecolor "cyan" "nordvpn logout"
+        timeout 10s nordvpn logout
+    fi
+}
 function trashnord {
     linebreak "Password"
     sudo echo "OK"
@@ -86,8 +98,7 @@ function trashnord {
     if command -v nordvpn &> /dev/null; then
         timeout 3s nordvpn set killswitch disabled
         timeout 3s nordvpn disconnect
-        linecolor "cyan" "nordvpn logout --persist-token"
-        timeout 10s nordvpn logout --persist-token
+        logoutnord
     fi
     sudo timeout 5s systemctl stop nordvpnd.service 2>/dev/null
     sudo killall -9 nordvpn-gui nordvpn nordvpnd norduserd 2>/dev/null

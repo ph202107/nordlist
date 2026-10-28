@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tested with NordVPN Version 6.0.1 on Linux Mint 22.3
-VERSION="2026.10.22"
+# Tested with NordVPN Version 6.0.2 on Linux Mint 22.3
+VERSION="2026.10.28"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -1024,11 +1024,9 @@ function set_vars_fav {
         return
     fi
     # Virtual
-    if [[ -f "$virtualfile" ]]; then
-        # leading space and substitute underscores. ignore case
-        if grep -iq " ${city// /_}" "$virtualfile"; then
-            fav="${FVColor}(Virtual)${Color_Off}"
-        fi
+    fcity="${city// /_}"
+    if [[ "${virtual_cities[${fcity,,}]}" ]]; then
+        fav="${FVColor}(Virtual)${Color_Off}"
     fi
 }
 function set_vars_techpro {
@@ -1133,12 +1131,12 @@ function techpro_set {
     disconnect_vpn "force"
     #
     # eg. protocol="OpenVPN (UDP)"
-    protclean="${protocol,,}"       # lowercase
-    protclean="${protclean//(/}"    # remove (
-    protclean="${protclean//)/}"    # remove )
-    protclean="${protclean// /_}"   # replace space with underscore
+    protoclean="${protocol,,}"          # lowercase
+    protoclean="${protoclean//(/}"      # remove '('
+    protoclean="${protoclean//)/}"      # remove ')'
+    protoclean="${protoclean// /_}"     # replace space with underscore
     #
-    if [[ "$protclean" == "${1,,}" ]]; then
+    if [[ "${1,,}" == "$protoclean" ]]; then
         echo -e "${TColor}Current Protocol is ${TIColor}$techpro${Color_Off}"
         echo
         return
@@ -2016,9 +2014,8 @@ function login_nogui {
     echo
 }
 function logout_nord {
-    # use "--persist-token" flag if available (v3.16.0+)
-    # https://github.com/NordSecurity/nordvpn-linux/issues/8
-    #
+    # v3.16.0+ flag: '--persist-token'
+    # v6.0.1+ flag: '--revoke-token' default: false
     if nordvpn logout --help | grep -q -i "persist-token"; then
         echo -e "${LColor}nordvpn logout --persist-token${Color_Off}"
         echo
@@ -2733,9 +2730,11 @@ function create_list_virtual {
         virtual_countries["${country}"]=1   # all lowercase
         virtual_cities["${city}"]=1         # all lowercase
     done < "$virtualfile"
+    #
+    echo "Virtual File: $( date -r "$virtualfile" )"
+    echo
 }
 function create_list_country {
-    # Create three arrays:
     # countrylist = all the countries from the "nordvpn countries" command output
     # virtual_countries = assoc. array of virtual countries. requires $virtualfile
     # modcountrylist = modified country names for the "Countries" selection menu.  shortened names and/or marked with an asterisk.
@@ -2755,9 +2754,6 @@ function create_list_country {
         return
     fi
     countrylist+=( "Random" "Exit" )
-    #
-    # create the virtual_countries associative array
-    create_list_virtual
     #
     # create the modcountrylist array
     for mcountry in "${countrylist[@]}"; do
@@ -2806,7 +2802,6 @@ function create_list_country {
     done
 }
 function create_list_city {
-    # Create three arrays:
     # citylist = all the cities from the "nordvpn cities $xcountry" command output
     # virtual_cities = assoc. array of virtual cities. requires $virtualfile
     # modcitylist = mark virtual cities with an asterisk, for the city selection menu
@@ -2834,9 +2829,6 @@ function create_list_city {
         citylist+=( "Random" "Best" )
     fi
     citylist+=( "Exit" )
-    #
-    # create the virtual_cities associative array
-    create_list_virtual
     #
     # Create the modcitylist array
     for mcity in "${citylist[@]}"; do
@@ -3967,8 +3959,9 @@ function city_count {
     virtualcountries=()
     virtualcities=()
     #
-    create_list_country "count"         # countrylist[@] = list of all countries
-    create_list_virtual                 # virtual_countries[@] = list of all virtual countries
+    create_list_country "count"
+    # countrylist[@] = "nordvpn countries" command output
+    # virtual_countries[@] = lowercase list of all virtual countries
     #
     for xcountry in "${countrylist[@]}"
     do
@@ -3980,8 +3973,9 @@ function city_count {
         allcountries+=( "$xcountry$is_virtual_country" )
         [[ -n "$is_virtual_country" ]] && virtualcountries+=( "$xcountry$is_virtual_country" )
         #
-        create_list_city "count"    # citylist[@] = list of all cities in $xcountry
-        create_list_virtual         # virtual_cities[@] = list of all virtual cities in $xcountry
+        create_list_city "count"
+        # citylist[@] = "nordvpn cities $xcountry" command output
+        # virtual_cities[@] = lowercase list of all virtual cities
         #
         for xcity in "${citylist[@]}"; do
             is_virtual_city=""
@@ -4148,6 +4142,8 @@ function allservers_update {
     echo "Last Modified: $( date -r "$virtualfile" )"
     echo "Lines: $( wc -l < "$virtualfile" )"
     echo
+    # recreate the arrays
+    create_list_virtual
     #
 }
 function allservers_group {
@@ -5670,6 +5666,9 @@ function start {
     if [[ -f "$favoritesfile" ]]; then
         readarray -t favoritelist < "$favoritesfile"
     fi
+    #
+    # create the virtual_countries and virtual_cities associative arrays
+    create_list_virtual
     #
     # check/change the nordvpnd log level
     service_log_level
