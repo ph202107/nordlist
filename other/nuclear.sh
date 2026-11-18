@@ -10,11 +10,11 @@ available_versions=(
     "nordvpn - Install the latest version available."
     "4.6.0 - 20 Apr 2026 Fix DNS, logout, token, GUI changes, pause feature."
     "5.2.0 - 01 Jul 2026 Switch server when down. GUI Pause feature. Meshnet fix."
-    "5.3.0 - 05 Aug 2026 Diagnostics, CLI Pause, ECH, mDNS, glibc 2.35."
     "5.4.0 - 07 Sep 2026 OpenVPN-DCO, TPLite-RTP, AC fix, internal improvements."
     "5.4.1 - 12 Oct 2026 Improved DNS reliability with systemd-resolved."
     "6.0.1 - 21 Oct 2026 Major update, numerous changes."
     "6.0.2 - 28 Oct 2026 Custom-DNS DNSSEC. Libtelio cert handling."
+    "6.1.0 - 18 Nov 2026 LAN-DNS, AutoConnect, GUI, sanitize logs."
 )
 #
 # Default choice for the version to install, eg. "nordvpn" or "6.0.1"
@@ -44,10 +44,9 @@ function default_settings {
     nordvpn set lan-discovery enabled
     nordvpn set tray disabled
     nordvpn set notify disabled
-    #nordvpn set post-quantum enabled
-    #nordvpn connect United_States
-    #nordvpn set killswitch enabled
-    #echo "error" | sudo tee "/run/nordvpn/loglevel"
+    nordvpn connect United_States
+    nordvpn set killswitch enabled
+    linecolor "purple" "Log Level: "; echo "error" | sudo tee "/run/nordvpn/loglevel"
     #
 }
 function linecolor {

@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tested with NordVPN Version 6.0.2 on Linux Mint 22.3
-VERSION="2026.10.28"
+# Tested with NordVPN Version 6.1.0 on Linux Mint 22.3
+VERSION="2026.11.18"
 #
 # Unofficial bash script to use with the NordVPN Linux CLI.
 # Tested on Linux Mint with gnome-terminal and Bash v5.
@@ -718,8 +718,8 @@ function indicators_display {
     #
     # Use any symbol to separate the indicators.  Set a color in function set_colors.
     #indsep=" "         # blank space
-    #indsep="\u2758"    # unicode vertical line
-    indsep="\u00B7"     # unicode middle-dot
+    #indsep=$(printf "\u2758")  # unicode vertical line
+    indsep=$(printf "\u00B7")   # unicode middle-dot
     #
     indall=()
     if [[ "$1" == "short" ]]; then
@@ -1032,9 +1032,13 @@ function set_vars_fav {
 function set_vars_techpro {
     # The protocol to display
     #
+    mdot=$(printf "\u00B7")     # unicode middle dot
+    #
     case "${protocol,,}" in
         *"openvpn"*)
-            protocold="$protocol"
+            protocold="${protocol//[()]/}"      # remove parenthesis
+            protocold="${protocold// /$mdot}"   # replace space with dot
+            #
             # OpenVPN Data Channel Offload (DCO) NordVPN 5.4.0+
             # https://github.com/NordSecurity/nordvpn-linux#openvpn-data-channel-offload-dco
             if [[ "$status" == "connected" ]]; then
@@ -1043,17 +1047,17 @@ function set_vars_techpro {
                 else
                     dcostatus="${DIColor}DCO${Color_Off}"
                 fi
-                techpro="${TIColor}${protocold}\u00B7${dcostatus}"
+                techpro="${TIColor}${protocold}${mdot}${dcostatus}"
                 return
             fi
             ;;
         *"nordlynx"*)
             # NordLynx protocol is always "UDP"
-            protocold="$protocol UDP"
+            protocold="${protocol}${mdot}UDP"
             ;;
         *"nordwhisper"*)
             # NordWhisper protocol is always "WebTunnel", use "WT"
-            protocold="$protocol WT"
+            protocold="${protocol}${mdot}WT"
             ;;
     esac
     #
@@ -1132,8 +1136,7 @@ function techpro_set {
     #
     # eg. protocol="OpenVPN (UDP)"
     protoclean="${protocol,,}"          # lowercase
-    protoclean="${protoclean//(/}"      # remove '('
-    protoclean="${protoclean//)/}"      # remove ')'
+    protoclean="${protoclean//[()]/}"   # remove parenthesis
     protoclean="${protoclean// /_}"     # replace space with underscore
     #
     if [[ "${1,,}" == "$protoclean" ]]; then
@@ -1168,7 +1171,7 @@ function techpro_menu {
         echo "NordLynx is required to use Post-Quantum VPN and is UDP only."
         echo
         echo "OpenVPN is a standard VPN technology which can use TCP or UDP."
-        echo "NordVPN 5.4.0+ supports OpenVPN DCO."
+        echo "NordVPN 5.4.0+ supports OpenVPN Data Channel Offload (DCO)."
         echo
         echo "NordWhisper may be slower and is designed for use only on restricted"
         echo "networks where VPN traffic is blocked but web browsing is allowed."
@@ -1583,8 +1586,6 @@ function autoconnect_setting {
         else
             echo -e "Default: ${LColor}Automatic${Color_Off}"
         fi
-        echo
-        echo "(The input location will remain as default until the script exits.)"
         echo
         read -r -p "Enter the Auto-Connect location: "; echo
         parent_menu

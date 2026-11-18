@@ -66,16 +66,12 @@ function list_socks5 {
         "san-francisco.us.socks.nordhold.net"
         "stockholm.se.socks.nordhold.net"
         #
-        # Server list retrieved via NordVPN Public API on 21 Oct 2026
-        # Subject to change.  Socks 5 Servers = 67
-        "socks-nl10.nordvpn.com (Amsterdam)"
+        # Server list retrieved via NordVPN Public API on 18 Nov 2026
+        # Subject to change.  Socks 5 Servers = 50
         "socks-nl11.nordvpn.com (Amsterdam)"
         "socks-nl12.nordvpn.com (Amsterdam)"
-        "socks-nl1.nordvpn.com (Amsterdam)"
-        "socks-nl2.nordvpn.com (Amsterdam)"
         "socks-nl3.nordvpn.com (Amsterdam)"
         "socks-nl4.nordvpn.com (Amsterdam)"
-        "socks-nl9.nordvpn.com (Amsterdam)"
         "socks-us65.nordvpn.com (Atlanta)"
         "socks-us66.nordvpn.com (Atlanta)"
         "socks-us67.nordvpn.com (Atlanta)"
@@ -86,10 +82,7 @@ function list_socks5 {
         "socks-us36.nordvpn.com (Chicago)"
         "socks-us37.nordvpn.com (Chicago)"
         "socks-us38.nordvpn.com (Chicago)"
-        "socks-us39.nordvpn.com (Chicago)"
-        "socks-us40.nordvpn.com (Chicago)"
         "socks-us41.nordvpn.com (Chicago)"
-        "socks-us42.nordvpn.com (Chicago)"
         "socks-us43.nordvpn.com (Chicago)"
         "socks-us71.nordvpn.com (Dallas)"
         "socks-us72.nordvpn.com (Dallas)"
@@ -109,22 +102,15 @@ function list_socks5 {
         "socks-us56.nordvpn.com (Phoenix)"
         "socks-us57.nordvpn.com (Phoenix)"
         "socks-us58.nordvpn.com (Phoenix)"
-        "socks-us59.nordvpn.com (Phoenix)"
         "socks-us45.nordvpn.com (San Francisco)"
         "socks-us46.nordvpn.com (San Francisco)"
         "socks-us47.nordvpn.com (San Francisco)"
         "socks-us48.nordvpn.com (San Francisco)"
         "socks-us49.nordvpn.com (San Francisco)"
-        "socks-us50.nordvpn.com (San Francisco)"
         "socks-us51.nordvpn.com (San Francisco)"
         "socks-us52.nordvpn.com (San Francisco)"
         "socks-us53.nordvpn.com (San Francisco)"
         "socks-us70.nordvpn.com (San Francisco)"
-        "socks-se10.nordvpn.com (Stockholm)"
-        "socks-se11.nordvpn.com (Stockholm)"
-        "socks-se12.nordvpn.com (Stockholm)"
-        "socks-se13.nordvpn.com (Stockholm)"
-        "socks-se14.nordvpn.com (Stockholm)"
         "socks-se15.nordvpn.com (Stockholm)"
         "socks-se16.nordvpn.com (Stockholm)"
         "socks-se17.nordvpn.com (Stockholm)"
@@ -132,9 +118,6 @@ function list_socks5 {
         "socks-se19.nordvpn.com (Stockholm)"
         "socks-se20.nordvpn.com (Stockholm)"
         "socks-se21.nordvpn.com (Stockholm)"
-        "socks-se24.nordvpn.com (Stockholm)"
-        "socks-se8.nordvpn.com (Stockholm)"
-        "socks-se9.nordvpn.com (Stockholm)"
     )
 }
 function test_proxy {
